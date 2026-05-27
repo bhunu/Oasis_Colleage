@@ -1,4 +1,4 @@
-import { useSearchParams, Link } from 'react-router-dom'
+import { useSearchParams, Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useState } from 'react'
 import {
@@ -6,6 +6,7 @@ import {
   FaEye, FaEyeSlash, FaLock, FaEnvelope, FaArrowLeft, FaShieldAlt,
 } from 'react-icons/fa'
 import SignUpModal from '../components/SignUpModal'
+import { findUserByCredential } from '../firebase/users'
 
 const PORTALS = {
   'web-admin': {
@@ -62,13 +63,55 @@ export default function Login() {
   const portal    = PORTALS[portalKey] ?? PORTALS['student-portal']
   const Icon      = portal.icon
 
+  const navigate = useNavigate()
+
   const [showPass, setShowPass]     = useState(false)
   const [form, setForm]             = useState({ credential: '', password: '' })
   const [showSignUp, setShowSignUp] = useState(false)
+  const [authError, setAuthError]   = useState('')
+  const [loading, setLoading]       = useState(false)
 
-  const handleSubmit = (e) => {
+  const clearForm = () => setForm({ credential: '', password: '' })
+
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    // Authentication logic to be wired up later
+    setAuthError('')
+    setLoading(true)
+
+    try {
+      const field = portalKey === 'student-portal' ? 'regNumber' : 'email'
+      const user  = await findUserByCredential(field, form.credential.trim())
+
+      if (!user) {
+        setAuthError('Invalid credentials. Please try again.')
+        clearForm()
+        return
+      }
+
+      if (!user.active) {
+        setAuthError('Your account is not yet activated. Contact the administrator.')
+        clearForm()
+        return
+      }
+
+      // Web Admin → redirect to admin dashboard
+      if (portalKey === 'web-admin') {
+        const token = btoa(JSON.stringify({ name: user.name, role: user.role, email: user.email ?? '' }))
+        clearForm()
+        window.location.href = `http://localhost:5175?token=${token}`
+        return
+      }
+
+      // Other portals → go to school website home
+      clearForm()
+      navigate('/')
+    } catch (err) {
+      console.error('Login error:', err)
+      setAuthError('Something went wrong. Please try again.')
+      clearForm()
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -205,7 +248,7 @@ export default function Login() {
             {/* Credential field */}
             <div>
               <label className="font-montserrat text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-500 mb-2 block">
-                Email / Username
+                {portalKey === 'student-portal' ? 'Registration Number' : 'Email'}
               </label>
               <div className="relative">
                 <FaEnvelope className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 text-sm pointer-events-none" />
@@ -213,7 +256,7 @@ export default function Login() {
                   type="text"
                   value={form.credential}
                   onChange={e => setForm(f => ({ ...f, credential: e.target.value }))}
-                  placeholder="you@oasiscollege.ac.zw"
+                  placeholder={portalKey === 'student-portal' ? 'e.g. R261234' : 'you@oasiscollege.ac.zw'}
                   autoComplete="username"
                   className={`w-full bg-white/5 border border-white/10 focus:border-opacity-60 focus:outline-none rounded-xl pl-11 pr-4 py-3.5 text-white font-montserrat text-sm placeholder-gray-700 transition-all focus:${portal.accentBorder} focus:ring-1 focus:ring-current`}
                   style={{ '--tw-ring-color': 'transparent' }}
@@ -268,13 +311,25 @@ export default function Login() {
               </div>
             </div>
 
+            {/* Error message */}
+            {authError && (
+              <motion.div
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-red-500/10 border border-red-500/30 text-red-300 font-montserrat text-xs px-4 py-3 rounded-xl"
+              >
+                {authError}
+              </motion.div>
+            )}
+
             {/* Submit */}
             <button
               type="submit"
-              className="mt-3 bg-gold hover:bg-yellow-400 text-navy font-montserrat font-bold text-xs uppercase tracking-[0.12em] py-4 rounded-xl shadow-lg shadow-gold/20 hover:shadow-gold/40 transition-all duration-300 flex items-center justify-center gap-2"
+              disabled={loading}
+              className="mt-3 bg-gold hover:bg-yellow-400 disabled:opacity-60 text-navy font-montserrat font-bold text-xs uppercase tracking-[0.12em] py-4 rounded-xl shadow-lg shadow-gold/20 hover:shadow-gold/40 transition-all duration-300 flex items-center justify-center gap-2"
             >
               <FaShieldAlt />
-              Sign In to {portal.label}
+              {loading ? 'Signing in…' : `Sign In to ${portal.label}`}
             </button>
           </motion.form>
 

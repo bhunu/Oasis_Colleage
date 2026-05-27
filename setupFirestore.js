@@ -79,7 +79,7 @@ const users = [
   },
   {
     name:          'Tendai Moyo',
-    username:      'tendai.moyo22',
+    regNumber:     'R220047',
     role:          'student',
     form:          'Form 4',
     admissionYear: 2022,
@@ -88,7 +88,7 @@ const users = [
   },
   {
     name:          'Chiedza Nhamo',
-    username:      'chiedza.nhamo21',
+    regNumber:     'R210093',
     role:          'student',
     form:          'Lower 6',
     admissionYear: 2021,
@@ -97,7 +97,7 @@ const users = [
   },
   {
     name:          'Tatenda Chirwa',
-    username:      'tatenda.chirwa25',
+    regNumber:     'R250012',
     role:          'student',
     form:          'Form 1',
     admissionYear: 2025,
