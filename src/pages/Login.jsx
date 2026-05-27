@@ -5,6 +5,7 @@ import {
   FaGraduationCap, FaLaptopCode, FaClipboardList, FaUserGraduate,
   FaEye, FaEyeSlash, FaLock, FaEnvelope, FaArrowLeft, FaShieldAlt,
 } from 'react-icons/fa'
+import SignUpModal from '../components/SignUpModal'
 
 const PORTALS = {
   'web-admin': {
@@ -61,8 +62,9 @@ export default function Login() {
   const portal    = PORTALS[portalKey] ?? PORTALS['student-portal']
   const Icon      = portal.icon
 
-  const [showPass, setShowPass] = useState(false)
-  const [form, setForm]         = useState({ credential: '', password: '' })
+  const [showPass, setShowPass]     = useState(false)
+  const [form, setForm]             = useState({ credential: '', password: '' })
+  const [showSignUp, setShowSignUp] = useState(false)
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -251,9 +253,19 @@ export default function Login() {
                 <input type="checkbox" className="accent-gold w-3.5 h-3.5 rounded" />
                 <span className="font-montserrat text-xs text-gray-500 group-hover:text-gray-400 transition-colors">Remember me</span>
               </label>
-              <button type="button" className="font-montserrat text-xs text-gold hover:text-yellow-300 transition-colors">
-                Forgot password?
-              </button>
+              <div className="flex items-center gap-3">
+                <button type="button" className="font-montserrat text-xs text-gold hover:text-yellow-300 transition-colors">
+                  Forgot password?
+                </button>
+                <span className="text-gray-700 text-xs">·</span>
+                <button
+                  type="button"
+                  onClick={() => setShowSignUp(true)}
+                  className="font-montserrat text-xs text-gray-400 hover:text-white transition-colors"
+                >
+                  Sign up
+                </button>
+              </div>
             </div>
 
             {/* Submit */}
@@ -305,6 +317,10 @@ export default function Login() {
           </div>
         </div>
       </motion.div>
+
+      {showSignUp && (
+        <SignUpModal portalKey={portalKey} onClose={() => setShowSignUp(false)} />
+      )}
     </div>
   )
 }
