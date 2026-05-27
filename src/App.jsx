@@ -14,6 +14,7 @@ import Staff from './pages/Staff'
 import News from './pages/News'
 import Contact from './pages/Contact'
 import Login from './pages/Login'
+import Users from './pages/Users'
 
 const pageVariants = {
   initial: { opacity: 0, y: 12 },
@@ -51,6 +52,7 @@ export default function App() {
             <Route path="/news" element={<PageWrapper><News /></PageWrapper>} />
             <Route path="/contact" element={<PageWrapper><Contact /></PageWrapper>} />
             <Route path="/login" element={<Login />} />
+            <Route path="/users" element={<PageWrapper><Users /></PageWrapper>} />
           </Routes>
         </AnimatePresence>
       </main>
