@@ -94,11 +94,11 @@ export default function Login() {
         return
       }
 
-      // Web Admin → redirect to admin dashboard
+      // Web Admin → store session and go to admin dashboard
       if (portalKey === 'web-admin') {
-        const token = btoa(JSON.stringify({ name: user.name, role: user.role, email: user.email ?? '' }))
+        sessionStorage.setItem('adminSession', JSON.stringify({ name: user.name, role: user.role, email: user.email ?? '' }))
         clearForm()
-        window.location.href = `http://localhost:5175?token=${token}`
+        navigate('/admin')
         return
       }
 

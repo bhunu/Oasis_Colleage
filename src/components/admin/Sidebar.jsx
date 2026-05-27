@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { MdDashboard, MdArticle, MdEvent, MdPeople, MdPhotoLibrary, MdLogout, MdSchool } from 'react-icons/md'
+import { MdDashboard, MdArticle, MdEvent, MdPeople, MdPhotoLibrary, MdLogout } from 'react-icons/md'
+import { FaGraduationCap } from 'react-icons/fa'
 import toast from 'react-hot-toast'
 
 const NAV = [
@@ -21,23 +22,25 @@ export default function AdminSidebar({ open, onClose }) {
 
   return (
     <>
-      {open && <div className="fixed inset-0 bg-black/40 z-20 lg:hidden" onClick={onClose} />}
+      {open && <div className="fixed inset-0 bg-black/60 z-20 lg:hidden" onClick={onClose} />}
       <aside className={`
-        fixed top-0 left-0 h-full w-60 bg-white border-r border-slate-200
+        fixed top-0 left-0 h-full w-60 bg-[#0D1C35] border-r border-white/10
         flex flex-col z-30 transition-transform duration-300
         ${open ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0 lg:static lg:z-auto
       `}>
-        <div className="flex items-center gap-3 px-5 py-5 border-b border-slate-100">
-          <div className="w-9 h-9 bg-[#185FA5] rounded-lg flex items-center justify-center">
-            <MdSchool className="text-white text-xl" />
+        {/* Logo */}
+        <div className="flex items-center gap-3 px-5 py-5 border-b border-white/10">
+          <div className="w-9 h-9 bg-[#C9A84C] rounded-lg flex items-center justify-center shrink-0">
+            <FaGraduationCap className="text-[#0A1628] text-lg" />
           </div>
           <div>
-            <p className="text-sm font-bold text-slate-800 leading-tight">Oasis College</p>
-            <p className="text-[10px] text-slate-400 uppercase tracking-wider">Web Admin</p>
+            <p className="text-sm font-bold text-white leading-tight font-playfair">Oasis College</p>
+            <p className="text-[10px] text-[#C9A84C]/70 uppercase tracking-wider font-montserrat">Web Admin</p>
           </div>
         </div>
 
+        {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-0.5">
           {NAV.map(({ to, icon: Icon, label }) => (
             <NavLink
@@ -46,14 +49,16 @@ export default function AdminSidebar({ open, onClose }) {
               end={to === '/admin'}
               onClick={onClose}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                  isActive ? 'bg-blue-50 text-[#185FA5]' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800'
+                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium font-montserrat transition-all ${
+                  isActive
+                    ? 'bg-[#C9A84C]/10 text-[#C9A84C] border-l-2 border-[#C9A84C] pl-[10px]'
+                    : 'text-gray-400 hover:bg-white/5 hover:text-gray-200 border-l-2 border-transparent pl-[10px]'
                 }`
               }
             >
               {({ isActive }) => (
                 <>
-                  <Icon className={`text-lg ${isActive ? 'text-[#185FA5]' : 'text-slate-400'}`} />
+                  <Icon className={`text-lg shrink-0 ${isActive ? 'text-[#C9A84C]' : 'text-gray-500'}`} />
                   {label}
                 </>
               )}
@@ -61,12 +66,13 @@ export default function AdminSidebar({ open, onClose }) {
           ))}
         </nav>
 
-        <div className="px-3 pb-5 border-t border-slate-100 pt-3">
+        {/* Logout */}
+        <div className="px-3 pb-5 border-t border-white/10 pt-3">
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-red-50 hover:text-red-600 transition-all w-full"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium font-montserrat text-gray-400 hover:bg-red-900/30 hover:text-red-400 transition-all w-full border-l-2 border-transparent pl-[10px]"
           >
-            <MdLogout className="text-lg text-slate-400" />
+            <MdLogout className="text-lg text-gray-500 shrink-0" />
             Logout
           </button>
         </div>
