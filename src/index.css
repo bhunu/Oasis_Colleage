@@ -1,0 +1,99 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply font-sans text-slate bg-cream antialiased;
+    margin: 0;
+  }
+
+  #root {
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-playfair;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0A1628;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #C9A84C;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #D4B96A;
+  }
+}
+
+@layer components {
+  .gold-line-center {
+    display: block;
+    width: 4rem;
+    height: 4px;
+    background-color: #C9A84C;
+    border-radius: 2px;
+    margin: 1rem auto 0;
+  }
+
+  .gold-line-left {
+    display: block;
+    width: 4rem;
+    height: 4px;
+    background-color: #C9A84C;
+    border-radius: 2px;
+    margin-top: 1rem;
+  }
+
+  .section-padding {
+    @apply py-20 px-4 sm:px-6 lg:px-8;
+  }
+
+  .container-max {
+    @apply max-w-7xl mx-auto;
+  }
+
+  .card-hover {
+    @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl;
+  }
+
+  .text-gradient-gold {
+    background: linear-gradient(135deg, #C9A84C 0%, #D4B96A 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .overlay-navy {
+    position: absolute;
+    inset: 0;
+    background-color: rgba(10, 22, 40, 0.75);
+  }
+
+  .overlay-navy-dark {
+    position: absolute;
+    inset: 0;
+    background-color: rgba(10, 22, 40, 0.85);
+  }
+
+  .label-tag {
+    @apply font-montserrat text-xs font-semibold uppercase tracking-widest;
+  }
+}
