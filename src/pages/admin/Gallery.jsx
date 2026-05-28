@@ -4,14 +4,16 @@ import { MdDelete, MdPhotoLibrary, MdCloudUpload } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import { getGallery, uploadPhoto, deletePhoto } from '../../firebase/gallery'
 
-const ALBUMS = ['General', 'Events', 'Sports', 'Academic', 'Graduation', 'Campus']
+const CATEGORIES = ['general', 'events', 'sports', 'academic', 'cultural', 'sports-events']
+const CAT_LABEL  = { general: 'General', events: 'Events', sports: 'Sports', academic: 'Academic', cultural: 'Cultural', 'sports-events': 'Sports Events' }
 
 export default function AdminGallery() {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
-  const [album, setAlbum] = useState('General')
-  const [filter, setFilter] = useState('All')
+  const [category, setCategory] = useState('general')
+  const [caption, setCaption]   = useState('')
+  const [filter, setFilter]     = useState('All')
 
   const load = () => getGallery().then(setItems).finally(() => setLoading(false))
   useEffect(() => { load() }, [])
@@ -21,15 +23,16 @@ export default function AdminGallery() {
     setUploading(true)
     const tid = toast.loading(`Uploading ${accepted.length} photo${accepted.length > 1 ? 's' : ''}…`)
     try {
-      await Promise.all(accepted.map(f => uploadPhoto(f, album)))
+      await Promise.all(accepted.map(f => uploadPhoto(f, category, caption)))
       toast.success('Uploaded!', { id: tid })
+      setCaption('')
       await load()
     } catch {
       toast.error('Upload failed', { id: tid })
     } finally {
       setUploading(false)
     }
-  }, [album])
+  }, [category, caption])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -43,22 +46,34 @@ export default function AdminGallery() {
     catch { toast.error('Failed to delete') }
   }
 
-  const allTabs  = ['All', ...ALBUMS]
-  const filtered = filter === 'All' ? items : items.filter(i => i.album === filter)
+  const allTabs  = ['All', ...CATEGORIES]
+  const filtered = filter === 'All' ? items : items.filter(i => i.category === filter)
 
   return (
     <div className="space-y-5">
       {/* Upload zone */}
       <div className="bg-[#132140] rounded-xl border border-white/10 p-5">
         <div className="flex flex-wrap items-center gap-3 mb-4">
-          <label className="text-xs font-semibold text-gray-400 font-montserrat uppercase tracking-wider">Upload to album:</label>
+          <label className="text-xs font-semibold text-gray-400 font-montserrat uppercase tracking-wider">Category:</label>
           <select
-            value={album}
-            onChange={e => setAlbum(e.target.value)}
+            value={category}
+            onChange={e => setCategory(e.target.value)}
             className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-[#C9A84C]/50 font-montserrat"
           >
-            {ALBUMS.map(a => <option key={a}>{a}</option>)}
+            {CATEGORIES.map(c => <option key={c} value={c}>{CAT_LABEL[c]}</option>)}
           </select>
+        </div>
+        <div className="mb-4">
+          <label className="text-xs font-semibold text-gray-400 font-montserrat uppercase tracking-wider block mb-1.5">
+            Description <span className="normal-case text-gray-600 font-normal">(optional — applies to all photos in this upload)</span>
+          </label>
+          <textarea
+            rows={2}
+            value={caption}
+            onChange={e => setCaption(e.target.value)}
+            placeholder="e.g. Students competing at the 2026 Annual Sports Day…"
+            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-[#C9A84C]/50 font-montserrat resize-none"
+          />
         </div>
         <div
           {...getRootProps()}
@@ -87,9 +102,9 @@ export default function AdminGallery() {
                 : 'bg-[#132140] border border-white/10 text-gray-400 hover:border-white/20 hover:text-gray-200'
             }`}
           >
-            {a}
+            {a === 'All' ? 'All' : CAT_LABEL[a]}
             <span className="ml-1.5 opacity-60">
-              {a === 'All' ? items.length : items.filter(i => i.album === a).length}
+              {a === 'All' ? items.length : items.filter(i => i.category === a).length}
             </span>
           </button>
         ))}
@@ -113,7 +128,7 @@ export default function AdminGallery() {
             <div key={item.id} className="relative group aspect-square rounded-xl overflow-hidden border border-white/10">
               <img src={item.url} alt={item.name} className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-[#0A1628]/70 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
-                <p className="text-[#C9A84C] text-[10px] font-medium font-montserrat px-2 text-center leading-tight">{item.album}</p>
+                <p className="text-[#C9A84C] text-[10px] font-medium font-montserrat px-2 text-center leading-tight">{CAT_LABEL[item.category] ?? item.category}</p>
                 <button onClick={() => handleDelete(item)} className="p-2 bg-red-900/80 hover:bg-red-700 rounded-full transition">
                   <MdDelete className="text-white text-sm" />
                 </button>

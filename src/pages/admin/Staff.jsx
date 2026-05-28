@@ -3,8 +3,8 @@ import { MdAdd, MdEdit, MdDelete, MdClose, MdPeople, MdPhotoCamera } from 'react
 import toast from 'react-hot-toast'
 import { getAdminStaff, addAdminStaff, updateAdminStaff, deleteAdminStaff, uploadStaffPhoto } from '../../firebase/staffAdmin'
 
-const BLANK = { name: '', title: '', department: '', email: '', phone: '', bio: '' }
-const DEPARTMENTS = ['Administration', 'Sciences', 'Mathematics', 'English', 'Humanities', 'Technical', 'Support']
+const BLANK = { name: '', title: '', department: '', email: '', phone: '', qualification: '', description: '', featured: false }
+const DEPARTMENTS = ['Leadership', 'Sciences', 'Humanities', 'Mathematics', 'Commerce', 'Languages', 'Arts', 'Sports', 'Support Staff']
 
 const inputCls = 'w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-[#C9A84C]/50 font-montserrat'
 const labelCls = 'text-[10px] font-semibold uppercase tracking-wider text-gray-400 font-montserrat block mb-1'
@@ -26,7 +26,16 @@ export default function AdminStaff() {
   const openNew = () => { setEditing(null); setForm(BLANK); setPhotoFile(null); setPhotoPreview(null); setOpen(true) }
   const openEdit = (item) => {
     setEditing(item)
-    setForm({ name: item.name ?? '', title: item.title ?? '', department: item.department ?? '', email: item.email ?? '', phone: item.phone ?? '', bio: item.bio ?? '' })
+    setForm({
+      name:          item.name          ?? '',
+      title:         item.title         ?? '',
+      department:    item.department    ?? '',
+      email:         item.email         ?? '',
+      phone:         item.phone         ?? '',
+      qualification: item.qualification ?? '',
+      description:   item.description   ?? item.bio ?? '',
+      featured:      item.featured      ?? false,
+    })
     setPhotoFile(null); setPhotoPreview(item.photoUrl ?? null); setOpen(true)
   }
   const closePanel = () => { setOpen(false); setEditing(null) }
@@ -143,7 +152,15 @@ export default function AdminStaff() {
               </div>
               <div><label className={labelCls}>Email</label><input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className={inputCls} /></div>
               <div><label className={labelCls}>Phone</label><input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} className={inputCls} /></div>
-              <div><label className={labelCls}>Bio</label><textarea rows={3} value={form.bio} onChange={e => setForm(f => ({ ...f, bio: e.target.value }))} className={`${inputCls} resize-none`} /></div>
+              <div><label className={labelCls}>Qualification</label><input value={form.qualification} onChange={e => setForm(f => ({ ...f, qualification: e.target.value }))} className={inputCls} placeholder="e.g. B.Ed, PGCE (University of Zimbabwe)" /></div>
+              <div><label className={labelCls}>Bio / Description</label><textarea rows={3} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className={`${inputCls} resize-none`} placeholder="Short bio shown on the public staff page" /></div>
+              <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-lg px-3 py-2.5">
+                <span className="text-sm text-gray-300 font-montserrat">Featured / Leadership</span>
+                <button type="button" onClick={() => setForm(f => ({ ...f, featured: !f.featured }))}
+                  className={`w-11 h-6 rounded-full transition-colors relative ${form.featured ? 'bg-[#C9A84C]' : 'bg-white/10'}`}>
+                  <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${form.featured ? 'right-0.5' : 'left-0.5'}`} />
+                </button>
+              </div>
               <button type="submit" disabled={saving}
                 className="w-full bg-[#C9A84C] text-[#0A1628] text-sm font-bold py-3 rounded-lg hover:bg-[#D4B96A] disabled:opacity-60 transition font-montserrat">
                 {saving ? 'Saving…' : editing ? 'Update Staff' : 'Add Staff Member'}

@@ -114,6 +114,21 @@ const newsArticles = [
   },
 ]
 
+const galleryPhotos = [
+  { url: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800&q=80', category: 'sports',        caption: 'Netball squad training hard ahead of the provincial championships — champions in the making!', name: 'netball.jpg',      path: '', createdAt: now },
+  { url: 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=800&q=80', category: 'sports',      caption: 'Oasis athletes dominate the inter-school athletics championships, bringing home gold medals.', name: 'athletics.jpg',    path: '', createdAt: now },
+  { url: 'https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=800&q=80', category: 'sports-events', caption: 'Annual Sports Day 2026 — all four houses compete in track and field events.', name: 'sports-day.jpg', path: '', createdAt: now },
+  { url: 'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=800&q=80', category: 'sports-events', caption: 'Football inter-house tournament finals — the championship shield is on the line.', name: 'football.jpg',   path: '', createdAt: now },
+  { url: 'https://images.unsplash.com/photo-1517971071642-34a2d3ecc9cd?w=800&q=80', category: 'cultural',    caption: 'Form 3 Drama Club performs "Echoes of Tomorrow" — a powerful original play at the Drama Festival.', name: 'drama.jpg',       path: '', createdAt: now },
+  { url: 'https://images.unsplash.com/photo-1535525153412-5a42439a210d?w=800&q=80', category: 'cultural',    caption: "Traditional dance troupe showcasing Zimbabwe's vibrant Shona cultural heritage at Cultural Day.", name: 'cultural-day.jpg', path: '', createdAt: now },
+  { url: 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=800&q=80', category: 'academic',    caption: 'Students engaged in our new STEM Innovation Programme — robotics and coding in action.', name: 'stem.jpg',         path: '', createdAt: now },
+  { url: 'https://images.unsplash.com/photo-1571260899304-425eee4c7efc?w=800&q=80', category: 'academic',    caption: 'Oasis Computer Laboratory — 40 stations with high-speed internet access for all students.', name: 'computer-lab.jpg', path: '', createdAt: now },
+  { url: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=800&q=80', category: 'events',      caption: 'Open Day 2026 — prospective families tour the campus and meet the leadership team.', name: 'open-day.jpg',     path: '', createdAt: now },
+  { url: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&q=80', category: 'events',      caption: 'Parent-Teacher consultations — strengthening the home-school partnership.', name: 'parent-day.jpg',  path: '', createdAt: now },
+  { url: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&q=80', category: 'general',     caption: 'Oasis educators — the dedicated team shaping tomorrow\'s leaders in Checheche.', name: 'staff.jpg',        path: '', createdAt: now },
+  { url: 'https://images.unsplash.com/photo-1577896851231-70ef18881754?w=800&q=80', category: 'general',     caption: 'The Oasis Debate Team — Manicaland Regional Champions for the second consecutive year.', name: 'debate.jpg',       path: '', createdAt: now },
+]
+
 const Y = 2026
 function d(year, month, day) {
   return `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`
@@ -137,6 +152,121 @@ const calendarEvents = [
   { title: 'Term 2 Closes',                   date: d(Y,6,27), endDate: null,       category: 'academic',       description: 'Last day of Term 2. Students collect report cards. School closes at noon.',                                                     time: '6:30 AM – 12:00 PM', location: 'School Grounds',          createdAt: now },
   { title: 'Inter-School Football Tournament', date: d(Y,7,4), endDate: null,       category: 'sports-events',  description: "Oasis hosts the annual inter-school football tournament. Come support our boys' and girls' teams as they compete for district glory!", time: '8:00 AM', location: 'Oasis Sports Grounds',    createdAt: now },
   { title: 'District Athletics Championships', date: d(Y,7,19), endDate: d(Y,7,20), category: 'sports-events',  description: 'Our athletics team competes in the Chipinge District Championships. Track, field, and cross-country events over two days.',    time: '8:00 AM',           location: 'Chipinge Sports Complex',  createdAt: now },
+]
+
+const staffMembers = [
+  {
+    name:          'Mr. T. Chikomo',
+    title:         'Principal',
+    department:    'Leadership',
+    qualification: 'B.Ed, M.Ed in Educational Leadership (University of Zimbabwe)',
+    description:   'A visionary leader with over 20 years in Zimbabwean education. Mr. Chikomo has guided Oasis to national recognition through unwavering commitment to academic excellence and community development.',
+    email:         't.chikomo@oasiscollege.ac.zw',
+    phone:         '+263 77 100 0001',
+    photoUrl:      'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&q=80',
+    photoPath:     '',
+    featured:      true,
+    order:         1,
+    createdAt:     now,
+  },
+  {
+    name:          'Mrs. R. Maposa',
+    title:         'Deputy Principal',
+    department:    'Leadership',
+    qualification: 'B.Ed (PGCE), Diploma in Educational Management (Bindura University)',
+    description:   'Mrs. Maposa oversees pastoral care and student welfare with unmatched dedication. A Cambridge-trained educator, she has been integral to Oasis since its founding in 2012.',
+    email:         'r.maposa@oasiscollege.ac.zw',
+    phone:         '+263 77 100 0002',
+    photoUrl:      'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&q=80',
+    photoPath:     '',
+    featured:      true,
+    order:         2,
+    createdAt:     now,
+  },
+  {
+    name:          'Mr. S. Dube',
+    title:         'Head of Academics',
+    department:    'Leadership',
+    qualification: 'B.Sc, PGCE, M.Ed Curriculum Development (University of Zimbabwe)',
+    description:   "Mr. Dube drives the school's academic strategy and curriculum excellence. Under his leadership, O-Level and A-Level results have improved consecutively for four years.",
+    email:         's.dube@oasiscollege.ac.zw',
+    phone:         '+263 77 100 0003',
+    photoUrl:      'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&q=80',
+    photoPath:     '',
+    featured:      true,
+    order:         3,
+    createdAt:     now,
+  },
+  {
+    name:          'Mrs. F. Mutasa',
+    title:         'Head of Sciences',
+    department:    'Sciences',
+    qualification: 'B.Sc Chemistry Hons, PGCE (Midlands State University)',
+    description:   'Mrs. Mutasa leads the Science department with passion and precision. Her students consistently achieve top marks in Chemistry and Biology at both O and A Level.',
+    email:         'f.mutasa@oasiscollege.ac.zw',
+    phone:         '+263 77 100 0004',
+    photoUrl:      'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&q=80',
+    photoPath:     '',
+    featured:      false,
+    order:         4,
+    createdAt:     now,
+  },
+  {
+    name:          'Mr. K. Banda',
+    title:         'Head of Mathematics',
+    department:    'Mathematics',
+    qualification: 'B.Sc Mathematics Hons, PGCE (Great Zimbabwe University)',
+    description:   "Mr. Banda brings mathematics to life through innovative teaching. Known for making complex concepts accessible, his students hold some of the school's highest pass rates.",
+    email:         'k.banda@oasiscollege.ac.zw',
+    phone:         '+263 77 100 0005',
+    photoUrl:      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80',
+    photoPath:     '',
+    featured:      false,
+    order:         5,
+    createdAt:     now,
+  },
+  {
+    name:          'Mrs. P. Chirwa',
+    title:         'Head of English & Literature',
+    department:    'Humanities',
+    qualification: 'B.A English Literature, PGCE (University of Zimbabwe)',
+    description:   "An award-winning educator, Mrs. Chirwa has nurtured Zimbabwe's next generation of writers, debaters, and communicators through her love of the written word.",
+    email:         'p.chirwa@oasiscollege.ac.zw',
+    phone:         '+263 77 100 0006',
+    photoUrl:      'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&q=80',
+    photoPath:     '',
+    featured:      false,
+    order:         6,
+    createdAt:     now,
+  },
+  {
+    name:          'Mr. L. Moyo',
+    title:         'Head of Physical Education',
+    department:    'Sports',
+    qualification: 'B.Sc Sports Science, Coaching Certificate (Zimbabwe Sports Commission)',
+    description:   "Mr. Moyo has transformed Oasis's sports programme into a competitive powerhouse. Under his coaching, football and athletics teams have earned multiple district titles.",
+    email:         'l.moyo@oasiscollege.ac.zw',
+    phone:         '+263 77 100 0007',
+    photoUrl:      'https://images.unsplash.com/photo-1519345182560-3f2917c472ef?w=400&q=80',
+    photoPath:     '',
+    featured:      false,
+    order:         7,
+    createdAt:     now,
+  },
+  {
+    name:          'Mrs. G. Ncube',
+    title:         'Head of Arts & Culture',
+    department:    'Arts',
+    qualification: 'B.A Fine Art, Diploma in Cultural Studies (National Arts Council of Zimbabwe)',
+    description:   'Mrs. Ncube is the creative heartbeat of Oasis. From Drama Festival to Cultural Day, she champions every student\'s artistic expression and has built a thriving arts programme.',
+    email:         'g.ncube@oasiscollege.ac.zw',
+    phone:         '+263 77 100 0008',
+    photoUrl:      'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&q=80',
+    photoPath:     '',
+    featured:      false,
+    order:         8,
+    createdAt:     now,
+  },
 ]
 
 const users = [
@@ -322,6 +452,8 @@ const buildComments = (seededPosts, seededUsers) => {
   try {
     console.log('\nusers:')
     const seededUsers = await seedIfEmpty('users', users)
+    console.log('\nstaff:')
+    const seededStaff = await seedIfEmpty('staff', staffMembers)
     console.log('\nposts:')
     const seededPosts = await seed('posts', posts)
     console.log('\ncomments:')
@@ -331,13 +463,17 @@ const buildComments = (seededPosts, seededUsers) => {
     const seededCalendar = await seed('calendarEvents', calendarEvents)
     console.log('\nnews:')
     const seededNews = await seed('news', newsArticles)
+    console.log('\ngallery:')
+    const seededGallery = await seedIfEmpty('gallery', galleryPhotos)
 
     console.log('\n✅  Firestore seeded successfully!')
     console.log(`   users:          ${seededUsers.length} documents`)
+    console.log(`   staff:          ${seededStaff.length} documents`)
     console.log(`   posts:          ${seededPosts.length} documents`)
     console.log(`   comments:       ${comments.length} documents`)
     console.log(`   calendarEvents: ${seededCalendar.length} documents`)
     console.log(`   news:           ${seededNews.length} documents`)
+    console.log(`   gallery:        ${seededGallery.length} documents`)
     process.exit(0)
   } catch (err) {
     console.error('\n❌  Seeding failed:', err.message)

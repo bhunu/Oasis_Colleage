@@ -1,26 +1,19 @@
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import PageHero from '../components/PageHero'
 import SectionTitle from '../components/SectionTitle'
 import StaffCard from '../components/StaffCard'
-import StaffAdminPanel from '../components/StaffAdminPanel'
-import AdminPIN from '../components/AdminPIN'
-import Toast from '../components/Toast'
 import { useStaff } from '../hooks/useStaff'
-import { usePIN } from '../hooks/usePIN'
-import { DEPARTMENTS, DEPT_STYLES } from '../constants/departments'
-import { FaUsers, FaChevronDown } from 'react-icons/fa'
+import { DEPARTMENTS } from '../constants/departments'
+import { FaUsers } from 'react-icons/fa'
 
 export default function Staff() {
-  const { staff, addStaff, updateStaff, deleteStaff, reorderStaff, getFeatured, getByDepartment } = useStaff()
-  const { unlocked } = usePIN()
+  const { staff, loading, getFeatured, getByDepartment } = useStaff()
   const [activeDept, setActiveDept] = useState('All')
-  const [toast, setToast] = useState(null)
-  const [showAdmin, setShowAdmin] = useState(false)
 
-  const featuredStaff = getFeatured()
-  const filteredStaff = getByDepartment(activeDept)
-  const presentDepts = ['All', ...DEPARTMENTS.filter(d => staff.some(m => m.department === d))]
+  const featuredStaff  = getFeatured()
+  const filteredStaff  = getByDepartment(activeDept)
+  const presentDepts   = ['All', ...DEPARTMENTS.filter(d => staff.some(m => m.department === d))]
 
   return (
     <>
@@ -31,10 +24,8 @@ export default function Staff() {
         image="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1920&q=80"
       />
 
-      {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
-
-      {/* ── FEATURED LEADERSHIP ─────────────────────────────────── */}
-      {featuredStaff.length > 0 && (
+      {/* FEATURED LEADERSHIP */}
+      {!loading && featuredStaff.length > 0 && (
         <section className="section-padding bg-navy">
           <div className="container-max">
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
@@ -66,37 +57,51 @@ export default function Staff() {
         </section>
       )}
 
-      {/* ── ALL STAFF ───────────────────────────────────────────── */}
+      {/* ALL STAFF */}
       <section className="section-padding bg-cream">
         <div className="container-max">
           <SectionTitle
             label="Our Educators"
             title="Meet the Full Team"
-            subtitle={`${staff.length} dedicated professionals shaping the future of education in Checheche.`}
+            subtitle={loading ? 'Loading staff…' : `${staff.length} dedicated professionals shaping the future of education in Checheche.`}
           />
 
           {/* Department filter tabs */}
-          <div className="flex flex-wrap gap-2 mb-10">
-            {presentDepts.map(dept => {
-              const count = dept === 'All' ? staff.length : staff.filter(m => m.department === dept).length
-              return (
-                <button
-                  key={dept}
-                  onClick={() => setActiveDept(dept)}
-                  className={`font-montserrat text-xs font-semibold uppercase tracking-wider px-4 py-2 rounded-full transition-all duration-200 ${
-                    activeDept === dept
-                      ? 'bg-navy text-white shadow-lg'
-                      : 'bg-white text-slate hover:bg-gold/10 hover:text-navy border border-gray-200'
-                  }`}
-                >
-                  {dept}{dept !== 'All' ? ` (${count})` : ''}
-                </button>
-              )
-            })}
-          </div>
+          {!loading && (
+            <div className="flex flex-wrap gap-2 mb-10">
+              {presentDepts.map(dept => {
+                const count = dept === 'All' ? staff.length : staff.filter(m => m.department === dept).length
+                return (
+                  <button
+                    key={dept}
+                    onClick={() => setActiveDept(dept)}
+                    className={`font-montserrat text-xs font-semibold uppercase tracking-wider px-4 py-2 rounded-full transition-all duration-200 ${
+                      activeDept === dept
+                        ? 'bg-navy text-white shadow-lg'
+                        : 'bg-white text-slate hover:bg-gold/10 hover:text-navy border border-gray-200'
+                    }`}
+                  >
+                    {dept}{dept !== 'All' ? ` (${count})` : ''}
+                  </button>
+                )
+              })}
+            </div>
+          )}
 
-          {/* Staff grid */}
-          {filteredStaff.length === 0 ? (
+          {/* Skeleton */}
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="bg-white rounded-2xl overflow-hidden border border-gray-100">
+                  <div className="h-52 bg-gray-100 animate-pulse" />
+                  <div className="p-4 space-y-2">
+                    <div className="h-4 bg-gray-100 animate-pulse rounded w-3/4" />
+                    <div className="h-3 bg-gray-100 animate-pulse rounded w-1/2" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : filteredStaff.length === 0 ? (
             <div className="text-center py-20 text-slate-light">
               <FaUsers className="text-5xl mx-auto mb-4 opacity-30" />
               <p>No staff members in this department yet.</p>
@@ -116,45 +121,6 @@ export default function Staff() {
               ))}
             </motion.div>
           )}
-        </div>
-      </section>
-
-      {/* ── ADMIN ───────────────────────────────────────────────── */}
-      <section className="py-10 bg-white border-t border-gray-100">
-        <div className="container-max">
-          <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
-            <AdminPIN />
-            {unlocked && (
-              <button
-                onClick={() => setShowAdmin(v => !v)}
-                className="flex items-center gap-2 bg-navy hover:bg-navy-light text-white font-montserrat text-xs font-semibold uppercase tracking-wider px-4 py-2 rounded-lg transition-colors"
-              >
-                <FaUsers className="text-sm" />
-                {showAdmin ? 'Close Panel' : 'Manage Staff'}
-                <FaChevronDown className={`text-xs transition-transform duration-300 ${showAdmin ? 'rotate-180' : ''}`} />
-              </button>
-            )}
-          </div>
-
-          <AnimatePresence>
-            {unlocked && showAdmin && (
-              <motion.div
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.25 }}
-              >
-                <StaffAdminPanel
-                  staff={staff}
-                  addStaff={addStaff}
-                  updateStaff={updateStaff}
-                  deleteStaff={deleteStaff}
-                  reorderStaff={reorderStaff}
-                  onToast={setToast}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
       </section>
     </>
