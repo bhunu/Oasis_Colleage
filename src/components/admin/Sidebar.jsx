@@ -1,18 +1,28 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { MdDashboard, MdArticle, MdEvent, MdPeople, MdPhotoLibrary, MdLogout } from 'react-icons/md'
+import { MdDashboard, MdArticle, MdEvent, MdPeople, MdPhotoLibrary, MdLogout, MdManageAccounts } from 'react-icons/md'
 import { FaGraduationCap } from 'react-icons/fa'
+import { useEffect, useState } from 'react'
+import { getUsers } from '../../firebase/users'
 import toast from 'react-hot-toast'
 
 const NAV = [
-  { to: '/admin',         icon: MdDashboard,    label: 'Dashboard' },
-  { to: '/admin/news',    icon: MdArticle,      label: 'News' },
-  { to: '/admin/events',  icon: MdEvent,        label: 'Events' },
-  { to: '/admin/staff',   icon: MdPeople,       label: 'Staff' },
-  { to: '/admin/gallery', icon: MdPhotoLibrary, label: 'Gallery' },
+  { to: '/admin',         icon: MdDashboard,      label: 'Dashboard' },
+  { to: '/admin/news',    icon: MdArticle,        label: 'News' },
+  { to: '/admin/events',  icon: MdEvent,          label: 'Events' },
+  { to: '/admin/staff',   icon: MdPeople,         label: 'Staff' },
+  { to: '/admin/gallery', icon: MdPhotoLibrary,   label: 'Gallery' },
+  { to: '/admin/users',   icon: MdManageAccounts, label: 'User Management', badge: true },
 ]
 
 export default function AdminSidebar({ open, onClose }) {
   const navigate = useNavigate()
+  const [pendingCount, setPendingCount] = useState(0)
+
+  useEffect(() => {
+    getUsers()
+      .then(users => setPendingCount(users.filter(u => !u.active).length))
+      .catch(() => {})
+  }, [])
 
   const handleLogout = () => {
     sessionStorage.removeItem('adminSession')
@@ -42,7 +52,7 @@ export default function AdminSidebar({ open, onClose }) {
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-0.5">
-          {NAV.map(({ to, icon: Icon, label }) => (
+          {NAV.map(({ to, icon: Icon, label, badge }) => (
             <NavLink
               key={to}
               to={to}
@@ -59,7 +69,12 @@ export default function AdminSidebar({ open, onClose }) {
               {({ isActive }) => (
                 <>
                   <Icon className={`text-lg shrink-0 ${isActive ? 'text-[#C9A84C]' : 'text-gray-500'}`} />
-                  {label}
+                  <span className="flex-1">{label}</span>
+                  {badge && pendingCount > 0 && (
+                    <span className="ml-auto bg-amber-500 text-white text-[9px] font-bold font-montserrat px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-tight">
+                      {pendingCount}
+                    </span>
+                  )}
                 </>
               )}
             </NavLink>

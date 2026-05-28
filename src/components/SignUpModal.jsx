@@ -2,14 +2,14 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   FaTimes, FaUser, FaEnvelope, FaLock, FaEye, FaEyeSlash,
-  FaUserTag, FaBook, FaIdCard, FaGraduationCap, FaSyncAlt,
+  FaUserTag, FaIdCard, FaGraduationCap, FaSyncAlt,
 } from 'react-icons/fa'
 import { addUser, adminExists } from '../firebase/users'
 import { hashPassword } from '../utils/hash'
 
 const FORMS       = ['Form 1', 'Form 2', 'Form 3', 'Form 4', 'Lower 6', 'Upper 6']
-const SUBJECTS    = ['Mathematics', 'English', 'Geography', 'History', 'Science', 'Shona', 'ICT', 'Commerce', 'Accounts', 'Other']
 const ADMIN_ROLES = ['admin', 'staff']
+const STAFF_ROLES = ['Student Admin', 'Teacher', 'Bursar', 'Secretary']
 
 const PORTAL_CONFIG = {
   'web-admin': {
@@ -24,7 +24,7 @@ const PORTAL_CONFIG = {
     heading:     'Staff Registration',
     subheading:  'Students Records · Academic Staff',
     credential:  'email',
-    extraFields: ['subject'],
+    extraFields: ['role'],
     btnClass:    'bg-emerald-500 hover:bg-emerald-400 text-white',
     ringClass:   'focus:border-emerald-400/60',
   },
@@ -47,7 +47,8 @@ function generateRegNum() {
 export default function SignUpModal({ portalKey, onClose }) {
   const cfg = PORTAL_CONFIG[portalKey] ?? PORTAL_CONFIG['student-portal']
 
-  const [form, setForm]             = useState({ name: '', credential: '', password: '', confirm: '', extra: portalKey === 'web-admin' ? 'admin' : '' })
+  const initialExtra = portalKey === 'web-admin' ? 'admin' : portalKey === 'students-records' ? 'Student Admin' : ''
+  const [form, setForm]             = useState({ name: '', credential: '', password: '', confirm: '', extra: initialExtra })
   const [showPass, setShowPass]     = useState(false)
   const [showConf, setShowConf]     = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -99,16 +100,19 @@ export default function SignUpModal({ portalKey, onClose }) {
 
     setSubmitting(true)
     try {
-      const roleMap = { 'web-admin': form.extra || 'staff', 'students-records': 'teacher', 'student-portal': 'student' }
+      const roleMap = {
+        'web-admin':        form.extra || 'staff',
+        'students-records': form.extra || 'Student Admin',
+        'student-portal':   'student',
+      }
       const payload = {
         name:     form.name,
         role:     roleMap[portalKey],
         password: await hashPassword(form.password),
         ...(cfg.credential === 'email'     ? { email:     form.credential } : {}),
         ...(cfg.credential === 'regNumber' ? { regNumber: form.credential } : {}),
-        ...(cfg.extraFields.includes('subject') ? { subject: form.extra } : {}),
-        ...(cfg.extraFields.includes('form')    ? { form:    form.extra } : {}),
-        active: true,
+        ...(cfg.extraFields.includes('form') ? { form: form.extra } : {}),
+        active: portalKey === 'web-admin',
       }
       await addUser(payload)
       setSuccess(true)
@@ -243,19 +247,9 @@ export default function SignUpModal({ portalKey, onClose }) {
                   <div className="relative">
                     <FaUserTag className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 text-sm pointer-events-none" />
                     <select value={form.extra} onChange={set('extra')} className={`${inputClass} pl-11`}>
-                      <option value="" className="bg-gray-900">Select role</option>
-                      {ADMIN_ROLES.map(r => <option key={r} value={r} className="bg-gray-900 capitalize">{r}</option>)}
-                    </select>
-                  </div>
-                )}
-
-                {/* Extra: subject */}
-                {cfg.extraFields.includes('subject') && (
-                  <div className="relative">
-                    <FaBook className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 text-sm pointer-events-none" />
-                    <select value={form.extra} onChange={set('extra')} className={`${inputClass} pl-11`}>
-                      <option value="" className="bg-gray-900">Select subject</option>
-                      {SUBJECTS.map(s => <option key={s} value={s} className="bg-gray-900">{s}</option>)}
+                      {(portalKey === 'students-records' ? STAFF_ROLES : ADMIN_ROLES).map(r => (
+                        <option key={r} value={r} className="bg-gray-900">{r}</option>
+                      ))}
                     </select>
                   </div>
                 )}

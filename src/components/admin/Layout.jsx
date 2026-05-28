@@ -7,6 +7,7 @@ import AdminNews    from '../../pages/admin/News'
 import AdminEvents  from '../../pages/admin/Events'
 import AdminStaff   from '../../pages/admin/Staff'
 import AdminGallery from '../../pages/admin/Gallery'
+import AdminUsers   from '../../pages/admin/Users'
 
 const TITLES = {
   '/admin':         'Dashboard',
@@ -14,6 +15,7 @@ const TITLES = {
   '/admin/events':  'Events Calendar',
   '/admin/staff':   'Staff Directory',
   '/admin/gallery': 'Photo Gallery',
+  '/admin/users':   'User Management',
 }
 
 export default function AdminLayout() {
@@ -35,6 +37,7 @@ export default function AdminLayout() {
             <Route path="/admin/events"  element={<AdminEvents />} />
             <Route path="/admin/staff"   element={<AdminStaff />} />
             <Route path="/admin/gallery" element={<AdminGallery />} />
+            <Route path="/admin/users"   element={<AdminUsers />} />
             <Route path="*"              element={<Navigate to="/admin" replace />} />
           </Routes>
         </main>

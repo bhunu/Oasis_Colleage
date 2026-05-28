@@ -103,11 +103,30 @@ export default function Login() {
         return
       }
 
-      // Web Admin → store session and go to admin dashboard
+      // Web Admin → verify role before granting session
       if (portalKey === 'web-admin') {
+        const webAdminRoles = ['admin', 'staff']
+        if (!webAdminRoles.includes(user.role)) {
+          setAuthError('Access denied. This portal is for Web Admins only.')
+          clearForm()
+          return
+        }
         sessionStorage.setItem('adminSession', JSON.stringify({ name: user.name, role: user.role, email: user.email ?? '' }))
         clearForm()
         navigate('/admin')
+        return
+      }
+
+      // students-records → only Student Admin role is permitted
+      if (portalKey === 'students-records') {
+        if (user.role !== 'Student Admin') {
+          setAuthError('Access denied. This portal is for Student Admins only.')
+          clearForm()
+          return
+        }
+        sessionStorage.setItem('studentsAdminSession', JSON.stringify({ name: user.name, role: user.role, email: user.email ?? '' }))
+        clearForm()
+        navigate('/dashboard')
         return
       }
 
