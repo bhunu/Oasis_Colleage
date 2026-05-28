@@ -7,6 +7,7 @@ import {
 } from 'react-icons/fa'
 import SignUpModal from '../components/SignUpModal'
 import { findUserByCredential } from '../firebase/users'
+import { hashPassword } from '../utils/hash'
 
 const PORTALS = {
   'web-admin': {
@@ -90,6 +91,14 @@ export default function Login() {
 
       if (!user.active) {
         setAuthError('Your account is not yet activated. Contact the administrator.')
+        clearForm()
+        return
+      }
+
+      // Verify password
+      const hashed = await hashPassword(form.password)
+      if (hashed !== user.password) {
+        setAuthError('Invalid credentials. Please try again.')
         clearForm()
         return
       }

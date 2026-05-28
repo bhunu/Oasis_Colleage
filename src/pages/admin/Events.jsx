@@ -1,16 +1,37 @@
 import { useEffect, useState } from 'react'
 import { MdAdd, MdEdit, MdDelete, MdClose, MdEvent } from 'react-icons/md'
 import toast from 'react-hot-toast'
-import { getEvents, addEvent, updateEvent, deleteEvent } from '../../firebase/events'
+import { getCalendarEvents, addCalendarEvent, updateCalendarEvent, deleteCalendarEvent } from '../../firebase/calendarEvents'
+import { CATEGORY_STYLES } from '../../constants/categories'
 
-const BLANK = { title: '', date: '', time: '', location: '', description: '', type: '' }
-const TYPES  = ['Academic', 'Sports', 'Cultural', 'Community', 'Holiday', 'Other']
+const BLANK = { title: '', date: '', endDate: '', time: '', location: '', description: '', category: 'academic' }
+
+const CATEGORIES = [
+  { value: 'academic',      label: 'Academic'      },
+  { value: 'sports',        label: 'Sports'        },
+  { value: 'sports-events', label: 'Sports Events' },
+  { value: 'cultural',      label: 'Cultural'      },
+  { value: 'admin',         label: 'Admin'         },
+  { value: 'holiday',       label: 'Holiday'       },
+]
 
 const inputCls = 'w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-[#C9A84C]/50 font-montserrat'
 const labelCls = 'text-[10px] font-semibold uppercase tracking-wider text-gray-400 font-montserrat block mb-1'
 
+function CategoryBadge({ category }) {
+  const s = CATEGORY_STYLES[category]
+  if (!s) return null
+  return (
+    <span className={`mt-2 inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium font-montserrat ${s.bg} ${s.text}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+      {s.label}
+    </span>
+  )
+}
+
 function EventCard({ item, onEdit, onDelete }) {
   const d = item.date ? new Date(item.date + 'T00:00') : null
+  const isMultiDay = item.endDate && item.endDate !== item.date
   return (
     <div className="bg-[#132140] rounded-xl border border-white/10 p-4">
       <div className="flex items-start justify-between gap-2 mb-3">
@@ -23,37 +44,42 @@ function EventCard({ item, onEdit, onDelete }) {
           </div>
         )}
         <div className="flex gap-1 ml-auto">
-          <button onClick={() => onEdit(item)}     className="p-1.5 rounded text-gray-500 hover:bg-white/5   hover:text-[#C9A84C] transition"><MdEdit   className="text-sm" /></button>
+          <button onClick={() => onEdit(item)}      className="p-1.5 rounded text-gray-500 hover:bg-white/5    hover:text-[#C9A84C] transition"><MdEdit   className="text-sm" /></button>
           <button onClick={() => onDelete(item.id)} className="p-1.5 rounded text-gray-500 hover:bg-red-900/30 hover:text-red-400   transition"><MdDelete className="text-sm" /></button>
         </div>
       </div>
       <p className="text-sm font-semibold text-gray-100 font-montserrat leading-tight">{item.title}</p>
-      {item.location && <p className="text-xs text-gray-500 mt-1 font-montserrat">{item.location}</p>}
-      {item.time     && <p className="text-xs text-gray-500 font-montserrat">{item.time}</p>}
-      {item.type     && (
-        <span className="mt-2 inline-block text-[10px] bg-[#C9A84C]/10 text-[#C9A84C] px-2 py-0.5 rounded-full font-medium font-montserrat">
-          {item.type}
-        </span>
-      )}
+      {item.location  && <p className="text-xs text-gray-500 mt-1 font-montserrat">{item.location}</p>}
+      {item.time      && <p className="text-xs text-gray-500 font-montserrat">{item.time}</p>}
+      {isMultiDay     && <p className="text-[10px] text-gray-600 font-montserrat mt-0.5">Until {item.endDate}</p>}
+      <CategoryBadge category={item.category} />
     </div>
   )
 }
 
 export default function AdminEvents() {
-  const [items, setItems] = useState([])
+  const [items, setItems]   = useState([])
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [open, setOpen] = useState(false)
+  const [saving, setSaving]   = useState(false)
+  const [open, setOpen]       = useState(false)
   const [editing, setEditing] = useState(null)
-  const [form, setForm] = useState(BLANK)
+  const [form, setForm]       = useState(BLANK)
 
-  const load = () => getEvents().then(setItems).finally(() => setLoading(false))
+  const load = () => getCalendarEvents().then(setItems).finally(() => setLoading(false))
   useEffect(() => { load() }, [])
 
   const openNew = () => { setEditing(null); setForm(BLANK); setOpen(true) }
   const openEdit = (item) => {
     setEditing(item)
-    setForm({ title: item.title ?? '', date: item.date ?? '', time: item.time ?? '', location: item.location ?? '', description: item.description ?? '', type: item.type ?? '' })
+    setForm({
+      title:       item.title       ?? '',
+      date:        item.date        ?? '',
+      endDate:     item.endDate     ?? '',
+      time:        item.time        ?? '',
+      location:    item.location    ?? '',
+      description: item.description ?? '',
+      category:    item.category    ?? 'academic',
+    })
     setOpen(true)
   }
   const closePanel = () => { setOpen(false); setEditing(null) }
@@ -62,9 +88,11 @@ export default function AdminEvents() {
     e.preventDefault()
     if (!form.title.trim() || !form.date) return toast.error('Title and date are required')
     setSaving(true)
+    // Store null for empty endDate so calendar multi-day logic works correctly
+    const payload = { ...form, endDate: form.endDate || null, time: form.time || null, location: form.location || null }
     try {
-      if (editing) { await updateEvent(editing.id, form); toast.success('Event updated') }
-      else         { await addEvent(form);                toast.success('Event added')   }
+      if (editing) { await updateCalendarEvent(editing.id, payload); toast.success('Event updated') }
+      else         { await addCalendarEvent(payload);                 toast.success('Event added')   }
       await load(); closePanel()
     } catch { toast.error('Failed to save event') }
     finally { setSaving(false) }
@@ -72,7 +100,7 @@ export default function AdminEvents() {
 
   const handleDelete = async (id) => {
     if (!confirm('Delete this event?')) return
-    try { await deleteEvent(id); toast.success('Event deleted'); setItems(p => p.filter(i => i.id !== id)) }
+    try { await deleteCalendarEvent(id); toast.success('Event deleted'); setItems(p => p.filter(i => i.id !== id)) }
     catch { toast.error('Failed to delete') }
   }
 
@@ -130,33 +158,43 @@ export default function AdminEvents() {
             <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-6 space-y-4">
               <div>
                 <label className={labelCls}>Title *</label>
-                <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} className={inputCls} />
+                <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} className={inputCls} placeholder="Event title" />
               </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className={labelCls}>Date *</label>
+                  <label className={labelCls}>Start Date *</label>
                   <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className={inputCls} />
                 </div>
                 <div>
-                  <label className={labelCls}>Time</label>
-                  <input type="time" value={form.time} onChange={e => setForm(f => ({ ...f, time: e.target.value }))} className={inputCls} />
+                  <label className={labelCls}>End Date</label>
+                  <input type="date" value={form.endDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))} className={inputCls} />
                 </div>
               </div>
-              <div>
-                <label className={labelCls}>Location</label>
-                <input value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} className={inputCls} />
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={labelCls}>Time</label>
+                  <input value={form.time} onChange={e => setForm(f => ({ ...f, time: e.target.value }))} className={inputCls} placeholder="e.g. 9:00 AM" />
+                </div>
+                <div>
+                  <label className={labelCls}>Location</label>
+                  <input value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} className={inputCls} placeholder="e.g. School Hall" />
+                </div>
               </div>
+
               <div>
-                <label className={labelCls}>Type</label>
-                <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))} className={inputCls}>
-                  <option value="">Select type</option>
-                  {TYPES.map(t => <option key={t}>{t}</option>)}
+                <label className={labelCls}>Category</label>
+                <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className={inputCls}>
+                  {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                 </select>
               </div>
+
               <div>
                 <label className={labelCls}>Description</label>
-                <textarea rows={4} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className={`${inputCls} resize-none`} />
+                <textarea rows={4} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className={`${inputCls} resize-none`} placeholder="Event description…" />
               </div>
+
               <button type="submit" disabled={saving}
                 className="w-full bg-[#C9A84C] text-[#0A1628] text-sm font-bold py-3 rounded-lg hover:bg-[#D4B96A] disabled:opacity-60 transition font-montserrat">
                 {saving ? 'Saving…' : editing ? 'Update Event' : 'Add Event'}

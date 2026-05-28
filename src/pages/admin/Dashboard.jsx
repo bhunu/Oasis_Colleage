@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { MdArticle, MdEvent, MdPeople, MdPhotoLibrary } from 'react-icons/md'
 import StatCard from '../../components/admin/StatCard'
 import { getNews } from '../../firebase/news'
-import { getEvents } from '../../firebase/events'
+import { getCalendarEvents } from '../../firebase/calendarEvents'
 import { getAdminStaff } from '../../firebase/staffAdmin'
 import { getGallery } from '../../firebase/gallery'
 
@@ -13,7 +13,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    Promise.all([getNews(), getEvents(), getAdminStaff(), getGallery()])
+    Promise.all([getNews(), getCalendarEvents(), getAdminStaff(), getGallery()])
       .then(([news, events, staff, gallery]) => {
         setCounts({ news: news.length, events: events.length, staff: staff.length, gallery: gallery.length })
         setRecentNews(news.slice(0, 5))

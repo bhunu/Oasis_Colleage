@@ -1,6 +1,11 @@
 import { initializeApp, cert } from 'firebase-admin/app'
 import { getFirestore, Timestamp } from 'firebase-admin/firestore'
 import { readFileSync } from 'fs'
+import { createHash } from 'crypto'
+
+function hashPwd(password) {
+  return createHash('md5').update(password).digest('hex')
+}
 
 const serviceAccount = JSON.parse(
   readFileSync(
@@ -23,6 +28,7 @@ async function clearCollection(collectionName) {
   console.log(`  🗑  Cleared ${snap.size} existing doc(s) from "${collectionName}"`)
 }
 
+// Always clears and re-seeds (for content collections)
 async function seed(collectionName, docs) {
   await clearCollection(collectionName)
   console.log(`  Seeding "${collectionName}"...`)
@@ -36,9 +42,77 @@ async function seed(collectionName, docs) {
   return results
 }
 
+// Only seeds if collection is empty — never overwrites existing user accounts
+async function seedIfEmpty(collectionName, docs) {
+  const snap = await db.collection(collectionName).limit(1).get()
+  if (!snap.empty) {
+    console.log(`  ℹ  "${collectionName}" already has data — skipping (preserving existing accounts)`)
+    const all = await db.collection(collectionName).get()
+    return all.docs.map(d => ({ id: d.id, ...d.data() }))
+  }
+  return seed(collectionName, docs)
+}
+
 // ─── Data ──────────────────────────────────────────────────────────────────
 
 const now = Timestamp.now()
+
+const newsArticles = [
+  {
+    title:    'Oasis Students Shine at 2025 Cambridge O-Level Results',
+    category: 'Achievements',
+    date:     '2026-05-12',
+    image:    'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=700&q=80',
+    summary:  'Oasis Private College celebrates another exceptional year of Cambridge O-Level results, with 95% of candidates achieving five or more passes including English and Mathematics.',
+    content:  'Oasis Private College is proud to announce outstanding results in the 2025 Cambridge O-Level examinations. Ninety-five percent of candidates achieved five or more passes including English Language and Mathematics — a record-breaking performance for the school.\n\nThree students achieved straight A* grades across nine subjects, earning full university scholarships. The school leadership commended both students and staff for their dedication throughout the year.',
+    createdAt: now,
+  },
+  {
+    title:    'Oasis Opens State-of-the-Art Computer Laboratory',
+    category: 'News',
+    date:     '2026-05-05',
+    image:    'https://images.unsplash.com/photo-1571260899304-425eee4c7efc?w=700&q=80',
+    summary:  'The school has officially commissioned a brand new 40-station computer laboratory, equipped with the latest hardware and high-speed internet access for all students.',
+    content:  'Oasis Private College officially opened its new 40-station computer laboratory on 5 May 2026. The facility is equipped with modern workstations, high-speed fibre internet, and licensed software including the full Microsoft Office suite and coding environments for ICT and Computer Science classes.\n\nThe laboratory will serve students from Form 1 through Upper 6 and will be available for supervised self-study sessions in the evenings.',
+    createdAt: now,
+  },
+  {
+    title:    'Annual Sports Day 2026 — A Day of Champions',
+    category: 'Events',
+    date:     '2026-04-28',
+    image:    'https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=700&q=80',
+    summary:  'Over 500 students, parents, and community members gathered for Oasis Annual Sports Day 2026. Zambezi House claimed the overall trophy in a thrilling final day of competition.',
+    content:  'The 2026 Oasis Annual Sports Day was a spectacular showcase of athletic talent and school spirit. Over 500 students, parents, and community members packed the school sports grounds on 28 April.\n\nZambezi House claimed the overall championship trophy with a points tally of 342, narrowly edging out Limpopo House. Star performer Tendai Moyo (Form 4) set a new school record in the 100m sprint with a time of 11.2 seconds.',
+    createdAt: now,
+  },
+  {
+    title:    'Debate Team Claims Regional Championship',
+    category: 'Achievements',
+    date:     '2026-04-20',
+    image:    'https://images.unsplash.com/photo-1577896851231-70ef18881754?w=700&q=80',
+    summary:  'The Oasis Debate Team has won the Manicaland Regional Schools Debate Championship for the second consecutive year, defeating 14 other schools in the final.',
+    content:  'For the second consecutive year, the Oasis Debate Team has claimed the Manicaland Regional Schools Debate Championship. The team of six students, captained by Chiedza Nhamo (Lower 6), defeated 14 competing schools in a series of debates held over two weeks.\n\nThe winning motion was "Artificial Intelligence will do more harm than good in African schools." Oasis argued the proposition with exceptional research and oratory, winning unanimous judge approval in the final.',
+    createdAt: now,
+  },
+  {
+    title:    'Open Day 2026 Welcomes Over 200 Prospective Families',
+    category: 'Events',
+    date:     '2026-04-10',
+    image:    'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=700&q=80',
+    summary:  "Oasis Private College's annual Open Day drew a record 200+ prospective families. Visitors toured the campus, attended subject demos, and met the leadership team.",
+    content:  "The 2026 Oasis Open Day set a new attendance record with over 200 prospective families visiting the campus. Families toured classrooms, the new computer lab, the library, and sports facilities.\n\nDepartment heads ran interactive subject demonstrations, and the Student Council ambassadors guided tours. Applications for the 2027 academic year are now open. Visit the Admissions page for details.",
+    createdAt: now,
+  },
+  {
+    title:    'Oasis Launches New STEM Innovation Programme',
+    category: 'Academic',
+    date:     '2026-04-02',
+    image:    'https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=700&q=80',
+    summary:  'Oasis introduces a groundbreaking STEM Innovation Programme for Forms 2 and 3, providing hands-on experience in robotics, coding, and design thinking.',
+    content:  'Oasis Private College has launched a new STEM Innovation Programme targeting Form 2 and Form 3 students. The programme covers robotics fundamentals, Python programming, and design thinking methodology.\n\nPartnering with TechZim Education, students will complete three modules over the term, culminating in a school-wide Innovation Showcase where teams present working prototypes. The programme runs every Wednesday afternoon from 2:00 PM to 4:00 PM in the new computer laboratory.',
+    createdAt: now,
+  },
+]
 
 const Y = 2026
 function d(year, month, day) {
@@ -68,10 +142,11 @@ const calendarEvents = [
 const users = [
   {
     name:      'Mr. T. Mabhunu',
-    email:     'director@oasiscollege.ac.zw',
+    email:     'mabhunure@gmail.com',
     role:      'admin',
     title:     'School Director',
     phone:     '+263 77 123 4567',
+    password:  hashPwd('Admin@1234'),
     active:    true,
     createdAt: now,
   },
@@ -81,6 +156,7 @@ const users = [
     role:      'teacher',
     title:     'Senior Geography Teacher',
     subject:   'Geography',
+    password:  hashPwd('Teacher@123'),
     active:    true,
     createdAt: now,
   },
@@ -90,6 +166,7 @@ const users = [
     role:      'teacher',
     title:     'Mathematics Teacher',
     subject:   'Mathematics',
+    password:  hashPwd('Teacher@123'),
     active:    true,
     createdAt: now,
   },
@@ -99,6 +176,7 @@ const users = [
     role:      'teacher',
     title:     'English Language Teacher',
     subject:   'English',
+    password:  hashPwd('Teacher@123'),
     active:    true,
     createdAt: now,
   },
@@ -108,6 +186,7 @@ const users = [
     role:          'student',
     form:          'Form 4',
     admissionYear: 2022,
+    password:      hashPwd('Student@123'),
     active:        true,
     createdAt:     now,
   },
@@ -117,6 +196,7 @@ const users = [
     role:          'student',
     form:          'Lower 6',
     admissionYear: 2021,
+    password:      hashPwd('Student@123'),
     active:        true,
     createdAt:     now,
   },
@@ -126,6 +206,7 @@ const users = [
     role:          'student',
     form:          'Form 1',
     admissionYear: 2025,
+    password:      hashPwd('Student@123'),
     active:        true,
     createdAt:     now,
   },
@@ -240,7 +321,7 @@ const buildComments = (seededPosts, seededUsers) => {
 ;(async () => {
   try {
     console.log('\nusers:')
-    const seededUsers = await seed('users', users)
+    const seededUsers = await seedIfEmpty('users', users)
     console.log('\nposts:')
     const seededPosts = await seed('posts', posts)
     console.log('\ncomments:')
@@ -248,12 +329,15 @@ const buildComments = (seededPosts, seededUsers) => {
     await seed('comments', comments)
     console.log('\ncalendarEvents:')
     const seededCalendar = await seed('calendarEvents', calendarEvents)
+    console.log('\nnews:')
+    const seededNews = await seed('news', newsArticles)
 
     console.log('\n✅  Firestore seeded successfully!')
     console.log(`   users:          ${seededUsers.length} documents`)
     console.log(`   posts:          ${seededPosts.length} documents`)
     console.log(`   comments:       ${comments.length} documents`)
     console.log(`   calendarEvents: ${seededCalendar.length} documents`)
+    console.log(`   news:           ${seededNews.length} documents`)
     process.exit(0)
   } catch (err) {
     console.error('\n❌  Seeding failed:', err.message)

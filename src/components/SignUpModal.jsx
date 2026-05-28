@@ -5,6 +5,7 @@ import {
   FaUserTag, FaBook, FaIdCard, FaGraduationCap, FaSyncAlt,
 } from 'react-icons/fa'
 import { addUser, adminExists } from '../firebase/users'
+import { hashPassword } from '../utils/hash'
 
 const FORMS       = ['Form 1', 'Form 2', 'Form 3', 'Form 4', 'Lower 6', 'Upper 6']
 const SUBJECTS    = ['Mathematics', 'English', 'Geography', 'History', 'Science', 'Shona', 'ICT', 'Commerce', 'Accounts', 'Other']
@@ -100,8 +101,9 @@ export default function SignUpModal({ portalKey, onClose }) {
     try {
       const roleMap = { 'web-admin': form.extra || 'staff', 'students-records': 'teacher', 'student-portal': 'student' }
       const payload = {
-        name: form.name,
-        role: roleMap[portalKey],
+        name:     form.name,
+        role:     roleMap[portalKey],
+        password: await hashPassword(form.password),
         ...(cfg.credential === 'email'     ? { email:     form.credential } : {}),
         ...(cfg.credential === 'regNumber' ? { regNumber: form.credential } : {}),
         ...(cfg.extraFields.includes('subject') ? { subject: form.extra } : {}),
