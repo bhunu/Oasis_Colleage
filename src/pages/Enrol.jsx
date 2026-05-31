@@ -3,10 +3,16 @@ import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
 import { db } from '../firebase/config'
 import { addStudent } from '../firebase/students'
 import { generateRegNumber } from '../utils/generateRegNumber'
+import { sendOtpEmail } from '../utils/sendOtpEmail'
 import BulkImport from '../components/BulkImport'
 import toast from 'react-hot-toast'
-import { MdCheckCircle, MdContentCopy, MdPersonAdd, MdUploadFile } from 'react-icons/md'
+import { MdCheckCircle, MdContentCopy, MdPersonAdd, MdUploadFile, MdEmail } from 'react-icons/md'
 import { FaGraduationCap } from 'react-icons/fa'
+
+function generateOTP(len = 8) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  return Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+}
 
 const CLASSES = [
   'Form 1A', 'Form 1B', 'Form 1C',
@@ -22,6 +28,7 @@ const EMPTY_FORM = {
   dateOfBirth: '',
   gender: '',
   class: '',
+  studentEmail: '',
   guardianName: '',
   guardianPhone: '',
   guardianEmail: '',
@@ -64,6 +71,9 @@ function validate(data) {
     errors.guardianEmail = 'Email is required.'
   else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.guardianEmail.trim()))
     errors.guardianEmail = 'Enter a valid email address.'
+
+  if (data.studentEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.studentEmail.trim()))
+    errors.studentEmail = 'Enter a valid student email address.'
 
   if (!data.homeAddress.trim())
     errors.homeAddress = 'Home address is required.'
@@ -170,14 +180,17 @@ export default function Enrol() {
 
     setLoading(true)
     try {
-      const reg_number = await generateRegNumber()
+      const reg_number   = await generateRegNumber()
+      const fullName     = formData.fullName.trim()
+      const studentEmail = formData.studentEmail.trim().toLowerCase()
 
-      await addStudent({
+      const studentDocRef = await addStudent({
         reg_number,
-        fullName:      formData.fullName.trim(),
+        fullName,
         dateOfBirth:   formData.dateOfBirth,
         gender:        formData.gender,
         class:         formData.class,
+        ...(studentEmail ? { studentEmail } : {}),
         guardianName:  formData.guardianName.trim(),
         guardianPhone: formData.guardianPhone.trim(),
         guardianEmail: formData.guardianEmail.trim().toLowerCase(),
@@ -188,7 +201,7 @@ export default function Enrol() {
 
       await addDoc(collection(db, 'feeAccounts'), {
         reg_number,
-        studentName:  formData.fullName.trim(),
+        studentName:  fullName,
         class:        formData.class,
         term:         '2-2025',
         status:       'open',
@@ -199,10 +212,42 @@ export default function Enrol() {
         createdAt:    serverTimestamp(),
       })
 
-      setEnrolled({ regNumber: reg_number, name: formData.fullName.trim(), class: formData.class })
+      let otpSentToEmail = false
+
+      if (studentEmail) {
+        const otp        = generateOTP(8)
+        const expiryHrs  = 24
+        const expiresAt  = new Date(Date.now() + expiryHrs * 3600 * 1000)
+
+        await addDoc(collection(db, 'users'), {
+          studentId:        studentDocRef.id,
+          name:             fullName,
+          email:            studentEmail,
+          role:             'student',
+          active:           false,
+          uid:              null,
+          hasSetupPassword: false,
+          otpCode:          otp,
+          otpExpiresAt:     expiresAt,
+          otpUsed:          false,
+          createdAt:        serverTimestamp(),
+          updatedAt:        serverTimestamp(),
+        })
+
+        try {
+          await sendOtpEmail({ studentName: fullName, email: studentEmail, regNumber: reg_number, otpCode: otp, expiryHours: expiryHrs })
+          otpSentToEmail = true
+          toast.success(`OTP sent to ${studentEmail}`)
+        } catch (emailErr) {
+          console.error('OTP email failed:', emailErr)
+          toast.error('Student enrolled but OTP email could not be sent. Check EmailJS config.')
+        }
+      }
+
+      setEnrolled({ regNumber: reg_number, name: fullName, class: formData.class, studentEmail: studentEmail || null, otpSentToEmail })
       setFormData(EMPTY_FORM)
       setErrors({})
-      toast.success(`${formData.fullName.trim()} enrolled successfully!`)
+      toast.success(`${fullName} enrolled successfully!`)
     } catch (err) {
       console.error('Enrol error:', err)
       toast.error('Failed to enrol student. Please try again.')
@@ -220,9 +265,21 @@ export default function Enrol() {
             <MdCheckCircle className="text-emerald-400 text-3xl" />
           </div>
           <h2 className="font-playfair text-2xl font-bold text-white mb-1">Student Enrolled!</h2>
-          <p className="font-montserrat text-gray-500 text-sm mb-8">
+          <p className="font-montserrat text-gray-500 text-sm mb-4">
             The student has been successfully added to the records system.
           </p>
+
+          {enrolled.otpSentToEmail && (
+            <div className="flex items-start gap-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-4 py-3 mb-6 text-left">
+              <MdEmail className="text-emerald-400 text-lg mt-0.5 shrink-0" />
+              <div>
+                <p className="font-montserrat text-emerald-300 text-xs font-semibold">OTP Sent via Email</p>
+                <p className="font-montserrat text-gray-400 text-xs mt-0.5">
+                  Login credentials were sent to <span className="text-white">{enrolled.studentEmail}</span>
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="bg-[#C9A84C]/10 border border-[#C9A84C]/30 rounded-xl px-6 py-6 mb-6 text-left">
             <div className="flex items-center gap-2 justify-center mb-4 pb-4 border-b border-[#C9A84C]/20">
@@ -336,6 +393,15 @@ export default function Enrol() {
                     {CLASSES.map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
                   {errors.class && <p className={eCls}>{errors.class}</p>}
+                </div>
+                <div className="col-span-2">
+                  <label className={lCls}>
+                    Student Personal Email
+                    <span className="normal-case text-gray-700 tracking-normal font-normal ml-2">(optional — OTP login code will be sent here)</span>
+                  </label>
+                  <input type="email" name="studentEmail" value={formData.studentEmail} onChange={handleChange}
+                    placeholder="e.g. student@gmail.com" className={iCls(errors.studentEmail)} />
+                  {errors.studentEmail && <p className={eCls}>{errors.studentEmail}</p>}
                 </div>
               </div>
             </section>

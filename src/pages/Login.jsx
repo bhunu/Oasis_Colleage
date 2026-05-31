@@ -1,13 +1,23 @@
 import { useSearchParams, Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   FaGraduationCap, FaLaptopCode, FaClipboardList, FaUserGraduate,
   FaEye, FaEyeSlash, FaLock, FaEnvelope, FaArrowLeft, FaShieldAlt,
+  FaMoneyCheckAlt,
 } from 'react-icons/fa'
 import SignUpModal from '../components/SignUpModal'
 import { findUserByCredential } from '../firebase/users'
 import { hashPassword } from '../utils/hash'
+import {
+  signInWithEmailAndPassword, signOut,
+  createUserWithEmailAndPassword,
+} from 'firebase/auth'
+import { doc, getDoc, setDoc, getDocs, collection, query, where, addDoc, updateDoc, serverTimestamp, limit } from 'firebase/firestore'
+import { auth, db } from '../firebase/config'
+import { checkLockStatus, recordFailedAttempt, resetAttempts } from '../utils/loginSecurity'
+import { logSecurityEvent } from '../utils/logSecurityEvent'
+import { initStudentSession } from '../hooks/useStudentSessionGuard'
 
 const PORTALS = {
   'web-admin': {
@@ -46,17 +56,44 @@ const PORTALS = {
     orb1: 'bg-gold',
     orb2: 'bg-yellow-600',
   },
+  'bursar': {
+    label: 'School Bursar',
+    icon: FaMoneyCheckAlt,
+    description: 'Fee collections, expenses & financial reports',
+    gradient: 'from-[#032e22] via-[#04382a] to-[#0A1628]',
+    accentBg: 'bg-teal-600/15',
+    accentBorder: 'border-teal-500/30',
+    accentText: 'text-teal-400',
+    badgeClass: 'bg-teal-600/20 text-teal-300 border-teal-500/30',
+    orb1: 'bg-teal-600',
+    orb2: 'bg-emerald-700',
+  },
 }
 
 const ALL_PORTALS = [
   { key: 'web-admin',        ...PORTALS['web-admin'] },
   { key: 'students-records', ...PORTALS['students-records'] },
   { key: 'student-portal',   ...PORTALS['student-portal'] },
+  { key: 'bursar',           ...PORTALS['bursar'] },
 ]
 
 const fadeLeft  = { initial: { opacity: 0, x: -40 }, animate: { opacity: 1, x: 0 } }
 const fadeRight = { initial: { opacity: 0, x:  40 }, animate: { opacity: 1, x: 0 } }
 const fadeUp    = { initial: { opacity: 0, y:  24 }, animate: { opacity: 1, y: 0 } }
+
+/** Format ms remaining as "mm:ss" */
+function formatCountdown(ms) {
+  if (ms <= 0) return '0:00'
+  const m = Math.floor(ms / 60000)
+  const s = Math.floor((ms % 60000) / 1000)
+  return `${m}:${String(s).padStart(2, '0')}`
+}
+
+/** Returns the error string for remaining attempt count */
+function attemptsMessage(remaining) {
+  if (remaining <= 0) return 'Account locked for 30 minutes due to multiple failed login attempts.'
+  return `Incorrect credentials. ${remaining} attempt${remaining !== 1 ? 's' : ''} remaining.`
+}
 
 export default function Login() {
   const [searchParams] = useSearchParams()
@@ -66,26 +103,157 @@ export default function Login() {
 
   const navigate = useNavigate()
 
-  const [showPass, setShowPass]     = useState(false)
-  const [form, setForm]             = useState({ credential: '', password: '' })
-  const [showSignUp, setShowSignUp] = useState(false)
-  const [authError, setAuthError]   = useState('')
-  const [loading, setLoading]       = useState(false)
+  const [showPass,    setShowPass]    = useState(false)
+  const [form,        setForm]        = useState({ credential: '', password: '' })
+  const [showSignUp,  setShowSignUp]  = useState(false)
+  const [authError,   setAuthError]   = useState('')
+  const [loading,     setLoading]     = useState(false)
+  const [useOTP,      setUseOTP]      = useState(false)
+
+  // ── Security: lockout state ──────────────────────────────────────────────
+  const [lockInfo,   setLockInfo]   = useState(null)   // { lockedUntil: Date }
+  const [countdown,  setCountdown]  = useState(null)   // "mm:ss" string
+
+  // Countdown ticker
+  useEffect(() => {
+    if (!lockInfo?.lockedUntil) { setCountdown(null); return }
+    const tick = () => {
+      const rem = lockInfo.lockedUntil - Date.now()
+      if (rem <= 0) { setCountdown(null); setLockInfo(null); return }
+      setCountdown(formatCountdown(rem))
+    }
+    tick()
+    const t = setInterval(tick, 1000)
+    return () => clearInterval(t)
+  }, [lockInfo?.lockedUntil])
+
+  // Clear lock when portal or credential changes
+  useEffect(() => { setLockInfo(null); setAuthError('') }, [portalKey])
 
   const clearForm = () => setForm({ credential: '', password: '' })
+
+  // ── Shared fail handler ──────────────────────────────────────────────────
+  const handleFail = async (identifier, msg) => {
+    const result = await recordFailedAttempt(identifier, portalKey)
+    if (result.locked) {
+      setLockInfo({ lockedUntil: result.lockedUntil })
+      setAuthError('Account locked for 30 minutes due to multiple failed login attempts.')
+    } else {
+      setAuthError(msg ?? attemptsMessage(result.remaining))
+    }
+    clearForm()
+  }
+
+  // ── Student OTP first-time login ─────────────────────────────────────────
+  const handleStudentOTP = async () => {
+    const regNum = form.credential.trim().toUpperCase()
+    const otp    = form.password.trim().toUpperCase()
+    if (!regNum || !otp) return setAuthError('Enter your student ID and OTP code.')
+
+    try {
+      const snap = await getDocs(
+        query(collection(db, 'users'), where('studentId', '==', regNum), where('role', '==', 'student'), where('otpUsed', '==', false), limit(1))
+      )
+      if (snap.empty) {
+        await handleFail(regNum, 'No active OTP found for this student ID. Ask your admin to generate one.')
+        return
+      }
+      const otpDoc  = snap.docs[0]
+      const otpData = otpDoc.data()
+
+      if (otpData.otpCode !== otp) {
+        await handleFail(regNum, null) // uses attempts-remaining message
+        return
+      }
+      const expires = otpData.otpExpiresAt?.toDate ? otpData.otpExpiresAt.toDate() : new Date(otpData.otpExpiresAt)
+      if (new Date() > expires) {
+        await handleFail(regNum, 'This OTP has expired. Ask your admin to generate a new one.')
+        return
+      }
+
+      const syntheticEmail = `${regNum.toLowerCase().replace(/[^a-z0-9]/g, '')}@oasis.student`
+      const tempPass       = `OTP_${otp}_${regNum}`
+      const cred = await createUserWithEmailAndPassword(auth, syntheticEmail, tempPass)
+
+      const existingSnap = await getDoc(doc(db, 'users', cred.user.uid))
+      if (!existingSnap.exists()) {
+        await setDoc(doc(db, 'users', cred.user.uid), {
+          uid:              cred.user.uid,
+          studentId:        regNum,
+          role:             'student',
+          hasSetupPassword: false,
+          createdAt:        serverTimestamp(),
+          updatedAt:        serverTimestamp(),
+        })
+      }
+
+      await updateDoc(otpDoc.ref, { otpUsed: true, uid: cred.user.uid, updatedAt: serverTimestamp() })
+      await initStudentSession(cred.user.uid).catch(() => {})
+      await resetAttempts(regNum, portalKey).catch(() => {})
+      clearForm()
+      navigate('/student/setup-password')
+    } catch (err) {
+      await signOut(auth).catch(() => {})
+      if (err.code === 'auth/email-already-in-use') {
+        setAuthError('This student already has a portal account. Use "Returning student" login below.')
+      } else {
+        setAuthError('Something went wrong. Please try again.')
+      }
+      clearForm()
+    }
+  }
+
+  // ── Student password returning login ─────────────────────────────────────
+  const handleStudentPassword = async () => {
+    const regNum = form.credential.trim().toUpperCase()
+    const pass   = form.password
+    if (!regNum || !pass) return setAuthError('Enter your student ID and password.')
+    try {
+      const syntheticEmail = `${regNum.toLowerCase().replace(/[^a-z0-9]/g, '')}@oasis.student`
+      const cred = await signInWithEmailAndPassword(auth, syntheticEmail, pass)
+      await initStudentSession(cred.user.uid).catch(() => {})
+      await resetAttempts(regNum, portalKey).catch(() => {})
+      clearForm()
+      navigate('/student/dashboard')
+    } catch {
+      await signOut(auth).catch(() => {})
+      await handleFail(regNum, null)
+    }
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setAuthError('')
+
+    // Block if account is locked
+    if (lockInfo) return
+
     setLoading(true)
+    const identifier = form.credential.trim()
 
     try {
-      const field = portalKey === 'student-portal' ? 'regNumber' : 'email'
-      const user  = await findUserByCredential(field, form.credential.trim())
+      // Pre-auth lockout check
+      const lockCheck = await checkLockStatus(identifier, portalKey)
+      if (lockCheck.locked) {
+        setLockInfo({ lockedUntil: lockCheck.lockedUntil })
+        setAuthError('Account is temporarily locked. Try again after the countdown.')
+        return
+      }
+
+      /* ── Student portal → Firebase Auth path ── */
+      if (portalKey === 'student-portal') {
+        if (useOTP) {
+          await handleStudentOTP()
+        } else {
+          await handleStudentPassword()
+        }
+        return
+      }
+
+      const user = await findUserByCredential('email', identifier)
 
       if (!user) {
-        setAuthError('Invalid credentials. Please try again.')
-        clearForm()
+        await handleFail(identifier, null)
         return
       }
 
@@ -95,42 +263,77 @@ export default function Login() {
         return
       }
 
-      // Verify password
       const hashed = await hashPassword(form.password)
       if (hashed !== user.password) {
-        setAuthError('Invalid credentials. Please try again.')
-        clearForm()
+        await handleFail(identifier, null)
         return
       }
 
-      // Web Admin → verify role before granting session
+      /* Web Admin */
       if (portalKey === 'web-admin') {
         const webAdminRoles = ['admin', 'staff']
         if (!webAdminRoles.includes(user.role)) {
+          await logSecurityEvent({ identifier, action: 'WRONG_ROLE_ACCESS', attemptedRole: 'web_admin', actualRole: user.role })
           setAuthError('Access denied. This portal is for Web Admins only.')
           clearForm()
           return
         }
+        await resetAttempts(identifier, portalKey).catch(() => {})
         sessionStorage.setItem('adminSession', JSON.stringify({ name: user.name, role: user.role, email: user.email ?? '' }))
         clearForm()
         navigate('/admin')
         return
       }
 
-      // students-records → only Student Admin role is permitted
+      /* Students Records */
       if (portalKey === 'students-records') {
         if (user.role !== 'Student Admin') {
+          await logSecurityEvent({ identifier, action: 'WRONG_ROLE_ACCESS', attemptedRole: 'student_records_admin', actualRole: user.role })
           setAuthError('Access denied. This portal is for Student Admins only.')
           clearForm()
           return
         }
+        await resetAttempts(identifier, portalKey).catch(() => {})
         sessionStorage.setItem('studentsAdminSession', JSON.stringify({ name: user.name, role: user.role, email: user.email ?? '' }))
         clearForm()
         navigate('/dashboard')
         return
       }
 
-      // Other portals → go to school website home
+      /* Bursar */
+      if (portalKey === 'bursar') {
+        try {
+          const cred     = await signInWithEmailAndPassword(auth, identifier, form.password)
+          const userSnap = await getDoc(doc(db, 'users', cred.user.uid))
+          if (!userSnap.exists() || userSnap.data().role !== 'bursar') {
+            await logSecurityEvent({ uid: cred.user.uid, identifier, action: 'WRONG_ROLE_ACCESS', attemptedRole: 'bursar', actualRole: userSnap.exists() ? userSnap.data().role : 'none' })
+            await signOut(auth)
+            setAuthError('Access denied. This portal is for the School Bursar only.')
+            clearForm()
+            return
+          }
+          const data = userSnap.data()
+          await resetAttempts(identifier, portalKey).catch(() => {})
+          sessionStorage.setItem('bursarSession', JSON.stringify({
+            name:  data.name  || cred.user.displayName || 'Bursar',
+            role:  'bursar',
+            email: data.email || cred.user.email || '',
+            uid:   cred.user.uid,
+          }))
+          clearForm()
+          navigate('/bursar/dashboard')
+        } catch (err) {
+          await signOut(auth).catch(() => {})
+          if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
+            await handleFail(identifier, null)
+          } else {
+            setAuthError('Something went wrong. Please try again.')
+          }
+          clearForm()
+        }
+        return
+      }
+
       clearForm()
       navigate('/')
     } catch (err) {
@@ -141,6 +344,8 @@ export default function Login() {
       setLoading(false)
     }
   }
+
+  const isLocked = !!lockInfo
 
   return (
     <div className="min-h-screen bg-navy flex overflow-hidden">
@@ -267,6 +472,27 @@ export default function Login() {
             </p>
           </motion.div>
 
+          {/* Student portal OTP toggle */}
+          {portalKey === 'student-portal' && (
+            <motion.div {...fadeUp} transition={{ delay: 0.3, duration: 0.4 }} className="flex bg-white/5 border border-white/10 rounded-xl p-1 mb-1">
+              {[
+                { label: 'Returning student',  value: false },
+                { label: 'First time (OTP)',   value: true  },
+              ].map(({ label, value }) => (
+                <button
+                  key={String(value)}
+                  type="button"
+                  onClick={() => { setUseOTP(value); setAuthError(''); clearForm() }}
+                  className={`flex-1 py-2 rounded-lg text-xs font-semibold font-montserrat transition-all ${
+                    useOTP === value ? 'bg-[#C9A84C]/15 text-[#C9A84C]' : 'text-gray-500 hover:text-gray-300'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </motion.div>
+          )}
+
           <motion.form
             {...fadeUp}
             transition={{ delay: 0.32, duration: 0.45 }}
@@ -276,36 +502,37 @@ export default function Login() {
             {/* Credential field */}
             <div>
               <label className="font-montserrat text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-500 mb-2 block">
-                {portalKey === 'student-portal' ? 'Registration Number' : 'Email'}
+                {portalKey === 'student-portal' ? 'Student Registration Number' : 'Email'}
               </label>
               <div className="relative">
                 <FaEnvelope className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 text-sm pointer-events-none" />
                 <input
-                  type="text"
+                  type={portalKey === 'bursar' ? 'email' : 'text'}
                   value={form.credential}
                   onChange={e => setForm(f => ({ ...f, credential: e.target.value }))}
-                  placeholder={portalKey === 'student-portal' ? 'e.g. R261234' : 'you@oasiscollege.ac.zw'}
+                  placeholder={portalKey === 'student-portal' ? 'e.g. OC-2025-1248' : 'you@oasiscollege.ac.zw'}
                   autoComplete="username"
-                  className={`w-full bg-white/5 border border-white/10 focus:border-opacity-60 focus:outline-none rounded-xl pl-11 pr-4 py-3.5 text-white font-montserrat text-sm placeholder-gray-700 transition-all focus:${portal.accentBorder} focus:ring-1 focus:ring-current`}
-                  style={{ '--tw-ring-color': 'transparent' }}
+                  disabled={isLocked}
+                  className={`w-full bg-white/5 border border-white/10 focus:border-opacity-60 focus:outline-none rounded-xl pl-11 pr-4 py-3.5 text-white font-montserrat text-sm placeholder-gray-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
                 />
               </div>
             </div>
 
-            {/* Password field */}
+            {/* Password / OTP field */}
             <div>
               <label className="font-montserrat text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-500 mb-2 block">
-                Password
+                {portalKey === 'student-portal' && useOTP ? 'One-Time Passcode (OTP)' : 'Password'}
               </label>
               <div className="relative">
                 <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 text-sm pointer-events-none" />
                 <input
-                  type={showPass ? 'text' : 'password'}
+                  type={portalKey === 'student-portal' && useOTP ? 'text' : showPass ? 'text' : 'password'}
                   value={form.password}
                   onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                  placeholder="••••••••••"
-                  autoComplete="current-password"
-                  className="w-full bg-white/5 border border-white/10 focus:border-gold/50 focus:outline-none rounded-xl pl-11 pr-12 py-3.5 text-white font-montserrat text-sm placeholder-gray-700 transition-all"
+                  placeholder={portalKey === 'student-portal' && useOTP ? 'e.g. ABCD1234' : '••••••••••'}
+                  autoComplete={portalKey === 'student-portal' && useOTP ? 'one-time-code' : 'current-password'}
+                  disabled={isLocked}
+                  className="w-full bg-white/5 border border-white/10 focus:border-gold/50 focus:outline-none rounded-xl pl-11 pr-12 py-3.5 text-white font-montserrat text-sm placeholder-gray-700 transition-all tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <button
                   type="button"
@@ -328,36 +555,49 @@ export default function Login() {
                 <button type="button" className="font-montserrat text-xs text-gold hover:text-yellow-300 transition-colors">
                   Forgot password?
                 </button>
-                <span className="text-gray-700 text-xs">·</span>
-                <button
-                  type="button"
-                  onClick={() => setShowSignUp(true)}
-                  className="font-montserrat text-xs text-gray-400 hover:text-white transition-colors"
-                >
-                  Sign up
-                </button>
+                {portalKey !== 'student-portal' && (
+                  <>
+                    <span className="text-gray-700 text-xs">·</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowSignUp(true)}
+                      className="font-montserrat text-xs text-gray-400 hover:text-white transition-colors"
+                    >
+                      Sign up
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 
-            {/* Error message */}
-            {authError && (
+            {/* Error / lockout message */}
+            {(isLocked || authError) && (
               <motion.div
                 initial={{ opacity: 0, y: -6 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-red-500/10 border border-red-500/30 text-red-300 font-montserrat text-xs px-4 py-3 rounded-xl"
+                className={`border font-montserrat text-xs px-4 py-3 rounded-xl ${
+                  isLocked
+                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                    : 'bg-red-500/10 border-red-500/30 text-red-300'
+                }`}
               >
-                {authError}
+                {isLocked
+                  ? countdown
+                    ? `Account temporarily locked. Try again in ${countdown}.`
+                    : 'Account unlocked. You may try again.'
+                  : authError
+                }
               </motion.div>
             )}
 
             {/* Submit */}
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || isLocked}
               className="mt-3 bg-gold hover:bg-yellow-400 disabled:opacity-60 text-navy font-montserrat font-bold text-xs uppercase tracking-[0.12em] py-4 rounded-xl shadow-lg shadow-gold/20 hover:shadow-gold/40 transition-all duration-300 flex items-center justify-center gap-2"
             >
               <FaShieldAlt />
-              {loading ? 'Signing in…' : `Sign In to ${portal.label}`}
+              {loading ? 'Signing in…' : isLocked ? `Locked — ${countdown ?? '…'}` : `Sign In to ${portal.label}`}
             </button>
           </motion.form>
 

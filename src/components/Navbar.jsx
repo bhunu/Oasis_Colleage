@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { FaBars, FaTimes, FaGraduationCap, FaChevronDown, FaSignInAlt, FaLaptopCode, FaClipboardList, FaUserGraduate } from 'react-icons/fa'
+import { FaBars, FaTimes, FaGraduationCap, FaChevronDown, FaSignInAlt, FaLaptopCode, FaClipboardList, FaUserGraduate, FaMoneyCheckAlt } from 'react-icons/fa'
 import { useScrollNav } from '../hooks/useScrollNav'
 
 const LOGIN_PORTALS = [
   { key: 'web-admin',        label: 'Web Admin',         icon: FaLaptopCode,    desc: 'System administration' },
-  { key: 'students-records', label: 'Students Records',  icon: FaClipboardList, desc: 'Academic data management' },
-  { key: 'student-portal',   label: 'Student Portal',    icon: FaUserGraduate,  desc: 'Grades & resources' },
+  { key: 'students-records', label: 'Students Records',  icon: FaClipboardList,  desc: 'Academic data management' },
+  { key: 'student-portal',   label: 'Student Portal',    icon: FaUserGraduate,   desc: 'Grades & resources' },
+  { key: 'bursar',           label: 'Bursar',            icon: FaMoneyCheckAlt,  desc: 'Finance & fee management' },
 ]
 
 const NAV_LINKS = [

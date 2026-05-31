@@ -1,54 +1,111 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import { collection, getDocs, query, where, orderBy, doc, deleteDoc } from 'firebase/firestore'
+import { db } from '../../firebase/config'
 import {
-  FaCheck, FaTimes, FaTrash, FaUserCheck, FaUserSlash,
-  FaUsers, FaClock, FaFilter,
+  FaTimes, FaTrash, FaUserCheck, FaUserSlash,
+  FaUsers, FaClock, FaFilter, FaUserGraduate, FaKey, FaBan,
 } from 'react-icons/fa'
+import { MdSearch } from 'react-icons/md'
+import toast from 'react-hot-toast'
 import { getUsers, updateUser, deleteUser } from '../../firebase/users'
 
 const ROLE_STYLE = {
-  admin:          'bg-blue-500/20 text-blue-300 border-blue-500/30',
-  staff:          'bg-purple-500/20 text-purple-300 border-purple-500/30',
-  teacher:        'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-  student:        'bg-[#C9A84C]/20 text-[#C9A84C] border-[#C9A84C]/30',
-  'Student Admin':'bg-sky-500/20 text-sky-300 border-sky-500/30',
-  'Teacher':      'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-  'Bursar':       'bg-pink-500/20 text-pink-300 border-pink-500/30',
-  'Secretary':    'bg-violet-500/20 text-violet-300 border-violet-500/30',
+  admin:           'bg-blue-500/20 text-blue-300 border-blue-500/30',
+  staff:           'bg-purple-500/20 text-purple-300 border-purple-500/30',
+  teacher:         'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+  student:         'bg-[#C9A84C]/20 text-[#C9A84C] border-[#C9A84C]/30',
+  'Student Admin': 'bg-sky-500/20 text-sky-300 border-sky-500/30',
+  'Bursar':        'bg-pink-500/20 text-pink-300 border-pink-500/30',
+  'Secretary':     'bg-violet-500/20 text-violet-300 border-violet-500/30',
 }
-
 const roleStyle = (role) => ROLE_STYLE[role] ?? 'bg-white/10 text-gray-300 border-white/20'
 
-export default function AdminUsers() {
-  const [users, setUsers]     = useState([])
-  const [loading, setLoading] = useState(true)
-  const [tab, setTab]         = useState('all')   // 'all' | 'pending' | 'active'
-  const [error, setError]     = useState('')
-  const [busy, setBusy]       = useState({})       // { [id]: true } while saving
+function portalStatus(student) {
+  const u = student.portalUser
+  if (!u) return 'none'
+  if (u.hasSetupPassword) return 'active'
+  if (u.otpCode && !u.otpUsed) {
+    const exp = u.otpExpiresAt
+    const expDate = exp?.toDate ? exp.toDate() : exp ? new Date(exp) : null
+    if (expDate && expDate > new Date()) return 'otp-pending'
+  }
+  return 'none'
+}
 
-  const load = async () => {
+const PORTAL_STATUS_STYLE = {
+  active:      'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+  'otp-pending': 'bg-amber-500/15 text-amber-300 border-amber-500/30',
+  none:        'bg-white/10 text-gray-500 border-white/20',
+}
+const PORTAL_STATUS_LABEL = {
+  active:        'Active',
+  'otp-pending': 'OTP Pending',
+  none:          'Not Activated',
+}
+
+export default function AdminUsers() {
+  const navigate = useNavigate()
+  const [users,    setUsers]    = useState([])
+  const [loading,  setLoading]  = useState(true)
+  const [tab,      setTab]      = useState('all')
+  const [error,    setError]    = useState('')
+  const [busy,     setBusy]     = useState({})
+
+  /* Students tab state */
+  const [students,        setStudents]        = useState([])
+  const [studentsLoaded,  setStudentsLoaded]  = useState(false)
+  const [studentsLoading, setStudentsLoading] = useState(false)
+  const [studentSearch,   setStudentSearch]   = useState('')
+  const [activityModal,   setActivityModal]   = useState(null)
+
+  const loadUsers = async () => {
     setLoading(true)
-    try {
-      setUsers(await getUsers())
-    } catch {
-      setError('Failed to load users.')
-    } finally {
-      setLoading(false)
-    }
+    try { setUsers(await getUsers()) }
+    catch { setError('Failed to load users.') }
+    finally { setLoading(false) }
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { loadUsers() }, [])
 
+  const loadStudents = useCallback(async () => {
+    if (studentsLoaded) return
+    setStudentsLoading(true)
+    try {
+      const [studSnap, userSnap] = await Promise.all([
+        getDocs(query(collection(db, 'students'), orderBy('createdAt', 'desc'))),
+        getDocs(query(collection(db, 'users'), where('role', '==', 'student'))),
+      ])
+      const usersMap = {}
+      userSnap.docs.forEach(d => {
+        const data = d.data()
+        if (data.studentId) usersMap[data.studentId] = { docId: d.id, ref: d.ref, ...data }
+      })
+      setStudents(studSnap.docs.map(d => ({
+        id: d.id,
+        ...d.data(),
+        portalUser: usersMap[d.id] || null,
+      })))
+      setStudentsLoaded(true)
+    } catch {
+      setError('Failed to load student data.')
+    }
+    setStudentsLoading(false)
+  }, [studentsLoaded])
+
+  useEffect(() => {
+    if (tab === 'students') loadStudents()
+  }, [tab, loadStudents])
+
+  /* Non-student user actions */
   const setActive = async (id, value) => {
     setBusy(b => ({ ...b, [id]: true }))
     try {
       await updateUser(id, { active: value })
       setUsers(u => u.map(x => x.id === id ? { ...x, active: value } : x))
-    } catch {
-      setError('Failed to update account status.')
-    } finally {
-      setBusy(b => ({ ...b, [id]: false }))
-    }
+    } catch { setError('Failed to update account status.') }
+    finally { setBusy(b => ({ ...b, [id]: false })) }
   }
 
   const handleDelete = async (id, name) => {
@@ -57,31 +114,58 @@ export default function AdminUsers() {
     try {
       await deleteUser(id)
       setUsers(u => u.filter(x => x.id !== id))
-    } catch {
-      setError('Failed to delete user.')
-    } finally {
-      setBusy(b => ({ ...b, [id]: false }))
-    }
+    } catch { setError('Failed to delete user.') }
+    finally { setBusy(b => ({ ...b, [id]: false })) }
   }
 
-  const pending  = users.filter(u => !u.active)
-  const active   = users.filter(u =>  u.active)
-  const displayed = tab === 'pending' ? pending : tab === 'active' ? active : users
+  /* Student portal revoke */
+  const handleRevokePortal = async (student) => {
+    const u = student.portalUser
+    if (!u) return
+    if (!confirm(`Revoke portal access for ${student.fullName || student.name}?\n\nThey will not be able to log in to the student portal.`)) return
+    setBusy(b => ({ ...b, [student.id]: true }))
+    try {
+      await deleteDoc(doc(db, 'users', u.docId))
+      setStudents(prev => prev.map(s =>
+        s.id === student.id ? { ...s, portalUser: null } : s
+      ))
+      toast.success(`Portal access revoked for ${student.fullName || student.name}`)
+    } catch {
+      setError('Failed to revoke portal access.')
+    }
+    setBusy(b => ({ ...b, [student.id]: false }))
+  }
+
+  const nonStudentUsers = users.filter(u => u.role !== 'student')
+  const pending  = nonStudentUsers.filter(u => !u.active)
+  const active   = nonStudentUsers.filter(u =>  u.active)
+  const displayed = tab === 'pending' ? pending : tab === 'active' ? active : nonStudentUsers
 
   const tabs = [
-    { key: 'all',     label: 'All users',    count: users.length },
-    { key: 'pending', label: 'Pending',       count: pending.length },
-    { key: 'active',  label: 'Active',        count: active.length },
+    { key: 'all',      label: 'All users',  count: nonStudentUsers.length },
+    { key: 'pending',  label: 'Pending',    count: pending.length },
+    { key: 'active',   label: 'Active',     count: active.length },
+    { key: 'students', label: 'Students',   count: students.length, icon: FaUserGraduate },
   ]
+
+  const filteredStudents = students.filter(s => {
+    if (!studentSearch.trim()) return true
+    const q = studentSearch.toLowerCase()
+    return (
+      s.fullName?.toLowerCase().includes(q) ||
+      s.reg_number?.toLowerCase().includes(q) ||
+      s.class?.toLowerCase().includes(q)
+    )
+  })
 
   return (
     <div className="space-y-5">
 
       {/* Header stats */}
       <div className="grid grid-cols-3 gap-4">
-        <StatPill label="Total Accounts" value={users.length}   icon={FaUsers}     color="text-white" />
-        <StatPill label="Pending Activation" value={pending.length} icon={FaClock} color="text-amber-400" />
-        <StatPill label="Active Accounts" value={active.length} icon={FaUserCheck} color="text-emerald-400" />
+        <StatPill label="Total Accounts"      value={nonStudentUsers.length} icon={FaUsers}     color="text-white" />
+        <StatPill label="Pending Activation"  value={pending.length}         icon={FaClock}     color="text-amber-400" />
+        <StatPill label="Active Accounts"     value={active.length}          icon={FaUserCheck} color="text-emerald-400" />
       </div>
 
       {/* Error */}
@@ -112,6 +196,7 @@ export default function AdminUsers() {
                   : 'text-gray-500 border-transparent hover:text-gray-300'
               }`}
             >
+              {t.icon && <t.icon className="text-[10px]" />}
               {t.label}
               <span className={`px-1.5 py-0.5 rounded text-[10px] ${
                 tab === t.key ? 'bg-[#C9A84C]/20 text-[#C9A84C]' : 'bg-white/10 text-gray-500'
@@ -122,111 +207,266 @@ export default function AdminUsers() {
           ))}
         </div>
 
-        {loading ? (
-          <div className="py-16 text-center font-montserrat text-gray-500 text-sm">Loading users…</div>
-        ) : displayed.length === 0 ? (
-          <div className="py-16 text-center font-montserrat text-gray-500 text-sm">
-            {tab === 'pending' ? 'No pending accounts.' : tab === 'active' ? 'No active accounts yet.' : 'No users yet.'}
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-white/10">
-                  <Th>Name</Th>
-                  <Th>Email / Credential</Th>
-                  <Th>Role</Th>
-                  <Th>Status</Th>
-                  <Th align="right">Actions</Th>
-                </tr>
-              </thead>
-              <tbody>
-                <AnimatePresence>
-                  {displayed.map((user, i) => (
-                    <motion.tr
-                      key={user.id}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 10 }}
-                      transition={{ delay: i * 0.03 }}
-                      className="border-b border-white/5 hover:bg-white/[0.03] transition-colors"
-                    >
-                      {/* Name */}
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-[#C9A84C]/20 flex items-center justify-center shrink-0">
-                            <span className="text-[#C9A84C] text-xs font-bold font-montserrat">
-                              {user.name?.charAt(0).toUpperCase() || '?'}
-                            </span>
-                          </div>
-                          <span className="font-montserrat text-white text-sm">{user.name}</span>
-                        </div>
-                      </td>
+        {/* Students tab */}
+        {tab === 'students' && (
+          studentsLoading ? (
+            <div className="py-16 text-center font-montserrat text-gray-500 text-sm">Loading students…</div>
+          ) : (
+            <div>
+              {/* Search */}
+              <div className="px-5 py-3 border-b border-white/5 flex items-center gap-3">
+                <MdSearch className="text-gray-500 text-lg shrink-0" />
+                <input
+                  value={studentSearch}
+                  onChange={e => setStudentSearch(e.target.value)}
+                  placeholder="Search by name, reg no, or class…"
+                  className="flex-1 bg-transparent text-white font-montserrat text-sm outline-none placeholder-gray-600"
+                />
+              </div>
 
-                      {/* Email */}
-                      <td className="px-5 py-4 font-montserrat text-gray-400 text-sm">
-                        {user.email || user.regNumber || '—'}
-                      </td>
-
-                      {/* Role */}
-                      <td className="px-5 py-4">
-                        <span className={`inline-flex px-2.5 py-1 rounded-full border text-[10px] font-montserrat font-semibold uppercase tracking-wider ${roleStyle(user.role)}`}>
-                          {user.role}
-                        </span>
-                      </td>
-
-                      {/* Status */}
-                      <td className="px-5 py-4">
-                        {user.active ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-montserrat font-semibold uppercase tracking-wider">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                            Active
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10px] font-montserrat font-semibold uppercase tracking-wider">
-                            <FaClock className="text-[8px]" />
-                            Pending
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Actions */}
-                      <td className="px-5 py-4">
-                        <div className="flex items-center justify-end gap-2">
-                          {user.active ? (
-                            <ActionBtn
-                              onClick={() => setActive(user.id, false)}
-                              disabled={busy[user.id]}
-                              title="Deactivate account"
-                              colorClass="hover:bg-amber-500/20 hover:text-amber-400"
-                              icon={<FaUserSlash className="text-xs" />}
-                            />
-                          ) : (
-                            <ActionBtn
-                              onClick={() => setActive(user.id, true)}
-                              disabled={busy[user.id]}
-                              title="Activate account"
-                              colorClass="hover:bg-emerald-500/20 hover:text-emerald-400"
-                              icon={<FaUserCheck className="text-xs" />}
-                              highlight
-                            />
-                          )}
-                          <ActionBtn
-                            onClick={() => handleDelete(user.id, user.name)}
-                            disabled={busy[user.id]}
-                            title="Delete user"
-                            colorClass="hover:bg-red-500/20 hover:text-red-400"
-                            icon={<FaTrash className="text-xs" />}
-                          />
-                        </div>
-                      </td>
-                    </motion.tr>
-                  ))}
-                </AnimatePresence>
-              </tbody>
-            </table>
-          </div>
+              {filteredStudents.length === 0 ? (
+                <div className="py-16 text-center font-montserrat text-gray-500 text-sm">
+                  {studentSearch ? 'No students match your search.' : 'No students enrolled yet.'}
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-white/10">
+                        <Th>Reg No</Th>
+                        <Th>Name</Th>
+                        <Th>Class</Th>
+                        <Th>Portal Status</Th>
+                        <Th align="right">Actions</Th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredStudents.map((student, i) => {
+                        const status = portalStatus(student)
+                        return (
+                          <motion.tr
+                            key={student.id}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: i * 0.02 }}
+                            className="border-b border-white/5 hover:bg-white/[0.03] transition-colors"
+                          >
+                            <td className="px-5 py-4 font-mono text-xs text-[#C9A84C]">
+                              {student.reg_number || '—'}
+                            </td>
+                            <td className="px-5 py-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-7 h-7 rounded-full bg-[#C9A84C]/20 flex items-center justify-center shrink-0">
+                                  <span className="text-[#C9A84C] text-[10px] font-bold font-montserrat">
+                                    {student.fullName?.charAt(0) || '?'}
+                                  </span>
+                                </div>
+                                <span className="font-montserrat text-white text-sm">{student.fullName || '—'}</span>
+                              </div>
+                            </td>
+                            <td className="px-5 py-4 font-montserrat text-gray-400 text-sm">{student.class || '—'}</td>
+                            <td className="px-5 py-4">
+                              <span className={`inline-flex items-center px-2.5 py-1 rounded-full border text-[10px] font-montserrat font-semibold uppercase tracking-wider ${PORTAL_STATUS_STYLE[status]}`}>
+                                {PORTAL_STATUS_LABEL[status]}
+                              </span>
+                            </td>
+                            <td className="px-5 py-4">
+                              <div className="flex items-center justify-end gap-2">
+                                <ActionBtn
+                                  onClick={() => navigate('/admin/student-otp', { state: { regNumber: student.reg_number } })}
+                                  title="Generate OTP"
+                                  colorClass="hover:bg-[#C9A84C]/20 hover:text-[#C9A84C]"
+                                  icon={<FaKey className="text-xs" />}
+                                />
+                                {(status === 'active' || status === 'otp-pending') && (
+                                  <ActionBtn
+                                    onClick={() => handleRevokePortal(student)}
+                                    disabled={busy[student.id]}
+                                    title="Revoke portal access"
+                                    colorClass="hover:bg-red-500/20 hover:text-red-400"
+                                    icon={<FaBan className="text-xs" />}
+                                  />
+                                )}
+                                <ActionBtn
+                                  onClick={() => setActivityModal(student)}
+                                  title="View portal activity"
+                                  colorClass="hover:bg-blue-500/20 hover:text-blue-400"
+                                  icon={<FaFilter className="text-xs" />}
+                                />
+                              </div>
+                            </td>
+                          </motion.tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )
         )}
+
+        {/* Standard user tabs */}
+        {tab !== 'students' && (
+          loading ? (
+            <div className="py-16 text-center font-montserrat text-gray-500 text-sm">Loading users…</div>
+          ) : displayed.length === 0 ? (
+            <div className="py-16 text-center font-montserrat text-gray-500 text-sm">
+              {tab === 'pending' ? 'No pending accounts.' : tab === 'active' ? 'No active accounts yet.' : 'No users yet.'}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-white/10">
+                    <Th>Name</Th>
+                    <Th>Email / Credential</Th>
+                    <Th>Role</Th>
+                    <Th>Status</Th>
+                    <Th align="right">Actions</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <AnimatePresence>
+                    {displayed.map((user, i) => (
+                      <motion.tr
+                        key={user.id}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 10 }}
+                        transition={{ delay: i * 0.03 }}
+                        className="border-b border-white/5 hover:bg-white/[0.03] transition-colors"
+                      >
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-[#C9A84C]/20 flex items-center justify-center shrink-0">
+                              <span className="text-[#C9A84C] text-xs font-bold font-montserrat">
+                                {user.name?.charAt(0).toUpperCase() || '?'}
+                              </span>
+                            </div>
+                            <span className="font-montserrat text-white text-sm">{user.name}</span>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 font-montserrat text-gray-400 text-sm">
+                          {user.email || user.regNumber || '—'}
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className={`inline-flex px-2.5 py-1 rounded-full border text-[10px] font-montserrat font-semibold uppercase tracking-wider ${roleStyle(user.role)}`}>
+                            {user.role}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4">
+                          {user.active ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-montserrat font-semibold uppercase tracking-wider">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                              Active
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10px] font-montserrat font-semibold uppercase tracking-wider">
+                              <FaClock className="text-[8px]" />
+                              Pending
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="flex items-center justify-end gap-2">
+                            {user.active ? (
+                              <ActionBtn
+                                onClick={() => setActive(user.id, false)}
+                                disabled={busy[user.id]}
+                                title="Deactivate account"
+                                colorClass="hover:bg-amber-500/20 hover:text-amber-400"
+                                icon={<FaUserSlash className="text-xs" />}
+                              />
+                            ) : (
+                              <ActionBtn
+                                onClick={() => setActive(user.id, true)}
+                                disabled={busy[user.id]}
+                                title="Activate account"
+                                colorClass="hover:bg-emerald-500/20 hover:text-emerald-400"
+                                icon={<FaUserCheck className="text-xs" />}
+                                highlight
+                              />
+                            )}
+                            <ActionBtn
+                              onClick={() => handleDelete(user.id, user.name)}
+                              disabled={busy[user.id]}
+                              title="Delete user"
+                              colorClass="hover:bg-red-500/20 hover:text-red-400"
+                              icon={<FaTrash className="text-xs" />}
+                            />
+                          </div>
+                        </td>
+                      </motion.tr>
+                    ))}
+                  </AnimatePresence>
+                </tbody>
+              </table>
+            </div>
+          )
+        )}
+      </div>
+
+      {/* Portal activity modal */}
+      {activityModal && (
+        <ActivityModal student={activityModal} onClose={() => setActivityModal(null)} />
+      )}
+    </div>
+  )
+}
+
+function ActivityModal({ student, onClose }) {
+  const [logs,    setLogs]    = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    getDocs(query(collection(db, 'portalActivityLog'), where('studentId', '==', student.id)))
+      .then(snap => {
+        const list = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        list.sort((a, b) => (b.timestamp?.seconds ?? 0) - (a.timestamp?.seconds ?? 0))
+        setLogs(list)
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [student.id])
+
+  return (
+    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div
+        className="bg-[#0D1C35] border border-white/10 rounded-2xl p-6 w-full max-w-lg max-h-[80vh] flex flex-col"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h3 className="font-playfair font-semibold text-white">Portal Activity</h3>
+            <p className="text-xs text-gray-500 font-montserrat mt-0.5">{student.fullName} · {student.reg_number}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-500 hover:text-white transition">
+            <FaTimes />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          {loading ? (
+            <p className="text-gray-500 font-montserrat text-sm text-center py-8">Loading…</p>
+          ) : logs.length === 0 ? (
+            <p className="text-gray-500 font-montserrat text-sm text-center py-8">No portal activity logged for this student.</p>
+          ) : (
+            <ul className="space-y-2">
+              {logs.map(l => (
+                <li key={l.id} className="flex items-start gap-3 py-2 border-b border-white/5">
+                  <span className="w-1.5 h-1.5 mt-1.5 rounded-full bg-[#C9A84C] shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm text-gray-200 font-montserrat">{l.action || 'Login'}</p>
+                    <p className="text-[10px] text-gray-500 font-montserrat mt-0.5">
+                      {l.timestamp?.toDate ? l.timestamp.toDate().toLocaleString() : '—'}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
     </div>
   )

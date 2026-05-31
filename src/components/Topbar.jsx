@@ -13,6 +13,7 @@ const pageInfo = {
   '/end-of-term':   { title: 'End of Term Procedure',  subtitle: 'Term closing process' },
   '/student-portal':{ title: 'Student Portal',         subtitle: 'Student account view' },
   '/settings':      { title: 'Settings',               subtitle: 'System configuration' },
+  '/otp-manager':   { title: 'Student OTP Manager',   subtitle: 'Portal access & settings' },
 }
 
 function getSession() {

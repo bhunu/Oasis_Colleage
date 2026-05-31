@@ -84,6 +84,7 @@ export default function Students() {
                 <Row label="Home Address"   value={selected.homeAddress} />
                 <Row label="Student Type"   value={selected.studentType === 'returning' ? 'Returning' : 'New'} />
                 <Row label="Enrolment Date" value={selected.enrolmentDate} />
+                {selected.studentEmail && <Row label="Student Email" value={selected.studentEmail} />}
               </div>
             </div>
             <div>

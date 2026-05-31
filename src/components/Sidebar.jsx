@@ -45,7 +45,10 @@ const NAV = [
   },
   {
     section: 'SYSTEM',
-    items: [{ label: 'Settings', icon: IconSettings, path: '/settings' }],
+    items: [
+      { label: 'Settings',    icon: IconSettings, path: '/settings' },
+      { label: 'OTP Manager', icon: IconReceipt,  path: '/otp-manager' },
+    ],
   },
 ]
 
@@ -55,7 +58,7 @@ export default function Sidebar() {
   const handleLogout = () => {
     sessionStorage.removeItem('studentsAdminSession')
     toast.success('Logged out')
-    setTimeout(() => navigate('/login?portal=students-records'), 400)
+    setTimeout(() => navigate('/'), 400)
   }
 
   return (

@@ -5,15 +5,21 @@ import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
 import { db } from '../firebase/config'
 import { addStudent } from '../firebase/students'
 import { generateRegNumber } from '../utils/generateRegNumber'
+import { sendOtpEmail } from '../utils/sendOtpEmail'
 import toast from 'react-hot-toast'
 import {
   MdUploadFile, MdDownload, MdCheckCircle, MdError,
-  MdWarning, MdClose, MdCloudUpload,
+  MdWarning, MdClose, MdCloudUpload, MdEmail,
 } from 'react-icons/md'
+
+function generateOTP(len = 8) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  return Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+}
 
 // ── Required column headers (must match exactly) ──────────────────────────
 const REQUIRED_COLS  = ['fullName', 'dateOfBirth', 'gender', 'class', 'guardianName', 'guardianPhone', 'guardianEmail', 'homeAddress']
-const OPTIONAL_COLS  = ['enrolmentDate', 'studentType']
+const OPTIONAL_COLS  = ['enrolmentDate', 'studentType', 'studentEmail']
 const ALL_COLS       = [...REQUIRED_COLS, ...OPTIONAL_COLS]
 
 const VALID_CLASSES = [
@@ -36,6 +42,7 @@ export function downloadTemplate() {
     homeAddress:   '12 Mbare Road, Harare',
     enrolmentDate: new Date().toISOString().split('T')[0],
     studentType:   'new',
+    studentEmail:  'tatenda.ncube@gmail.com',
   }]
 
   const ws = XLSX.utils.json_to_sheet(sample, { header: ALL_COLS })
@@ -82,6 +89,9 @@ function validateRow(row, idx) {
   else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.guardianEmail.trim())) errs.push('Invalid email')
 
   if (!row.homeAddress?.trim())                     errs.push('Address missing')
+
+  if (row.studentEmail?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.studentEmail.trim()))
+    errs.push('Invalid student email')
 
   return errs
 }
@@ -136,6 +146,7 @@ export default function BulkImport() {
             homeAddress:   String(r.homeAddress   || '').trim(),
             enrolmentDate: parseDate(r.enrolmentDate) || new Date().toISOString().split('T')[0],
             studentType:   String(r.studentType || 'new').trim().toLowerCase(),
+            studentEmail:  String(r.studentEmail || '').trim().toLowerCase(),
           }
           const errs = validateRow(row, i)
           return { ...row, _errors: errs, _status: errs.length === 0 ? 'valid' : 'error' }
@@ -166,15 +177,19 @@ export default function BulkImport() {
     setImporting(true)
     let success = 0, failed = 0
 
+    let otpEmailed = 0
+
     for (const row of validRows) {
       try {
         const reg_number = await generateRegNumber()
-        await addStudent({
+
+        const studentDocRef = await addStudent({
           reg_number,
           fullName:      row.fullName,
           dateOfBirth:   row.dateOfBirth,
           gender:        row.gender,
           class:         row.class,
+          studentEmail:  row.studentEmail || '',
           guardianName:  row.guardianName,
           guardianPhone: row.guardianPhone,
           guardianEmail: row.guardianEmail,
@@ -182,6 +197,7 @@ export default function BulkImport() {
           enrolmentDate: row.enrolmentDate,
           studentType:   row.studentType,
         })
+
         await addDoc(collection(db, 'feeAccounts'), {
           reg_number,
           studentName:  row.fullName,
@@ -192,9 +208,38 @@ export default function BulkImport() {
           createdAt: serverTimestamp(),
         })
 
-        // Mark row as imported with reg number
+        let otpSent = false
+        if (row.studentEmail) {
+          const otp       = generateOTP(8)
+          const expiryHrs = 24
+          const expiresAt = new Date(Date.now() + expiryHrs * 3600 * 1000)
+
+          await addDoc(collection(db, 'users'), {
+            studentId:        studentDocRef.id,
+            name:             row.fullName,
+            email:            row.studentEmail,
+            role:             'student',
+            active:           false,
+            uid:              null,
+            hasSetupPassword: false,
+            otpCode:          otp,
+            otpExpiresAt:     expiresAt,
+            otpUsed:          false,
+            createdAt:        serverTimestamp(),
+            updatedAt:        serverTimestamp(),
+          })
+
+          try {
+            await sendOtpEmail({ studentName: row.fullName, email: row.studentEmail, regNumber: reg_number, otpCode: otp, expiryHours: expiryHrs })
+            otpSent = true
+            otpEmailed++
+          } catch (emailErr) {
+            console.error(`OTP email failed for ${row.fullName}:`, emailErr)
+          }
+        }
+
         setRows(prev => prev.map(r =>
-          r === row ? { ...r, _status: 'imported', _regNumber: reg_number } : r
+          r === row ? { ...r, _status: 'imported', _regNumber: reg_number, _otpSent: otpSent } : r
         ))
         success++
       } catch {

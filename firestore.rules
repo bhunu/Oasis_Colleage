@@ -1,8 +1,120 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if true;
+
+    // ── Helper: read the authenticated user's document ──────────────────
+    function studentDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    function isStudent() {
+      return request.auth != null && studentDoc().role == 'student';
+    }
+
+    // ── students ─────────────────────────────────────────────────────────
+    match /students/{studentId} {
+      allow read: if isStudent() && studentDoc().studentId == studentId;
+      allow update: if isStudent()
+        && studentDoc().studentId == studentId
+        && request.resource.data.diff(resource.data)
+             .affectedKeys().hasOnly(['email', 'phone', 'hasEmail', 'updatedAt']);
+      allow create, delete: if false;
+    }
+
+    // ── users ────────────────────────────────────────────────────────────
+    match /users/{uid} {
+      // Allow unauthenticated list for OTP validation on login page
+      // (only matches unused pending student records)
+      allow read: if resource.data.role == 'student'
+                  && resource.data.otpUsed == false
+                  && request.auth == null;
+      // Authenticated users read their own document
+      allow read: if request.auth != null && request.auth.uid == uid;
+      // Students create their own doc on first OTP login
+      allow create: if request.auth != null && request.auth.uid == uid;
+      // Students update only hasSetupPassword flag
+      allow update: if request.auth != null
+        && request.auth.uid == uid
+        && studentDoc().role == 'student'
+        && request.resource.data.diff(resource.data)
+             .affectedKeys().hasOnly(['hasSetupPassword', 'updatedAt']);
+      allow delete: if false;
+    }
+
+    // ── portalSettings ───────────────────────────────────────────────────
+    match /portalSettings/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'web_admin';
+    }
+
+    // ── proofOfPayments ──────────────────────────────────────────────────
+    match /proofOfPayments/{docId} {
+      allow read: if isStudent()
+        && resource.data.studentId == studentDoc().studentId;
+      allow create: if isStudent()
+        && request.resource.data.studentId == studentDoc().studentId;
+      allow update, delete: if false;
+    }
+
+    // ── academicResults ──────────────────────────────────────────────────
+    match /academicResults/{docId} {
+      allow read: if isStudent()
+        && resource.data.studentId == studentDoc().studentId;
+      allow write: if false;
+    }
+
+    // ── feeAccounts ──────────────────────────────────────────────────────
+    match /feeAccounts/{docId} {
+      allow read: if isStudent()
+        && resource.data.studentId == studentDoc().studentId;
+      allow write: if false;
+    }
+
+    // ── receipts ─────────────────────────────────────────────────────────
+    match /receipts/{docId} {
+      allow read: if isStudent()
+        && resource.data.studentId == studentDoc().studentId;
+      allow write: if false;
+    }
+
+    // ── notifications ────────────────────────────────────────────────────
+    match /notifications/{docId} {
+      allow read: if isStudent()
+        && resource.data.studentId == studentDoc().studentId;
+      allow update: if isStudent()
+        && resource.data.studentId == studentDoc().studentId
+        && request.resource.data.diff(resource.data)
+             .affectedKeys().hasOnly(['read']);
+      allow create, delete: if false;
+    }
+
+    // ── otpLogs (web-admin only) ─────────────────────────────────────────
+    match /otpLogs/{docId} {
+      allow read, write: if request.auth != null
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'web_admin';
+    }
+
+    // ── securityLogs ─────────────────────────────────────────────────────
+    // Only web_admin can read; any authenticated client can create (logging never fails auth flow)
+    match /securityLogs/{docId} {
+      allow read: if request.auth != null
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'web_admin';
+      allow create: if request.auth != null;
+      allow update, delete: if false;
+    }
+
+    // ── activeSessions (student concurrent session guard) ─────────────────
+    match /users/{uid}/activeSessions/{sessionId} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // ── loginAttempts ─────────────────────────────────────────────────────
+    // Reads are open so the login page can check lockout status before auth.
+    // Creates/updates are open so unauthenticated users can record failed attempts.
+    // No deletes from clients — resets are done via writes (setting fields to null).
+    match /loginAttempts/{docId} {
+      allow read, create, update: if true;
+      allow delete: if false;
     }
   }
 }

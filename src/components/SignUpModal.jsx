@@ -36,6 +36,14 @@ const PORTAL_CONFIG = {
     btnClass:    'bg-gold hover:bg-yellow-400 text-navy',
     ringClass:   'focus:border-gold/60',
   },
+  'bursar': {
+    heading:     'Bursar Registration',
+    subheading:  'School Bursar · Finance Office',
+    credential:  'email',
+    extraFields: [],
+    btnClass:    'bg-teal-500 hover:bg-teal-400 text-white',
+    ringClass:   'focus:border-teal-400/60',
+  },
 }
 
 function generateRegNum() {
@@ -45,7 +53,7 @@ function generateRegNum() {
 }
 
 export default function SignUpModal({ portalKey, onClose }) {
-  const cfg = PORTAL_CONFIG[portalKey] ?? PORTAL_CONFIG['student-portal']
+  const cfg = PORTAL_CONFIG[portalKey] ?? PORTAL_CONFIG['web-admin']
 
   const initialExtra = portalKey === 'web-admin' ? 'admin' : portalKey === 'students-records' ? 'Student Admin' : ''
   const [form, setForm]             = useState({ name: '', credential: '', password: '', confirm: '', extra: initialExtra })
@@ -104,6 +112,7 @@ export default function SignUpModal({ portalKey, onClose }) {
         'web-admin':        form.extra || 'staff',
         'students-records': form.extra || 'Student Admin',
         'student-portal':   'student',
+        'bursar':           'Bursar',
       }
       const payload = {
         name:     form.name,
@@ -113,6 +122,7 @@ export default function SignUpModal({ portalKey, onClose }) {
         ...(cfg.credential === 'regNumber' ? { regNumber: form.credential } : {}),
         ...(cfg.extraFields.includes('form') ? { form: form.extra } : {}),
         active: portalKey === 'web-admin',
+        ...(portalKey === 'bursar' ? { pendingActivation: true } : {}),
       }
       await addUser(payload)
       setSuccess(true)
@@ -180,23 +190,42 @@ export default function SignUpModal({ portalKey, onClose }) {
               </motion.div>
             ) : success ? (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center py-4">
-                <div className="w-14 h-14 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <FaGraduationCap className="text-emerald-400 text-2xl" />
+                <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 ${portalKey === 'bursar' ? 'bg-teal-500/20' : 'bg-emerald-500/20'}`}>
+                  <FaGraduationCap className={`text-2xl ${portalKey === 'bursar' ? 'text-teal-400' : 'text-emerald-400'}`} />
                 </div>
-                <h3 className="font-playfair text-white text-xl font-bold mb-2">Account Created!</h3>
 
-                {/* Show reg number prominently for students */}
-                {cfg.credential === 'regNumber' && (
-                  <div className="bg-gold/10 border border-gold/30 rounded-xl px-5 py-4 my-4 text-left">
-                    <p className="font-montserrat text-[10px] uppercase tracking-widest text-gold/70 mb-1">Your Registration Number</p>
-                    <p className="font-montserrat text-gold text-2xl font-bold tracking-widest">{regNum}</p>
-                    <p className="font-montserrat text-gray-500 text-[10px] mt-2">Keep this safe — you will need it to sign in.</p>
-                  </div>
+                {portalKey === 'bursar' ? (
+                  <>
+                    <h3 className="font-playfair text-white text-xl font-bold mb-2">Registration Submitted</h3>
+                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl px-5 py-4 my-4 text-left">
+                      <p className="font-montserrat text-amber-300 text-xs font-semibold uppercase tracking-wider mb-1">Pending Activation</p>
+                      <p className="font-montserrat text-gray-300 text-sm leading-relaxed">
+                        Your account is awaiting approval by the <span className="text-white font-semibold">Web Admin</span>. You will be able to sign in once it has been activated.
+                      </p>
+                    </div>
+                    <p className="font-montserrat text-gray-500 text-xs mb-5">
+                      Contact the school administrator if you need urgent access.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h3 className="font-playfair text-white text-xl font-bold mb-2">Account Created!</h3>
+
+                    {/* Show reg number prominently for students */}
+                    {cfg.credential === 'regNumber' && (
+                      <div className="bg-gold/10 border border-gold/30 rounded-xl px-5 py-4 my-4 text-left">
+                        <p className="font-montserrat text-[10px] uppercase tracking-widest text-gold/70 mb-1">Your Registration Number</p>
+                        <p className="font-montserrat text-gold text-2xl font-bold tracking-widest">{regNum}</p>
+                        <p className="font-montserrat text-gray-500 text-[10px] mt-2">Keep this safe — you will need it to sign in.</p>
+                      </div>
+                    )}
+
+                    <p className="font-montserrat text-gray-400 text-sm mb-5">
+                      Your account has been submitted. An administrator will activate it shortly.
+                    </p>
+                  </>
                 )}
 
-                <p className="font-montserrat text-gray-400 text-sm mb-5">
-                  Your account has been submitted. An administrator will activate it shortly.
-                </p>
                 <button onClick={onClose} className="font-montserrat text-xs uppercase tracking-wider text-gold hover:text-yellow-300 transition-colors">
                   Back to Sign In
                 </button>

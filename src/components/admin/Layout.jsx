@@ -1,21 +1,27 @@
 import { useState } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
-import AdminSidebar from './Sidebar'
-import AdminTopBar  from './TopBar'
-import Dashboard    from '../../pages/admin/Dashboard'
-import AdminNews    from '../../pages/admin/News'
-import AdminEvents  from '../../pages/admin/Events'
-import AdminStaff   from '../../pages/admin/Staff'
-import AdminGallery from '../../pages/admin/Gallery'
-import AdminUsers   from '../../pages/admin/Users'
+import AdminSidebar       from './Sidebar'
+import AdminTopBar        from './TopBar'
+import Dashboard          from '../../pages/admin/Dashboard'
+import AdminNews          from '../../pages/admin/News'
+import AdminEvents        from '../../pages/admin/Events'
+import AdminStaff         from '../../pages/admin/Staff'
+import AdminGallery       from '../../pages/admin/Gallery'
+import AdminUsers         from '../../pages/admin/Users'
+import StudentOTPManager  from '../../pages/webadmin/StudentOTPManager'
+import PortalSettings     from '../../pages/webadmin/PortalSettings'
+import SecurityLogs       from '../../pages/webadmin/SecurityLogs'
 
 const TITLES = {
-  '/admin':         'Dashboard',
-  '/admin/news':    'News & Announcements',
-  '/admin/events':  'Events Calendar',
-  '/admin/staff':   'Staff Directory',
-  '/admin/gallery': 'Photo Gallery',
-  '/admin/users':   'User Management',
+  '/admin':                  'Dashboard',
+  '/admin/news':             'News & Announcements',
+  '/admin/events':           'Events Calendar',
+  '/admin/staff':            'Staff Directory',
+  '/admin/gallery':          'Photo Gallery',
+  '/admin/users':            'User Management',
+  '/admin/student-otp':      'Student OTP Manager',
+  '/admin/portal-settings':  'Portal Settings',
+  '/admin/security-logs':    'Security Logs',
 }
 
 export default function AdminLayout() {
@@ -36,9 +42,12 @@ export default function AdminLayout() {
             <Route path="/admin/news"    element={<AdminNews />} />
             <Route path="/admin/events"  element={<AdminEvents />} />
             <Route path="/admin/staff"   element={<AdminStaff />} />
-            <Route path="/admin/gallery" element={<AdminGallery />} />
-            <Route path="/admin/users"   element={<AdminUsers />} />
-            <Route path="*"              element={<Navigate to="/admin" replace />} />
+            <Route path="/admin/gallery"          element={<AdminGallery />} />
+            <Route path="/admin/users"            element={<AdminUsers />} />
+            <Route path="/admin/student-otp"      element={<StudentOTPManager />} />
+            <Route path="/admin/portal-settings"  element={<PortalSettings />} />
+            <Route path="/admin/security-logs"    element={<SecurityLogs />} />
+            <Route path="*"                       element={<Navigate to="/admin" replace />} />
           </Routes>
         </main>
       </div>

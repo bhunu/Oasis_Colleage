@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react'
-import { MdArticle, MdEvent, MdPeople, MdPhotoLibrary } from 'react-icons/md'
+import { useNavigate } from 'react-router-dom'
+import { collection, getDocs, query, where } from 'firebase/firestore'
+import { db } from '../../firebase/config'
+import { MdArticle, MdEvent, MdPeople, MdPhotoLibrary, MdKey, MdPerson } from 'react-icons/md'
 import StatCard from '../../components/admin/StatCard'
 import { getNews } from '../../firebase/news'
 import { getCalendarEvents } from '../../firebase/calendarEvents'
@@ -7,10 +10,13 @@ import { getAdminStaff } from '../../firebase/staffAdmin'
 import { getGallery } from '../../firebase/gallery'
 
 export default function Dashboard() {
-  const [counts, setCounts] = useState({ news: 0, events: 0, staff: 0, gallery: 0 })
-  const [recentNews, setRecentNews] = useState([])
+  const navigate = useNavigate()
+  const [counts, setCounts]           = useState({ news: 0, events: 0, staff: 0, gallery: 0 })
+  const [portalCounts, setPortalCounts] = useState({ active: 0, pending: 0, expired: 0 })
+  const [recentNews, setRecentNews]   = useState([])
   const [upcomingEvents, setUpcomingEvents] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading]         = useState(true)
+  const [portalLoading, setPortalLoading] = useState(true)
 
   useEffect(() => {
     Promise.all([getNews(), getCalendarEvents(), getAdminStaff(), getGallery()])
@@ -21,15 +27,82 @@ export default function Dashboard() {
         setUpcomingEvents(events.filter(e => e.date >= today).slice(0, 5))
       })
       .finally(() => setLoading(false))
+
+    const now = new Date()
+    getDocs(query(collection(db, 'users'), where('role', '==', 'student')))
+      .then(snap => {
+        let active = 0, pending = 0, expired = 0
+        snap.docs.forEach(d => {
+          const u = d.data()
+          if (u.hasSetupPassword) {
+            active++
+          } else if (u.otpCode && !u.otpUsed) {
+            const exp = u.otpExpiresAt
+            const expDate = exp?.toDate ? exp.toDate() : exp ? new Date(exp) : null
+            if (expDate && expDate > now) pending++
+            else expired++
+          }
+        })
+        setPortalCounts({ active, pending, expired })
+      })
+      .catch(() => {})
+      .finally(() => setPortalLoading(false))
   }, [])
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      {/* Stat cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
         <StatCard label="News Articles"  value={counts.news}    icon={MdArticle}      color="blue"   loading={loading} />
         <StatCard label="Events"         value={counts.events}  icon={MdEvent}        color="green"  loading={loading} />
         <StatCard label="Staff Members"  value={counts.staff}   icon={MdPeople}       color="purple" loading={loading} />
         <StatCard label="Gallery Photos" value={counts.gallery} icon={MdPhotoLibrary} color="amber"  loading={loading} />
+        <StatCard label="Portal Users"   value={portalCounts.active}  icon={MdPerson} color="green"  loading={portalLoading} />
+        <div
+          onClick={() => navigate('/admin/student-otp')}
+          className="cursor-pointer hover:opacity-90 transition-opacity"
+        >
+          <StatCard
+            label="Pending OTPs"
+            value={portalCounts.pending}
+            icon={MdKey}
+            color="amber"
+            loading={portalLoading}
+          />
+          {!portalLoading && portalCounts.expired > 0 && (
+            <p className="text-[10px] font-montserrat text-gray-600 mt-1 pl-1">
+              {portalCounts.expired} expired · click to manage
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Quick actions */}
+      <div className="bg-[#132140] rounded-xl border border-white/10 p-5">
+        <h2 className="text-sm font-bold text-white font-playfair mb-4">Quick Actions</h2>
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={() => navigate('/admin/student-otp')}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold font-montserrat text-[#0A1628] transition hover:opacity-90"
+            style={{ backgroundColor: '#C9A84C' }}
+          >
+            <MdKey className="text-base" />
+            Student OTP
+          </button>
+          <button
+            onClick={() => navigate('/admin/users')}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold font-montserrat text-gray-200 bg-white/5 border border-white/10 hover:bg-white/10 transition"
+          >
+            <MdPeople className="text-base" />
+            User Management
+          </button>
+          <button
+            onClick={() => navigate('/admin/portal-settings')}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold font-montserrat text-gray-200 bg-white/5 border border-white/10 hover:bg-white/10 transition"
+          >
+            Portal Settings
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

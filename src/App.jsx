@@ -1,8 +1,39 @@
+import { useState } from 'react'
 import { Routes, Route, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Toaster } from 'react-hot-toast'
+import Preloader from './components/Preloader'
 import Navbar from './components/Navbar'
+// Bursar imports
+import BursarProtectedRoute from './components/auth/BursarProtectedRoute'
+import BursarLayout         from './components/bursar/BursarLayout'
+import BursarDashboard      from './pages/bursar/BursarDashboard'
+import ReceivePayment       from './pages/bursar/ReceivePayment'
+import IssueReceipt         from './pages/bursar/IssueReceipt'
+import BursarStudentAccounts from './pages/bursar/BursarStudentAccounts'
+import BursarArrears        from './pages/bursar/BursarArrears'
+import BudgetOverview       from './pages/bursar/BudgetOverview'
+import RecordExpense        from './pages/bursar/RecordExpense'
+import ExpenseCategories    from './pages/bursar/ExpenseCategories'
+import IncomeStatement      from './pages/bursar/IncomeStatement'
+import BalanceSheet         from './pages/bursar/BalanceSheet'
+import CollectionReport     from './pages/bursar/CollectionReport'
+import PrintReports         from './pages/bursar/PrintReports'
+import BursarSettings       from './pages/bursar/BursarSettings'
+// Student portal imports
+import { StudentProvider }  from './context/StudentContext'
+import StudentProtectedRoute, { StudentAuthRoute } from './components/auth/StudentProtectedRoute'
+import StudentLayout        from './pages/student/StudentLayout'
+import StudentDashboard     from './pages/student/StudentDashboard'
+import StudentResults       from './pages/student/StudentResults'
+import StudentFees          from './pages/student/StudentFees'
+import StudentProfile       from './pages/student/StudentProfile'
+import StudentUploadPOP     from './pages/student/StudentUploadPOP'
+import SetupPassword        from './pages/student/SetupPassword'
+// Web-admin pages
+import StudentOTPManager    from './pages/webadmin/StudentOTPManager'
 import Footer from './components/Footer'
+import { Navigate } from 'react-router-dom'
 import ScrollToTop from './components/ScrollToTop'
 import Home from './pages/Home'
 import About from './pages/About'
@@ -52,6 +83,7 @@ function PageWrapper({ children }) {
 }
 
 export default function App() {
+  const [loading, setLoading] = useState(true)
   const location  = useLocation()
   const isAdmin   = location.pathname.startsWith('/admin')
   const isDashboard = location.pathname.startsWith('/dashboard') || 
@@ -66,8 +98,52 @@ export default function App() {
                      location.pathname.startsWith('/payments') ||
                      location.pathname.startsWith('/end-of-term') ||
                      location.pathname.startsWith('/student-portal') ||
-                     location.pathname.startsWith('/settings')
+                     location.pathname.startsWith('/settings') ||
+                     location.pathname.startsWith('/otp-manager')
   const isLogin   = location.pathname === '/login'
+  const isBursar  = location.pathname.startsWith('/bursar')
+  const isStudent = location.pathname.startsWith('/student')
+
+  if (loading) return <Preloader onDone={() => setLoading(false)} />
+
+  if (isStudent) {
+    return (
+      <StudentProvider>
+        <Toaster position="top-right" />
+        <Routes location={location} key={location.pathname}>
+          <Route path="/student/setup-password" element={<StudentAuthRoute><SetupPassword /></StudentAuthRoute>} />
+          <Route path="/student/dashboard"  element={<StudentProtectedRoute><StudentLayout><StudentDashboard /></StudentLayout></StudentProtectedRoute>} />
+          <Route path="/student/results"    element={<StudentProtectedRoute><StudentLayout><StudentResults /></StudentLayout></StudentProtectedRoute>} />
+          <Route path="/student/fees"       element={<StudentProtectedRoute><StudentLayout><StudentFees /></StudentLayout></StudentProtectedRoute>} />
+          <Route path="/student/profile"    element={<StudentProtectedRoute><StudentLayout><StudentProfile /></StudentLayout></StudentProtectedRoute>} />
+          <Route path="/student/upload-pop" element={<StudentProtectedRoute><StudentLayout><StudentUploadPOP /></StudentLayout></StudentProtectedRoute>} />
+        </Routes>
+      </StudentProvider>
+    )
+  }
+
+  if (isBursar) {
+    return (
+      <>
+        <Toaster position="top-right" />
+        <Routes location={location} key={location.pathname}>
+          <Route path="/bursar/dashboard"          element={<BursarProtectedRoute><BursarLayout><BursarDashboard /></BursarLayout></BursarProtectedRoute>} />
+          <Route path="/bursar/receive-payment"    element={<BursarProtectedRoute><BursarLayout><ReceivePayment /></BursarLayout></BursarProtectedRoute>} />
+          <Route path="/bursar/issue-receipt"      element={<BursarProtectedRoute><BursarLayout><IssueReceipt /></BursarLayout></BursarProtectedRoute>} />
+          <Route path="/bursar/student-accounts"   element={<BursarProtectedRoute><BursarLayout><BursarStudentAccounts /></BursarLayout></BursarProtectedRoute>} />
+          <Route path="/bursar/arrears"            element={<BursarProtectedRoute><BursarLayout><BursarArrears /></BursarLayout></BursarProtectedRoute>} />
+          <Route path="/bursar/budget"             element={<BursarProtectedRoute><BursarLayout><BudgetOverview /></BursarLayout></BursarProtectedRoute>} />
+          <Route path="/bursar/record-expense"     element={<BursarProtectedRoute><BursarLayout><RecordExpense /></BursarLayout></BursarProtectedRoute>} />
+          <Route path="/bursar/expense-categories" element={<BursarProtectedRoute><BursarLayout><ExpenseCategories /></BursarLayout></BursarProtectedRoute>} />
+          <Route path="/bursar/income-statement"   element={<BursarProtectedRoute><BursarLayout><IncomeStatement /></BursarLayout></BursarProtectedRoute>} />
+          <Route path="/bursar/balance-sheet"      element={<BursarProtectedRoute><BursarLayout><BalanceSheet /></BursarLayout></BursarProtectedRoute>} />
+          <Route path="/bursar/collection-report"  element={<BursarProtectedRoute><BursarLayout><CollectionReport /></BursarLayout></BursarProtectedRoute>} />
+          <Route path="/bursar/print-reports"      element={<BursarProtectedRoute><BursarLayout><PrintReports /></BursarLayout></BursarProtectedRoute>} />
+          <Route path="/bursar/settings"           element={<BursarProtectedRoute><BursarLayout><BursarSettings /></BursarLayout></BursarProtectedRoute>} />
+        </Routes>
+      </>
+    )
+  }
 
   if (isAdmin) {
     return (
@@ -124,6 +200,9 @@ export default function App() {
           <Route path="/settings" element={
             <ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>
           }/>
+          <Route path="/otp-manager" element={
+            <ProtectedRoute><Layout><StudentOTPManager /></Layout></ProtectedRoute>
+          }/>
         </Routes>
       </>
     )
@@ -150,6 +229,7 @@ export default function App() {
             <Route path="/contact"     element={<PageWrapper><Contact    /></PageWrapper>} />
             <Route path="/login"       element={<Login />} />
             <Route path="/users"       element={<PageWrapper><Users      /></PageWrapper>} />
+            <Route path="*"            element={<Navigate to="/" replace />} />
           </Routes>
         </AnimatePresence>
       </main>
