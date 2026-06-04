@@ -45,7 +45,8 @@ import Gallery from './pages/Gallery'
 import Staff from './pages/Staff'
 import News from './pages/News'
 import Contact from './pages/Contact'
-import Login from './pages/Login'
+import Login      from './pages/Login'
+import StaffLogin  from './pages/StaffLogin'
 import Users from './pages/Users'
 import AdminRoute from './components/admin/AdminRoute'
 import AdminLayout from './components/admin/Layout'
@@ -100,7 +101,7 @@ export default function App() {
                      location.pathname.startsWith('/student-portal') ||
                      location.pathname.startsWith('/settings') ||
                      location.pathname.startsWith('/otp-manager')
-  const isLogin   = location.pathname === '/login'
+  const isLogin   = location.pathname === '/login' || location.pathname === '/staff-login'
   const isBursar  = location.pathname.startsWith('/bursar')
   const isStudent = location.pathname.startsWith('/student')
 
@@ -227,7 +228,8 @@ export default function App() {
             <Route path="/staff"       element={<PageWrapper><Staff      /></PageWrapper>} />
             <Route path="/news"        element={<PageWrapper><News       /></PageWrapper>} />
             <Route path="/contact"     element={<PageWrapper><Contact    /></PageWrapper>} />
-            <Route path="/login"       element={<Login />} />
+            <Route path="/login"        element={<Login />} />
+            <Route path="/staff-login" element={<StaffLogin />} />
             <Route path="/users"       element={<PageWrapper><Users      /></PageWrapper>} />
             <Route path="*"            element={<Navigate to="/" replace />} />
           </Routes>

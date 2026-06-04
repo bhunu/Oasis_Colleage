@@ -2,89 +2,67 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   FaTimes, FaUser, FaEnvelope, FaLock, FaEye, FaEyeSlash,
-  FaUserTag, FaIdCard, FaGraduationCap, FaSyncAlt,
+  FaUserTag, FaGraduationCap,
 } from 'react-icons/fa'
-import { addUser, adminExists } from '../firebase/users'
-import { hashPassword } from '../utils/hash'
+import { createUserWithEmailAndPassword, signOut } from 'firebase/auth'
+import { doc, setDoc, serverTimestamp, getDocs, query, collection, where, limit } from 'firebase/firestore'
+import { auth, db } from '../firebase/config'
 
-const FORMS       = ['Form 1', 'Form 2', 'Form 3', 'Form 4', 'Lower 6', 'Upper 6']
-const ADMIN_ROLES = ['admin', 'staff']
-const STAFF_ROLES = ['Student Admin', 'Teacher', 'Bursar', 'Secretary']
+const ROLE_OPTIONS = {
+  'web-admin':        ['admin', 'staff'],
+  'students-records': ['Student Admin', 'Teacher', 'Secretary'],
+  'bursar':           ['bursar'],
+}
 
 const PORTAL_CONFIG = {
   'web-admin': {
     heading:     'Create Admin Account',
     subheading:  'Web Admin · System Administration',
-    credential:  'email',
-    extraFields: ['role'],
     btnClass:    'bg-blue-500 hover:bg-blue-400 text-white',
     ringClass:   'focus:border-blue-400/60',
+    defaultRole: 'admin',
+    active:      true,
   },
   'students-records': {
     heading:     'Staff Registration',
     subheading:  'Students Records · Academic Staff',
-    credential:  'email',
-    extraFields: ['role'],
     btnClass:    'bg-emerald-500 hover:bg-emerald-400 text-white',
     ringClass:   'focus:border-emerald-400/60',
-  },
-  'student-portal': {
-    heading:     'Student Registration',
-    subheading:  'Student Portal · New Enrolment',
-    credential:  'regNumber',
-    extraFields: ['form'],
-    btnClass:    'bg-gold hover:bg-yellow-400 text-navy',
-    ringClass:   'focus:border-gold/60',
+    defaultRole: 'Student Admin',
+    active:      false,
   },
   'bursar': {
     heading:     'Bursar Registration',
     subheading:  'School Bursar · Finance Office',
-    credential:  'email',
-    extraFields: [],
     btnClass:    'bg-teal-500 hover:bg-teal-400 text-white',
     ringClass:   'focus:border-teal-400/60',
+    defaultRole: 'bursar',
+    active:      false,
   },
-}
-
-function generateRegNum() {
-  const year = String(new Date().getFullYear()).slice(-2)
-  const rand = String(Math.floor(Math.random() * 10000)).padStart(4, '0')
-  return `R${year}${rand}`
 }
 
 export default function SignUpModal({ portalKey, onClose }) {
   const cfg = PORTAL_CONFIG[portalKey] ?? PORTAL_CONFIG['web-admin']
 
-  const initialExtra = portalKey === 'web-admin' ? 'admin' : portalKey === 'students-records' ? 'Student Admin' : ''
-  const [form, setForm]             = useState({ name: '', credential: '', password: '', confirm: '', extra: initialExtra })
-  const [showPass, setShowPass]     = useState(false)
-  const [showConf, setShowConf]     = useState(false)
+  const [form,       setForm]       = useState({ name: '', email: '', password: '', confirm: '', role: cfg.defaultRole })
+  const [showPass,   setShowPass]   = useState(false)
+  const [showConf,   setShowConf]   = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [error, setError]           = useState('')
-  const [success, setSuccess]       = useState(false)
-  const [regNum, setRegNum]         = useState('')
+  const [error,      setError]      = useState('')
+  const [success,    setSuccess]    = useState(false)
   const [adminLocked, setAdminLocked] = useState(false)
-  const [checking, setChecking]     = useState(false)
-
-  // Auto-generate reg number once when student portal opens
-  useEffect(() => {
-    if (cfg.credential === 'regNumber') {
-      const rn = generateRegNum()
-      setRegNum(rn)
-      setForm(f => ({ ...f, credential: rn }))
-    }
-  }, [cfg.credential])
+  const [checking,   setChecking]   = useState(false)
 
   // Block web-admin registration if an admin already exists
   useEffect(() => {
     if (portalKey !== 'web-admin') return
     setChecking(true)
-    adminExists()
-      .then(exists => setAdminLocked(exists))
+    getDocs(query(collection(db, 'users'), where('role', '==', 'admin'), limit(1)))
+      .then(snap => setAdminLocked(!snap.empty))
+      .catch(() => {})
       .finally(() => setChecking(false))
   }, [portalKey])
 
-  // Close on Escape
   useEffect(() => {
     const handler = (e) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', handler)
@@ -93,52 +71,56 @@ export default function SignUpModal({ portalKey, onClose }) {
 
   const set = (key) => (e) => setForm(f => ({ ...f, [key]: e.target.value }))
 
-  const refreshRegNum = () => {
-    const rn = generateRegNum()
-    setRegNum(rn)
-    setForm(f => ({ ...f, credential: rn }))
-  }
-
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
 
+    if (!form.name.trim())           { setError('Full name is required.'); return }
+    if (!form.email.trim())          { setError('Email address is required.'); return }
+    if (form.password.length < 6)    { setError('Password must be at least 6 characters.'); return }
     if (form.password !== form.confirm) { setError('Passwords do not match.'); return }
-    if (form.password.length < 6)       { setError('Password must be at least 6 characters.'); return }
 
     setSubmitting(true)
     try {
-      const roleMap = {
-        'web-admin':        form.extra || 'staff',
-        'students-records': form.extra || 'Student Admin',
-        'student-portal':   'student',
-        'bursar':           'Bursar',
-      }
-      const payload = {
-        name:     form.name,
-        role:     roleMap[portalKey],
-        password: await hashPassword(form.password),
-        ...(cfg.credential === 'email'     ? { email:     form.credential } : {}),
-        ...(cfg.credential === 'regNumber' ? { regNumber: form.credential } : {}),
-        ...(cfg.extraFields.includes('form') ? { form: form.extra } : {}),
-        active: portalKey === 'web-admin',
-        ...(portalKey === 'bursar' ? { pendingActivation: true } : {}),
-      }
-      await addUser(payload)
+      const role = form.role || cfg.defaultRole
+
+      const cred = await createUserWithEmailAndPassword(auth, form.email.trim(), form.password)
+
+      await setDoc(doc(db, 'users', cred.user.uid), {
+        name:      form.name.trim(),
+        email:     form.email.trim().toLowerCase(),
+        role,
+        active:    cfg.active,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      })
+
+      // Sign out immediately — account needs admin activation before use
+      await signOut(auth)
+
       setSuccess(true)
     } catch (err) {
       console.error('SignUp error:', err)
-      setError(err?.message ?? 'Registration failed. Please try again.')
+      if (err.code === 'auth/email-already-in-use') {
+        setError('An account with this email already exists.')
+      } else if (err.code === 'auth/invalid-email') {
+        setError('Please enter a valid email address.')
+      } else if (err.code === 'auth/weak-password') {
+        setError('Password is too weak. Use at least 6 characters.')
+      } else {
+        setError(err?.message ?? 'Registration failed. Please try again.')
+      }
     } finally {
       setSubmitting(false)
     }
   }
 
-  const inputClass = `w-full bg-white/5 border border-white/10 ${cfg.ringClass} focus:outline-none rounded-xl pl-11 pr-4 py-3 text-white font-montserrat text-sm placeholder-gray-700 transition-all`
+  const roles      = ROLE_OPTIONS[portalKey] ?? [cfg.defaultRole]
+  const inputClass = `w-full bg-white/5 border border-white/10 ${cfg.ringClass} focus:outline-none rounded-xl pl-11 pr-4 py-3.5 text-white font-montserrat text-sm placeholder-gray-700 transition-all`
+  const labelClass = 'font-montserrat text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-500 mb-2 block'
 
   return (
     <AnimatePresence>
-      {/* Backdrop */}
       <motion.div
         key="backdrop"
         initial={{ opacity: 0 }}
@@ -148,7 +130,6 @@ export default function SignUpModal({ portalKey, onClose }) {
         className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50"
       />
 
-      {/* Modal */}
       <motion.div
         key="modal"
         initial={{ opacity: 0, scale: 0.94, y: 24 }}
@@ -158,7 +139,7 @@ export default function SignUpModal({ portalKey, onClose }) {
       >
         <div
           onClick={e => e.stopPropagation()}
-          className="pointer-events-auto w-full max-w-md bg-[#0e1b2e] border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
+          className="pointer-events-auto w-full max-w-md bg-[#0e1b2e] border border-white/10 rounded-2xl shadow-2xl overflow-y-auto max-h-[95vh]"
         >
           {/* Header */}
           <div className="flex items-start justify-between px-7 pt-7 pb-5 border-b border-white/10">
@@ -166,7 +147,7 @@ export default function SignUpModal({ portalKey, onClose }) {
               <h2 className="font-playfair text-white text-2xl font-bold leading-tight">{cfg.heading}</h2>
               <p className="font-montserrat text-gray-500 text-[11px] mt-1 uppercase tracking-wider">{cfg.subheading}</p>
             </div>
-            <button onClick={onClose} className="text-gray-600 hover:text-white transition-colors mt-1 p-1" aria-label="Close">
+            <button onClick={onClose} className="text-gray-600 hover:text-white transition-colors mt-1 p-1">
               <FaTimes />
             </button>
           </div>
@@ -181,8 +162,7 @@ export default function SignUpModal({ portalKey, onClose }) {
                 </div>
                 <h3 className="font-playfair text-white text-xl font-bold mb-2">Registration Closed</h3>
                 <p className="font-montserrat text-gray-400 text-sm mb-6 leading-relaxed">
-                  A Web Admin account already exists.<br />
-                  Only one administrator is permitted.
+                  A Web Admin account already exists.<br />Only one administrator is permitted.
                 </p>
                 <button onClick={onClose} className="font-montserrat text-xs uppercase tracking-wider text-gold hover:text-yellow-300 transition-colors">
                   Back to Sign In
@@ -194,34 +174,24 @@ export default function SignUpModal({ portalKey, onClose }) {
                   <FaGraduationCap className={`text-2xl ${portalKey === 'bursar' ? 'text-teal-400' : 'text-emerald-400'}`} />
                 </div>
 
-                {portalKey === 'bursar' ? (
+                {portalKey === 'web-admin' ? (
+                  <>
+                    <h3 className="font-playfair text-white text-xl font-bold mb-2">Account Created!</h3>
+                    <p className="font-montserrat text-gray-400 text-sm mb-5 leading-relaxed">
+                      Your Web Admin account is ready. You can now sign in.
+                    </p>
+                  </>
+                ) : (
                   <>
                     <h3 className="font-playfair text-white text-xl font-bold mb-2">Registration Submitted</h3>
                     <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl px-5 py-4 my-4 text-left">
                       <p className="font-montserrat text-amber-300 text-xs font-semibold uppercase tracking-wider mb-1">Pending Activation</p>
                       <p className="font-montserrat text-gray-300 text-sm leading-relaxed">
-                        Your account is awaiting approval by the <span className="text-white font-semibold">Web Admin</span>. You will be able to sign in once it has been activated.
+                        Your account is awaiting approval by the <span className="text-white font-semibold">Web Admin</span>. You will be able to sign in once activated.
                       </p>
                     </div>
                     <p className="font-montserrat text-gray-500 text-xs mb-5">
                       Contact the school administrator if you need urgent access.
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <h3 className="font-playfair text-white text-xl font-bold mb-2">Account Created!</h3>
-
-                    {/* Show reg number prominently for students */}
-                    {cfg.credential === 'regNumber' && (
-                      <div className="bg-gold/10 border border-gold/30 rounded-xl px-5 py-4 my-4 text-left">
-                        <p className="font-montserrat text-[10px] uppercase tracking-widest text-gold/70 mb-1">Your Registration Number</p>
-                        <p className="font-montserrat text-gold text-2xl font-bold tracking-widest">{regNum}</p>
-                        <p className="font-montserrat text-gray-500 text-[10px] mt-2">Keep this safe — you will need it to sign in.</p>
-                      </div>
-                    )}
-
-                    <p className="font-montserrat text-gray-400 text-sm mb-5">
-                      Your account has been submitted. An administrator will activate it shortly.
                     </p>
                   </>
                 )}
@@ -232,84 +202,106 @@ export default function SignUpModal({ portalKey, onClose }) {
               </motion.div>
             ) : (
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-
                 {error && (
                   <div className="bg-red-500/10 border border-red-500/30 text-red-300 font-montserrat text-xs px-4 py-2.5 rounded-xl">
                     {error}
                   </div>
                 )}
 
-                {/* Reg number display (students only) — shown at top, read-only */}
-                {cfg.credential === 'regNumber' && (
-                  <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 flex items-center justify-between">
-                    <div>
-                      <p className="font-montserrat text-[9px] uppercase tracking-widest text-gray-600 mb-0.5">Registration Number</p>
-                      <p className="font-montserrat text-white font-semibold tracking-widest text-sm">{regNum}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={refreshRegNum}
-                      title="Generate new number"
-                      className="text-gray-600 hover:text-gold transition-colors p-1"
-                    >
-                      <FaSyncAlt className="text-xs" />
-                    </button>
-                  </div>
-                )}
-
                 {/* Full Name */}
-                <div className="relative">
-                  <FaUser className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 text-sm pointer-events-none" />
-                  <input type="text" value={form.name} onChange={set('name')} placeholder="Full name" required className={inputClass} />
+                <div>
+                  <label className={labelClass}>Full Name</label>
+                  <div className="relative">
+                    <FaUser className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 text-sm pointer-events-none" />
+                    <input
+                      type="text"
+                      value={form.name}
+                      onChange={set('name')}
+                      placeholder="e.g. Tendai Moyo"
+                      autoComplete="name"
+                      required
+                      className={inputClass}
+                    />
+                  </div>
                 </div>
 
-                {/* Email (non-student portals only) */}
-                {cfg.credential === 'email' && (
+                {/* Email */}
+                <div>
+                  <label className={labelClass}>Email Address</label>
                   <div className="relative">
                     <FaEnvelope className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 text-sm pointer-events-none" />
-                    <input type="email" value={form.credential} onChange={set('credential')} placeholder="Email address" required className={inputClass} />
+                    <input
+                      type="email"
+                      value={form.email}
+                      onChange={set('email')}
+                      placeholder="you@oasiscollege.ac.zw"
+                      autoComplete="new-email"
+                      required
+                      className={inputClass}
+                    />
                   </div>
-                )}
+                </div>
 
-                {/* Extra: role */}
-                {cfg.extraFields.includes('role') && (
+                {/* Role */}
+                <div>
+                  <label className={labelClass}>Role</label>
                   <div className="relative">
                     <FaUserTag className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 text-sm pointer-events-none" />
-                    <select value={form.extra} onChange={set('extra')} className={`${inputClass} pl-11`}>
-                      {(portalKey === 'students-records' ? STAFF_ROLES : ADMIN_ROLES).map(r => (
-                        <option key={r} value={r} className="bg-gray-900">{r}</option>
-                      ))}
+                    <select
+                      value={form.role}
+                      onChange={set('role')}
+                      disabled={roles.length === 1}
+                      className={`${inputClass} pl-11 [&>option]:bg-[#0D1C35] disabled:opacity-60 disabled:cursor-not-allowed`}
+                    >
+                      {roles.map(r => <option key={r} value={r}>{r}</option>)}
                     </select>
                   </div>
-                )}
-
-                {/* Extra: form/class */}
-                {cfg.extraFields.includes('form') && (
-                  <div className="relative">
-                    <FaGraduationCap className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 text-sm pointer-events-none" />
-                    <select value={form.extra} onChange={set('extra')} required className={`${inputClass} pl-11`}>
-                      <option value="" className="bg-gray-900">Select form / class</option>
-                      {FORMS.map(f => <option key={f} value={f} className="bg-gray-900">{f}</option>)}
-                    </select>
-                  </div>
-                )}
+                </div>
 
                 {/* Password */}
-                <div className="relative">
-                  <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 text-sm pointer-events-none" />
-                  <input type={showPass ? 'text' : 'password'} value={form.password} onChange={set('password')} placeholder="Password" required className={`${inputClass} pr-11`} />
-                  <button type="button" onClick={() => setShowPass(v => !v)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-300 transition-colors">
-                    {showPass ? <FaEyeSlash /> : <FaEye />}
-                  </button>
+                <div>
+                  <label className={labelClass}>Password</label>
+                  <div className="relative">
+                    <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 text-sm pointer-events-none" />
+                    <input
+                      type={showPass ? 'text' : 'password'}
+                      value={form.password}
+                      onChange={set('password')}
+                      placeholder="Min. 6 characters"
+                      autoComplete="new-password"
+                      required
+                      className={`${inputClass} pr-11`}
+                    />
+                    <button type="button" onClick={() => setShowPass(v => !v)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-300 transition-colors">
+                      {showPass ? <FaEyeSlash /> : <FaEye />}
+                    </button>
+                  </div>
                 </div>
 
                 {/* Confirm Password */}
-                <div className="relative">
-                  <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 text-sm pointer-events-none" />
-                  <input type={showConf ? 'text' : 'password'} value={form.confirm} onChange={set('confirm')} placeholder="Confirm password" required className={`${inputClass} pr-11`} />
-                  <button type="button" onClick={() => setShowConf(v => !v)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-300 transition-colors">
-                    {showConf ? <FaEyeSlash /> : <FaEye />}
-                  </button>
+                <div>
+                  <label className={labelClass}>Confirm Password</label>
+                  <div className="relative">
+                    <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 text-sm pointer-events-none" />
+                    <input
+                      type={showConf ? 'text' : 'password'}
+                      value={form.confirm}
+                      onChange={set('confirm')}
+                      placeholder="Repeat your password"
+                      autoComplete="new-password"
+                      required
+                      className={`${inputClass} pr-11`}
+                    />
+                    <button type="button" onClick={() => setShowConf(v => !v)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-300 transition-colors">
+                      {showConf ? <FaEyeSlash /> : <FaEye />}
+                    </button>
+                  </div>
+                  {form.confirm.length > 0 && form.password !== form.confirm && (
+                    <p className="font-montserrat text-[11px] text-red-400 mt-1.5">Passwords do not match</p>
+                  )}
+                  {form.confirm.length >= 6 && form.password === form.confirm && (
+                    <p className="font-montserrat text-[11px] text-emerald-400 mt-1.5">Passwords match</p>
+                  )}
                 </div>
 
                 <button type="submit" disabled={submitting}

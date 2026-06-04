@@ -1,16 +1,13 @@
 import { useEffect, useRef } from 'react'
-import { signOut } from 'firebase/auth'
-import { auth } from '../firebase/config'
 import { useStudent } from '../context/StudentContext'
 import toast from 'react-hot-toast'
 
 /**
  * Watches for user inactivity and signs the student out after
  * portalSettings.sessionTimeoutMinutes of no activity.
- * Listens to mousemove, keydown, touchstart, click events.
  */
 export default function useStudentSessionTimeout() {
-  const { portalSettings } = useStudent()
+  const { portalSettings, logout } = useStudent()
   const timerRef = useRef(null)
 
   useEffect(() => {
@@ -19,9 +16,9 @@ export default function useStudentSessionTimeout() {
 
     const reset = () => {
       clearTimeout(timerRef.current)
-      timerRef.current = setTimeout(async () => {
+      timerRef.current = setTimeout(() => {
         toast('Session timed out. Please sign in again.', { icon: '🔒' })
-        await signOut(auth)
+        logout()
       }, ms)
     }
 
@@ -33,5 +30,5 @@ export default function useStudentSessionTimeout() {
       clearTimeout(timerRef.current)
       EVENTS.forEach(ev => window.removeEventListener(ev, reset))
     }
-  }, [portalSettings?.sessionTimeoutMinutes])
+  }, [portalSettings?.sessionTimeoutMinutes, logout])
 }

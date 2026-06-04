@@ -3,8 +3,8 @@ import { db } from '../firebase/config'
 
 /** Maps each Firebase-Auth role to its login page */
 export const ROLE_LOGIN_PAGES = {
-  bursar:  '/login?portal=bursar',
-  student: '/login?portal=student-portal',
+  bursar:  '/staff-login?portal=bursar',
+  student: '/login',
 }
 
 /**

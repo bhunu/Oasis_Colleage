@@ -3,7 +3,7 @@ import { db } from '../firebase/config'
 import { logSecurityEvent } from './logSecurityEvent'
 
 const MAX_ATTEMPTS    = 3
-const LOCKOUT_MS      = 30 * 60 * 1000   // 30 minutes
+const LOCKOUT_MS      = 3 * 60 * 1000    // 3 minutes
 
 /** Deterministic doc ID from identifier + portal */
 function attemptDocId(identifier, portal) {

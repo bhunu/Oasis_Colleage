@@ -48,6 +48,6 @@ export default function BursarProtectedRoute({ children }) {
   }, [])
 
   if (status === 'checking') return <Spinner />
-  if (status === 'denied')   return <Navigate to="/login?portal=bursar" replace />
+  if (status === 'denied')   return <Navigate to="/staff-login?portal=bursar" replace />
   return children
 }

@@ -4,10 +4,10 @@ import {
   collection, getDocs, query, orderBy,
   serverTimestamp,
 } from 'firebase/firestore'
-import { signOut } from 'firebase/auth'
 import { useNavigate } from 'react-router-dom'
-import { auth, db } from '../firebase/config'
+import { db } from '../firebase/config'
 import { logSecurityEvent } from '../utils/logSecurityEvent'
+import { useStudent } from '../context/StudentContext'
 
 const MAX_SESSIONS = 2
 const PING_INTERVAL_MS = 60_000
@@ -19,7 +19,6 @@ export async function initStudentSession(uid) {
 
   const sessRef = collection(db, 'users', uid, 'activeSessions')
 
-  // Enforce max sessions: kill oldest if at limit
   try {
     const snap = await getDocs(query(sessRef, orderBy('loginAt', 'asc')))
     if (snap.size >= MAX_SESSIONS) {
@@ -54,8 +53,9 @@ export async function endStudentSession(uid) {
  * device deletes it (concurrent session kill).
  */
 export default function useStudentSessionGuard(uid) {
-  const navigate    = useNavigate()
-  const pingRef     = useRef(null)
+  const navigate = useNavigate()
+  const { logout } = useStudent()
+  const pingRef  = useRef(null)
 
   useEffect(() => {
     if (!uid) return
@@ -65,12 +65,10 @@ export default function useStudentSessionGuard(uid) {
 
     const sessionRef = doc(db, 'users', uid, 'activeSessions', sessionId)
 
-    // Watch for external deletion
     const unsubscribe = onSnapshot(sessionRef, (snap) => {
       if (!snap.exists()) {
-        signOut(auth).catch(() => {})
-        sessionStorage.clear()
         logSecurityEvent({ uid, action: 'CONCURRENT_SESSION_KILLED' })
+        logout()
         navigate('/login?portal=student-portal', {
           replace: true,
           state: { message: 'You were signed out because your account was accessed from another device.' },
@@ -78,7 +76,6 @@ export default function useStudentSessionGuard(uid) {
       }
     }, () => {})
 
-    // Heartbeat to keep lastActiveAt fresh
     pingRef.current = setInterval(() => {
       setDoc(sessionRef, { lastActiveAt: serverTimestamp() }, { merge: true }).catch(() => {})
     }, PING_INTERVAL_MS)
@@ -87,5 +84,5 @@ export default function useStudentSessionGuard(uid) {
       unsubscribe()
       clearInterval(pingRef.current)
     }
-  }, [uid, navigate])
+  }, [uid, navigate, logout])
 }

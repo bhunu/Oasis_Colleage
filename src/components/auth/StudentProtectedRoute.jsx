@@ -1,8 +1,5 @@
 import { useStudent } from '../../context/StudentContext'
 import { Navigate } from 'react-router-dom'
-import { useEffect } from 'react'
-import { logSecurityEvent } from '../../utils/logSecurityEvent'
-import { auth } from '../../firebase/config'
 
 function Spinner() {
   return (
@@ -17,39 +14,19 @@ function Spinner() {
 
 export default function StudentProtectedRoute({ children }) {
   const { studentData, loading } = useStudent()
-  const user = auth.currentUser
-
-  // Log cross-role attempts once we know auth state is resolved
-  useEffect(() => {
-    if (loading) return
-    if (user && !studentData) {
-      logSecurityEvent({
-        uid:           user.uid,
-        action:        'WRONG_ROLE_ACCESS',
-        attemptedRole: 'student',
-        actualRole:    'unknown',
-      })
-    }
-  }, [loading, user, studentData])
 
   if (loading) return <Spinner />
-
   if (!studentData) return <Navigate to="/login?portal=student-portal" replace />
-
-  /* OTP used but password not set — enforce setup */
   if (!studentData.hasSetupPassword) return <Navigate to="/student/setup-password" replace />
 
   return children
 }
 
-/** Lighter guard used on /student/setup-password */
 export function StudentAuthRoute({ children }) {
   const { studentData, loading, authLoading } = useStudent()
 
   if (loading || authLoading) return <Spinner />
-
   if (!studentData) return <Navigate to="/login?portal=student-portal" replace />
-
   if (studentData.hasSetupPassword) return <Navigate to="/student/dashboard" replace />
 
   return children

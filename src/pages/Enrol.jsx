@@ -87,7 +87,7 @@ function validate(data) {
 }
 
 const iCls = (err) =>
-  `w-full bg-white/5 border ${err ? 'border-red-500/60' : 'border-white/10'} focus:border-[#C9A84C]/50 focus:outline-none rounded-xl px-4 py-2.5 text-white font-montserrat text-sm placeholder-gray-600 transition-all`
+  `w-full bg-white/5 border ${err ? 'border-red-500/60' : 'border-white/10'} focus:border-[#C9A84C]/50 focus:outline-none rounded-xl px-4 py-2.5 text-white font-montserrat text-sm placeholder-gray-600 transition-all [&>option]:bg-[#0D1C35] [&>option]:text-white`
 
 const lCls = 'block text-[11px] font-semibold text-gray-500 uppercase tracking-widest font-montserrat mb-1.5'
 const eCls = 'text-red-400 text-[11px] font-montserrat mt-1'
@@ -129,8 +129,7 @@ export default function Enrol() {
   }
 
   const printCard = () => {
-    const win = window.open('', '_blank', 'width=480,height=640')
-    win.document.write(`<!DOCTYPE html>
+    const html = `<!DOCTYPE html>
 <html>
 <head>
   <title>Student Registration Card</title>
@@ -162,11 +161,16 @@ export default function Enrol() {
     <div class="note">Keep this number safe.<br>It is used to log in to the Student Portal.</div>
   </div>
 </body>
-</html>`)
+</html>`
+    const win = window.open('', '_blank', 'width=480,height=640')
+    win.document.open()
     win.document.close()
-    win.focus()
-    win.print()
-    win.close()
+    const iframe = win.document.createElement('iframe')
+    iframe.style.cssText = 'border:none;width:100%;height:100%;position:fixed;top:0;left:0'
+    iframe.srcdoc = html
+    win.document.body.style.margin = '0'
+    win.document.body.appendChild(iframe)
+    iframe.onload = () => { win.focus(); win.print(); win.close() }
   }
 
   const handleSubmit = async (e) => {
@@ -220,7 +224,7 @@ export default function Enrol() {
         const expiresAt  = new Date(Date.now() + expiryHrs * 3600 * 1000)
 
         await addDoc(collection(db, 'users'), {
-          studentId:        studentDocRef.id,
+          studentId:        reg_number,
           name:             fullName,
           email:            studentEmail,
           role:             'student',

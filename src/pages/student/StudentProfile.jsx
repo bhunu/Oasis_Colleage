@@ -19,10 +19,10 @@ export default function StudentProfile() {
     : 'ST'
 
   const handleSave = async () => {
-    if (!studentData?.studentId) return
+    if (!studentData?.studentDocId) return
     setSaving(true)
     try {
-      await updateDoc(doc(db, 'students', studentData.studentId), {
+      await updateDoc(doc(db, 'students', studentData.studentDocId), {
         email:     email.trim(),
         phone:     phone.trim(),
         hasEmail:  email.trim().length > 0,

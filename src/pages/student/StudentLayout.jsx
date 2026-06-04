@@ -1,7 +1,5 @@
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { signOut } from 'firebase/auth'
-import { auth } from '../../firebase/config'
 import { useStudent } from '../../context/StudentContext'
 import useStudentSessionTimeout from '../../hooks/useStudentSessionTimeout'
 import useStudentSessionGuard, { endStudentSession } from '../../hooks/useStudentSessionGuard'
@@ -25,7 +23,7 @@ const NAV = [
 export default function StudentLayout({ children }) {
   useStudentSessionTimeout()
   const navigate  = useNavigate()
-  const { studentData } = useStudent()
+  const { studentData, logout } = useStudent()
   const [open, setOpen] = useState(false)
 
   // Concurrent session guard — signs out if another device kills this session
@@ -37,7 +35,7 @@ export default function StudentLayout({ children }) {
 
   const handleLogout = async () => {
     await endStudentSession(studentData?.uid)
-    await signOut(auth)
+    logout()
     toast.success('Signed out')
     navigate('/')
   }

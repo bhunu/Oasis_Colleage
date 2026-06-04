@@ -5,10 +5,10 @@ import { FaBars, FaTimes, FaGraduationCap, FaChevronDown, FaSignInAlt, FaLaptopC
 import { useScrollNav } from '../hooks/useScrollNav'
 
 const LOGIN_PORTALS = [
-  { key: 'web-admin',        label: 'Web Admin',         icon: FaLaptopCode,    desc: 'System administration' },
-  { key: 'students-records', label: 'Students Records',  icon: FaClipboardList,  desc: 'Academic data management' },
-  { key: 'student-portal',   label: 'Student Portal',    icon: FaUserGraduate,   desc: 'Grades & resources' },
-  { key: 'bursar',           label: 'Bursar',            icon: FaMoneyCheckAlt,  desc: 'Finance & fee management' },
+  { key: 'web-admin',        label: 'Web Admin',         icon: FaLaptopCode,    desc: 'System administration',     href: '/staff-login?portal=web-admin' },
+  { key: 'students-records', label: 'Students Records',  icon: FaClipboardList, desc: 'Academic data management',  href: '/staff-login?portal=students-records' },
+  { key: 'student-portal',   label: 'Student Portal',    icon: FaUserGraduate,  desc: 'Grades & resources',        href: '/login' },
+  { key: 'bursar',           label: 'Bursar',            icon: FaMoneyCheckAlt, desc: 'Finance & fee management',  href: '/staff-login?portal=bursar' },
 ]
 
 const NAV_LINKS = [
@@ -183,7 +183,7 @@ function LoginDropdown() {
               return (
                 <Link
                   key={portal.key}
-                  to={`/login?portal=${portal.key}`}
+                  to={portal.href}
                   className="flex items-start gap-3 px-4 py-3.5 hover:bg-white/5 transition-colors group border-b border-white/5 last:border-0"
                 >
                   <div className="w-7 h-7 rounded-lg bg-gold/10 flex items-center justify-center flex-shrink-0 mt-0.5 group-hover:bg-gold/20 transition-colors">
@@ -352,7 +352,7 @@ export default function Navbar() {
                     return (
                       <Link
                         key={portal.key}
-                        to={`/login?portal=${portal.key}`}
+                        to={portal.href}
                         className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors group"
                       >
                         <div className="w-7 h-7 rounded-lg bg-gold/10 flex items-center justify-center flex-shrink-0 group-hover:bg-gold/20 transition-colors">

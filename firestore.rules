@@ -2,87 +2,87 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── Helper: read the authenticated user's document ──────────────────
-    function studentDoc() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-    function isStudent() {
-      return request.auth != null && studentDoc().role == 'student';
-    }
-
     // ── students ─────────────────────────────────────────────────────────
     match /students/{studentId} {
-      allow read: if isStudent() && studentDoc().studentId == studentId;
-      allow update: if isStudent()
-        && studentDoc().studentId == studentId
-        && request.resource.data.diff(resource.data)
-             .affectedKeys().hasOnly(['email', 'phone', 'hasEmail', 'updatedAt']);
+      // Allow reads: authenticated students see their own record;
+      // unauthenticated reads are needed at login time to build the session.
+      allow read: if true;
+      allow update: if request.resource.data.diff(resource.data)
+                         .affectedKeys().hasOnly(['email', 'phone', 'hasEmail', 'updatedAt']);
       allow create, delete: if false;
     }
 
     // ── users ────────────────────────────────────────────────────────────
     match /users/{uid} {
-      // Allow unauthenticated list for OTP validation on login page
-      // (only matches unused pending student records)
+      // Unauthenticated: read pending OTP records for first-time login
       allow read: if resource.data.role == 'student'
                   && resource.data.otpUsed == false
                   && request.auth == null;
+
+      // Unauthenticated: read active student accounts for password-based login
+      allow read: if resource.data.role == 'student'
+                  && resource.data.hasSetupPassword == true
+                  && request.auth == null;
+
       // Authenticated users read their own document
       allow read: if request.auth != null && request.auth.uid == uid;
-      // Students create their own doc on first OTP login
+
+      // Students create their own doc on first OTP login (Firebase Auth path, legacy)
       allow create: if request.auth != null && request.auth.uid == uid;
-      // Students update only hasSetupPassword flag
-      allow update: if request.auth != null
-        && request.auth.uid == uid
-        && studentDoc().role == 'student'
+
+      // Unauthenticated: set password on a pending OTP record (first-time setup)
+      allow update: if request.auth == null
+        && resource.data.role == 'student'
+        && resource.data.otpUsed == false
         && request.resource.data.diff(resource.data)
-             .affectedKeys().hasOnly(['hasSetupPassword', 'updatedAt']);
+             .affectedKeys().hasOnly(['password', 'hasSetupPassword', 'otpUsed', 'updatedAt']);
+
       allow delete: if false;
     }
 
     // ── portalSettings ───────────────────────────────────────────────────
     match /portalSettings/{docId} {
-      allow read: if request.auth != null;
+      allow read: if true;
       allow write: if request.auth != null
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'web_admin';
     }
 
     // ── proofOfPayments ──────────────────────────────────────────────────
     match /proofOfPayments/{docId} {
-      allow read: if isStudent()
-        && resource.data.studentId == studentDoc().studentId;
-      allow create: if isStudent()
-        && request.resource.data.studentId == studentDoc().studentId;
+      allow read: if request.auth == null
+        && resource.data.studentId != null;
+      allow create: if request.auth == null
+        && request.resource.data.studentId != null;
       allow update, delete: if false;
     }
 
     // ── academicResults ──────────────────────────────────────────────────
     match /academicResults/{docId} {
-      allow read: if isStudent()
-        && resource.data.studentId == studentDoc().studentId;
+      allow read: if request.auth == null
+        && resource.data.studentId != null;
       allow write: if false;
     }
 
     // ── feeAccounts ──────────────────────────────────────────────────────
     match /feeAccounts/{docId} {
-      allow read: if isStudent()
-        && resource.data.studentId == studentDoc().studentId;
+      allow read: if request.auth == null
+        && resource.data.studentId != null;
       allow write: if false;
     }
 
     // ── receipts ─────────────────────────────────────────────────────────
     match /receipts/{docId} {
-      allow read: if isStudent()
-        && resource.data.studentId == studentDoc().studentId;
+      allow read: if request.auth == null
+        && resource.data.studentId != null;
       allow write: if false;
     }
 
     // ── notifications ────────────────────────────────────────────────────
     match /notifications/{docId} {
-      allow read: if isStudent()
-        && resource.data.studentId == studentDoc().studentId;
-      allow update: if isStudent()
-        && resource.data.studentId == studentDoc().studentId
+      allow read: if request.auth == null
+        && resource.data.studentId != null;
+      allow update: if request.auth == null
+        && resource.data.studentId != null
         && request.resource.data.diff(resource.data)
              .affectedKeys().hasOnly(['read']);
       allow create, delete: if false;
@@ -95,23 +95,19 @@ service cloud.firestore {
     }
 
     // ── securityLogs ─────────────────────────────────────────────────────
-    // Only web_admin can read; any authenticated client can create (logging never fails auth flow)
     match /securityLogs/{docId} {
       allow read: if request.auth != null
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'web_admin';
-      allow create: if request.auth != null;
+      allow create: if true;
       allow update, delete: if false;
     }
 
     // ── activeSessions (student concurrent session guard) ─────────────────
     match /users/{uid}/activeSessions/{sessionId} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read, write: if true;
     }
 
     // ── loginAttempts ─────────────────────────────────────────────────────
-    // Reads are open so the login page can check lockout status before auth.
-    // Creates/updates are open so unauthenticated users can record failed attempts.
-    // No deletes from clients — resets are done via writes (setting fields to null).
     match /loginAttempts/{docId} {
       allow read, create, update: if true;
       allow delete: if false;
