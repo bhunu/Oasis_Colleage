@@ -3,7 +3,7 @@ import { useDropzone } from 'react-dropzone'
 import * as XLSX from 'xlsx'
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
 import { db } from '../firebase/config'
-import { addStudent } from '../firebase/students'
+import { addStudent, getStudents } from '../firebase/students'
 import { generateRegNumber } from '../utils/generateRegNumber'
 import { sendOtpEmail } from '../utils/sendOtpEmail'
 import toast from 'react-hot-toast'
@@ -85,8 +85,7 @@ function validateRow(row, idx) {
   if (!row.guardianPhone?.trim())                   errs.push('Phone missing')
   else if (!/^[+0-9][\d\s\-]{6,14}$/.test(row.guardianPhone.trim())) errs.push('Invalid phone')
 
-  if (!row.guardianEmail?.trim())                   errs.push('Email missing')
-  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.guardianEmail.trim())) errs.push('Invalid email')
+  if (row.guardianEmail?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.guardianEmail.trim())) errs.push('Invalid email')
 
   if (!row.homeAddress?.trim())                     errs.push('Address missing')
 
@@ -119,7 +118,7 @@ export default function BulkImport() {
 
   const processFile = useCallback((file) => {
     const reader = new FileReader()
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const wb   = XLSX.read(e.target.result, { type: 'array' })
         const ws   = wb.Sheets[wb.SheetNames[0]]
@@ -152,7 +151,20 @@ export default function BulkImport() {
           return { ...row, _errors: errs, _status: errs.length === 0 ? 'valid' : 'error' }
         })
 
-        setRows(parsed)
+        // Detect duplicates against already-uploaded students (match by fullName + dateOfBirth)
+        const existing = await getStudents()
+        const existingKeys = new Set(
+          existing.map(s => `${s.fullName?.trim().toLowerCase()}|${s.dateOfBirth}`)
+        )
+        const deduplicated = parsed.map(row => {
+          if (row._status === 'valid') {
+            const key = `${row.fullName.toLowerCase()}|${row.dateOfBirth}`
+            if (existingKeys.has(key)) return { ...row, _status: 'duplicate' }
+          }
+          return row
+        })
+
+        setRows(deduplicated)
         setFileName(file.name)
         setDone(false)
       } catch {
@@ -168,9 +180,10 @@ export default function BulkImport() {
     multiple: false,
   })
 
-  const validRows   = rows.filter(r => r._status === 'valid')
-  const errorRows   = rows.filter(r => r._status === 'error')
-  const importedRows = rows.filter(r => r._status === 'imported')
+  const validRows     = rows.filter(r => r._status === 'valid')
+  const errorRows     = rows.filter(r => r._status === 'error')
+  const importedRows  = rows.filter(r => r._status === 'imported')
+  const duplicateRows = rows.filter(r => r._status === 'duplicate')
 
   const handleImport = async () => {
     if (validRows.length === 0) return
@@ -305,9 +318,10 @@ export default function BulkImport() {
 
   // ── Preview table ──────────────────────────────────────────────────────
   const statusIcon = (r) => {
-    if (r._status === 'imported') return <MdCheckCircle className="text-emerald-400 text-base shrink-0" />
-    if (r._status === 'failed')   return <MdError className="text-red-400 text-base shrink-0" />
-    if (r._status === 'error')    return <MdWarning className="text-amber-400 text-base shrink-0" />
+    if (r._status === 'imported')  return <MdCheckCircle className="text-emerald-400 text-base shrink-0" />
+    if (r._status === 'failed')    return <MdError className="text-red-400 text-base shrink-0" />
+    if (r._status === 'error')     return <MdWarning className="text-amber-400 text-base shrink-0" />
+    if (r._status === 'duplicate') return <MdCheckCircle className="text-blue-400 text-base shrink-0" />
     return <MdCheckCircle className="text-emerald-400/40 text-base shrink-0" />
   }
 
@@ -323,7 +337,8 @@ export default function BulkImport() {
           <div className="flex gap-3 text-xs font-montserrat">
             <span className="text-emerald-400">{validRows.length} valid</span>
             {errorRows.length > 0 && <span className="text-amber-400">{errorRows.length} errors</span>}
-            {importedRows.length > 0 && <span className="text-blue-400">{importedRows.length} imported</span>}
+            {duplicateRows.length > 0 && <span className="text-blue-400">{duplicateRows.length} duplicate{duplicateRows.length > 1 ? 's' : ''}</span>}
+            {importedRows.length > 0 && <span className="text-emerald-400">{importedRows.length} imported</span>}
           </div>
         </div>
         <button onClick={reset} className="text-gray-600 hover:text-gray-300 transition-colors p-1">
@@ -349,7 +364,7 @@ export default function BulkImport() {
             </thead>
             <tbody>
               {rows.map((row, i) => (
-                <tr key={i} className={`border-b border-white/5 ${row._status === 'error' ? 'bg-red-500/5' : row._status === 'imported' ? 'bg-emerald-500/5' : ''}`}>
+                <tr key={i} className={`border-b border-white/5 ${row._status === 'error' ? 'bg-red-500/5' : row._status === 'imported' ? 'bg-emerald-500/5' : row._status === 'duplicate' ? 'bg-blue-500/5' : ''}`}>
                   <td className="px-3 py-2.5 text-gray-600">{i + 1}</td>
                   <td className="px-3 py-2.5 text-white">{row.fullName || <span className="text-red-400 italic">missing</span>}</td>
                   <td className="px-3 py-2.5 text-gray-400">{row.dateOfBirth}</td>
@@ -365,9 +380,10 @@ export default function BulkImport() {
                           {row._errors[0]}{row._errors.length > 1 ? ` +${row._errors.length - 1}` : ''}
                         </span>
                       )}
-                      {row._status === 'imported' && <span className="text-emerald-400">Imported</span>}
-                      {row._status === 'valid'    && <span className="text-gray-500">Ready</span>}
-                      {row._status === 'failed'   && <span className="text-red-400">Failed</span>}
+                      {row._status === 'imported'  && <span className="text-emerald-400">Imported</span>}
+                      {row._status === 'valid'     && <span className="text-gray-500">Ready</span>}
+                      {row._status === 'failed'    && <span className="text-red-400">Failed</span>}
+                      {row._status === 'duplicate' && <span className="text-blue-400">Already uploaded</span>}
                     </div>
                   </td>
                 </tr>

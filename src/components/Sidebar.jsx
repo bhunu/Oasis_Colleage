@@ -12,6 +12,7 @@ import {
   MdCalendarMonth as IconCalendarOff,
   MdSettings as IconSettings,
   MdLogout as IconLogout,
+  MdBook as IconBook,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
@@ -30,6 +31,7 @@ const NAV = [
   {
     section: 'ACADEMICS',
     items: [
+      { label: 'Subjects',          icon: IconBook,            path: '/subjects' },
       { label: 'End of term exams', icon: IconFileCertificate, path: '/exams' },
       { label: 'Academic reports',  icon: IconReportAnalytics, path: '/reports' },
     ],
@@ -47,7 +49,6 @@ const NAV = [
     section: 'SYSTEM',
     items: [
       { label: 'Settings',    icon: IconSettings, path: '/settings' },
-      { label: 'OTP Manager', icon: IconReceipt,  path: '/otp-manager' },
     ],
   },
 ]

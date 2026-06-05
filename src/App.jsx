@@ -68,6 +68,7 @@ import Payments from './pages/Payments'
 import EndOfTerm from './pages/EndOfTerm'
 import StudentPortal from './pages/StudentPortal'
 import Settings from './pages/Settings'
+import Subjects from './pages/Subjects'
 
 const pageVariants = {
   initial: { opacity: 0, y: 12 },
@@ -100,10 +101,11 @@ export default function App() {
                      location.pathname.startsWith('/end-of-term') ||
                      location.pathname.startsWith('/student-portal') ||
                      location.pathname.startsWith('/settings') ||
+                     location.pathname.startsWith('/subjects') ||
                      location.pathname.startsWith('/otp-manager')
   const isLogin   = location.pathname === '/login' || location.pathname === '/staff-login'
   const isBursar  = location.pathname.startsWith('/bursar')
-  const isStudent = location.pathname.startsWith('/student')
+  const isStudent = location.pathname.startsWith('/student/')
 
   if (loading) return <Preloader onDone={() => setLoading(false)} />
 
@@ -200,6 +202,9 @@ export default function App() {
           }/>
           <Route path="/settings" element={
             <ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>
+          }/>
+          <Route path="/subjects" element={
+            <ProtectedRoute><Layout><Subjects /></Layout></ProtectedRoute>
           }/>
           <Route path="/otp-manager" element={
             <ProtectedRoute><Layout><StudentOTPManager /></Layout></ProtectedRoute>

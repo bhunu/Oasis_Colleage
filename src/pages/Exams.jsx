@@ -25,7 +25,7 @@ const CLASSES = [
 const TERMS = ['Term 1 2025','Term 2 2025','Term 3 2025','Term 1 2026','Term 2 2026']
 
 // Reserved columns that are NOT subjects
-const NON_SUBJECT = new Set(['regno', 'fullname', 'comment'])
+const NON_SUBJECT = new Set(['regno', 'comment'])
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 function toTermId(term) {
@@ -37,8 +37,7 @@ function toClassId(cls) {
 
 function validateRow(row, subjectCols) {
   const errors = []
-  if (!row.regNo?.trim())    errors.push('Reg number missing')
-  if (!row.fullName?.trim()) errors.push('Full name missing')
+  if (!row.regNo?.trim()) errors.push('Reg number missing')
   for (const col of subjectCols) {
     const raw = row.subjects[col]
     if (raw === '' || raw === null || raw === undefined) continue
@@ -57,10 +56,9 @@ function parseCSV(results) {
   // Normalise header keys: lowercase + trim
   const headers   = Object.keys(raw[0]).map(h => h.trim())
   const subjectCols = headers.filter(h => !NON_SUBJECT.has(h.toLowerCase()))
-    // everything that isn't regNo / fullName / comment
     .filter(h => {
       const lo = h.toLowerCase()
-      return lo !== 'regno' && lo !== 'fullname' && lo !== 'comment'
+      return lo !== 'regno' && lo !== 'comment'
     })
 
   const rows = raw.map((r, idx) => {
@@ -77,16 +75,15 @@ function parseCSV(results) {
     }
 
     const row = {
-      _idx:     idx + 2,          // 1-based row number in the CSV (row 1 = header)
-      regNo:    get('regno'),
-      fullName: get('fullname'),
-      comment:  get('comment'),
+      _idx:    idx + 2,          // 1-based row number in the CSV (row 1 = header)
+      regNo:   get('regno'),
+      comment: get('comment'),
       subjects,
     }
     row._errors = validateRow(row, subjectCols)
     row._valid  = row._errors.length === 0
     return row
-  }).filter(r => r.regNo || r.fullName)  // drop completely blank rows
+  }).filter(r => r.regNo)  // drop completely blank rows
 
   return { rows, subjectCols }
 }
@@ -100,8 +97,8 @@ function chunks(arr, n) {
 
 // Download a sample CSV template
 function downloadTemplate() {
-  const header = 'regNo,fullName,maths,english,science,history,geography,agriculture,commerce,accounts,biology,comment'
-  const sample = 'R26001,Tatenda Ncube,78,65,82,70,55,90,60,72,68,'
+  const header = 'regNo,maths,english,science,history,geography,agriculture,commerce,accounts,biology,comment'
+  const sample = 'R26001,78,65,82,70,55,90,60,72,68,'
   const blob   = new Blob([header + '\n' + sample], { type: 'text/csv' })
   const url    = URL.createObjectURL(blob)
   const a      = document.createElement('a')
@@ -213,7 +210,6 @@ export default function Exams() {
           const ref = doc(db, basePath, row.regNo.trim())
           batch.set(ref, {
             regNo:      row.regNo.trim(),
-            fullName:   row.fullName.trim(),
             className,
             term,
             subjects,
@@ -324,7 +320,7 @@ export default function Exams() {
             </p>
             <p className="font-montserrat text-xs text-gray-600">or click to browse — .csv files only</p>
             <p className="font-montserrat text-[10px] text-gray-700 mt-3">
-              Required columns: <span className="text-gray-500">regNo, fullName, [subjects…], comment (optional)</span>
+              Required columns: <span className="text-gray-500">regNo, [subjects…], comment (optional)</span>
             </p>
           </div>
         ) : verifying ? (
@@ -428,7 +424,6 @@ export default function Exams() {
                 <tr>
                   <th className="text-left px-4 py-3 text-gray-500 uppercase tracking-wider w-10">#</th>
                   <th className="text-left px-4 py-3 text-gray-500 uppercase tracking-wider">Reg No</th>
-                  <th className="text-left px-4 py-3 text-gray-500 uppercase tracking-wider">Full Name</th>
                   {parsed.subjectCols.map(col => (
                     <th key={col} className="text-center px-3 py-3 text-gray-500 uppercase tracking-wider whitespace-nowrap">
                       {col}
@@ -449,9 +444,6 @@ export default function Exams() {
                     <td className="px-4 py-3 text-gray-600">{row._idx}</td>
                     <td className={`px-4 py-3 font-mono font-semibold ${row.regNo ? 'text-[#C9A84C]' : 'text-red-400 italic'}`}>
                       {row.regNo || 'missing'}
-                    </td>
-                    <td className={`px-4 py-3 ${row.fullName ? 'text-white' : 'text-red-400 italic'}`}>
-                      {row.fullName || 'missing'}
                     </td>
                     {parsed.subjectCols.map(col => {
                       const val = row.subjects[col]
