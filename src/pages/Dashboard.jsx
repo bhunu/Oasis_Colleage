@@ -1,16 +1,16 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { collection, getCountFromServer, getDocs, query, where, orderBy } from 'firebase/firestore'
 import { db } from '../firebase/config'
 import StatCard from '../components/StatCard'
 import {
   MdPeople as IconUsers,
-  MdCheckCircle as IconCheckCircle,
-  MdWarning as IconAlertTriangle,
-  MdDescription as IconFileText,
+  MdDirectionsWalk as IconDayScholar,
+  MdHotel as IconBoarder,
 } from 'react-icons/md'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell,
+  ResponsiveContainer, LineChart, Line,
 } from 'recharts'
 
 const CHART_GRID   = { stroke: 'rgba(255,255,255,0.06)', strokeDasharray: '3 3' }
@@ -22,20 +22,24 @@ const TOOLTIP_STYLE = {
   cursor:       { fill: 'rgba(255,255,255,0.04)' },
 }
 
+const LEVEL_ORDER = ['Form 1', 'Form 2', 'Form 3', 'Form 4', 'Lower 6', 'Upper 6']
+
+function classToLevel(cls = '') {
+  const c = cls.trim()
+  if (/form\s*1/i.test(c)) return 'Form 1'
+  if (/form\s*2/i.test(c)) return 'Form 2'
+  if (/form\s*3/i.test(c)) return 'Form 3'
+  if (/form\s*4/i.test(c)) return 'Form 4'
+  if (/lower\s*6|l\.?6/i.test(c)) return 'Lower 6'
+  if (/upper\s*6|u\.?6/i.test(c)) return 'Upper 6'
+  return null
+}
+
+function isMale(g = '') {
+  return /^(m|male|boy|boys)$/i.test(String(g).trim())
+}
+
 const mockChartData = {
-  feesByClass: [
-    { name: 'Form 1A', arrears: 2400, paid: 2400 },
-    { name: 'Form 1B', arrears: 1398, paid: 2210 },
-    { name: 'Form 2A', arrears: 9800, paid: 2290 },
-    { name: 'Form 2B', arrears: 3908, paid: 2000 },
-    { name: 'Form 3A', arrears: 4800, paid: 2181 },
-    { name: 'Form 3B', arrears: 3800, paid: 2500 },
-  ],
-  paymentStatus: [
-    { name: 'Paid in full', value: 45, color: '#10b981' },
-    { name: 'In arrears',   value: 35, color: '#ef4444' },
-    { name: 'Partial',      value: 20, color: '#C9A84C' },
-  ],
   trendData: [
     { term: 'Term 1', '2023': 12000, '2024': 15000, '2025': 8000 },
     { term: 'Term 2', '2023': 11000, '2024': 13000, '2025': 9500 },
@@ -43,21 +47,7 @@ const mockChartData = {
   ],
 }
 
-const mockRecentEnrolments = [
-  { id: 'OC-2025-0001', name: 'Tatenda Ncube',    class: 'Form 1A', date: '2025-05-28' },
-  { id: 'OC-2025-0002', name: 'Chipo Mukwaya',    class: 'Form 2B', date: '2025-05-27' },
-  { id: 'OC-2025-0003', name: 'Tinashe Banda',    class: 'Form 3A', date: '2025-05-26' },
-  { id: 'OC-2025-0004', name: 'Nomsa Mwangi',     class: 'Form 1B', date: '2025-05-25' },
-  { id: 'OC-2025-0005', name: 'Bongani Dlamini',  class: 'Form 4A', date: '2025-05-24' },
-]
 
-const mockArrearStudents = [
-  { id: 'OC-2024-0145', name: 'Samuel Mwale',     class: 'Form 2A', amount: 850 },
-  { id: 'OC-2024-0128', name: 'Grace Moyo',        class: 'Form 3B', amount: 620 },
-  { id: 'OC-2024-0156', name: 'David Chikombo',    class: 'Form 1A', amount: 400 },
-  { id: 'OC-2024-0142', name: 'Blessing Ncube',    class: 'Form 2B', amount: 280 },
-  { id: 'OC-2024-0189', name: 'Joyce Banda',       class: 'Form 3A', amount: 120 },
-]
 
 const CARD_CLASS = 'bg-[#0D1C35] border border-white/10 rounded-xl p-6'
 const HEADING    = 'font-semibold text-white font-playfair'
@@ -67,28 +57,65 @@ const TD_NAME    = 'py-3 px-4 text-sm text-white font-montserrat'
 
 export default function Dashboard() {
   const navigate = useNavigate()
-  const [stats, setStats] = useState({ totalStudents: 285, feesPaidFull: 198, feesArrears: 87, marksUploaded: 92 })
+  const [stats, setStats]               = useState({ totalStudents: null, dayScholars: null, boarders: null })
+  const [recentEnrolments, setRecent]   = useState([])
+  const [demographics, setDemographics] = useState([])
+  const [boardingDemo, setBoardingDemo] = useState([])
 
   useEffect(() => {
-    setStats({ totalStudents: 285, feesPaidFull: 198, feesArrears: 87, marksUploaded: 92 })
+    Promise.all([
+      getCountFromServer(query(collection(db, 'students'), where('boardingStatus', '==', 'day'))),
+      getCountFromServer(query(collection(db, 'students'), where('boardingStatus', '==', 'boarder'))),
+      getDocs(query(collection(db, 'students'), orderBy('createdAt', 'desc'))),
+    ])
+      .then(([day, boarder, allSnap]) => {
+        const allStudents = allSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+        setStats({
+          totalStudents: allStudents.length,
+          dayScholars:   day.data().count,
+          boarders:      boarder.data().count,
+        })
+        setRecent(allStudents.slice(0, 5))
+
+        const map = {}
+        LEVEL_ORDER.forEach(l => { map[l] = { level: l, boys: 0, girls: 0 } })
+        allStudents.forEach(s => {
+          const level = classToLevel(s.class)
+          if (!level) return
+          if (isMale(s.gender)) map[level].boys++
+          else map[level].girls++
+        })
+        setDemographics(LEVEL_ORDER.map(l => map[l]).filter(d => d.boys + d.girls > 0))
+
+        const bd = { boarders: { boys: 0, girls: 0 }, day: { boys: 0, girls: 0 } }
+        allStudents.forEach(s => {
+          const bucket = String(s.boardingStatus || 'day').trim().toLowerCase() === 'boarder' ? 'boarders' : 'day'
+          if (isMale(s.gender)) bd[bucket].boys++
+          else bd[bucket].girls++
+        })
+        setBoardingDemo([
+          { category: 'Boarders',     boys: bd.boarders.boys, girls: bd.boarders.girls },
+          { category: 'Day Scholars', boys: bd.day.boys,      girls: bd.day.girls      },
+        ])
+      })
+      .catch(() => setStats({ totalStudents: '—', dayScholars: '—', boarders: '—' }))
   }, [])
 
   return (
     <div className="space-y-6">
 
       {/* Stat cards */}
-      <div className="grid grid-cols-4 gap-4">
-        <StatCard label="Total Students"   value={stats.totalStudents}                       icon={IconUsers}         color="blue"   />
-        <StatCard label="Fees Paid in Full" value={stats.feesPaidFull}                       icon={IconCheckCircle}   color="green"  />
-        <StatCard label="Fees in Arrears"   value={`$${(87 * 450).toLocaleString()}`}        icon={IconAlertTriangle} color="red"    />
-        <StatCard label="Marks Uploaded"    value={`${stats.marksUploaded}%`}                icon={IconFileText}      color="purple" />
+      <div className="grid grid-cols-3 gap-4">
+        <StatCard label="Total Students" value={stats.totalStudents}        icon={IconUsers}       color="blue"   />
+        <StatCard label="Day Scholars"   value={stats.dayScholars}          icon={IconDayScholar}  color="gold"   />
+        <StatCard label="Boarder Students" value={stats.boarders} icon={IconBoarder} color="purple" />
       </div>
 
       {/* Quick Actions */}
       <div className="grid grid-cols-2 gap-4">
         {[
-          { label: 'Enrol Student', sub: 'Add new enrollment',  path: '/enrol' },
-          { label: 'Update Fees',   sub: 'Manage fee accounts', path: '/fees' },
+          { label: 'Enrol Student',              sub: 'Add new enrollment',       path: '/enrol' },
+          { label: 'Student Reg Forms',          sub: 'Generate registration forms', path: '/access-pass' },
         ].map(({ label, sub, path }) => (
           <button
             key={path}
@@ -103,49 +130,97 @@ export default function Dashboard() {
 
       {/* Charts row 1 */}
       <div className="grid grid-cols-2 gap-6">
-        {/* Fees by class */}
+        {/* Demographics */}
         <div className={CARD_CLASS}>
-          <div className="flex justify-between items-center mb-4">
-            <h3 className={HEADING}>Fees Arrears by Class</h3>
-            <select className="text-xs bg-white/5 border border-white/10 text-gray-400 rounded-lg px-3 py-1.5 font-montserrat focus:outline-none focus:border-[#C9A84C]/40">
-              <option>Term 2 2025</option>
-              <option>Term 1 2025</option>
-            </select>
+          <div className="flex justify-between items-center mb-1">
+            <div>
+              <h3 className={HEADING}>Student Demographics</h3>
+              <p className="text-[11px] text-gray-500 font-montserrat mt-0.5">Enrolled students by level & gender</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="flex items-center gap-1.5 text-[11px] text-gray-400 font-montserrat">
+                <span className="w-2.5 h-2.5 rounded-sm inline-block bg-[#3b82f6]" />Boys
+              </span>
+              <span className="flex items-center gap-1.5 text-[11px] text-gray-400 font-montserrat">
+                <span className="w-2.5 h-2.5 rounded-sm inline-block bg-[#f43f5e]" />Girls
+              </span>
+            </div>
           </div>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={mockChartData.feesByClass} layout="vertical">
-              <CartesianGrid {...CHART_GRID} />
-              <XAxis type="number" tick={AXIS_TICK} axisLine={AXIS_LINE} tickLine={false} />
-              <YAxis dataKey="name" type="category" width={75} tick={AXIS_TICK} axisLine={AXIS_LINE} tickLine={false} />
-              <Tooltip {...TOOLTIP_STYLE} />
-              <Legend wrapperStyle={{ color: '#9ca3af', fontSize: 11, fontFamily: 'Montserrat' }} />
-              <Bar dataKey="arrears" fill="#ef4444" radius={[0, 4, 4, 0]} />
-              <Bar dataKey="paid"    fill="#3b82f6" radius={[0, 4, 4, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          {demographics.length === 0 ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#C9A84C]" />
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={demographics} layout="vertical" barCategoryGap="30%" barGap={3}>
+                <CartesianGrid {...CHART_GRID} />
+                <XAxis type="number" domain={[0, 40]} ticks={[0, 10, 20, 30, 40]} tick={AXIS_TICK} axisLine={AXIS_LINE} tickLine={false} />
+                <YAxis dataKey="level" type="category" width={62} tick={AXIS_TICK} axisLine={AXIS_LINE} tickLine={false} />
+                <Tooltip
+                  {...TOOLTIP_STYLE}
+                  formatter={(value, name) => [value, name === 'boys' ? 'Boys' : 'Girls']}
+                />
+                <Bar dataKey="boys"  name="Boys"  fill="#3b82f6" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="girls" name="Girls" fill="#f43f5e" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
 
-        {/* Payment status */}
+        {/* Boarding demographics */}
         <div className={CARD_CLASS}>
-          <h3 className={`${HEADING} mb-4`}>Payment Status</h3>
-          <ResponsiveContainer width="100%" height={220}>
-            <PieChart>
-              <Pie data={mockChartData.paymentStatus} cx="50%" cy="50%" innerRadius={70} outerRadius={100} paddingAngle={2} dataKey="value">
-                {mockChartData.paymentStatus.map((entry, i) => (
-                  <Cell key={i} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip {...TOOLTIP_STYLE} />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="mt-2 space-y-2">
-            {mockChartData.paymentStatus.map((item, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: item.color }} />
-                <span className="text-xs text-gray-400 font-montserrat">{item.name}: <span className="text-white">{item.value}%</span></span>
-              </div>
-            ))}
+          <div className="flex justify-between items-center mb-1">
+            <div>
+              <h3 className={HEADING}>Boarding Demographics</h3>
+              <p className="text-[11px] text-gray-500 font-montserrat mt-0.5">Boys & girls by boarding status</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="flex items-center gap-1.5 text-[11px] text-gray-400 font-montserrat">
+                <span className="w-2.5 h-2.5 rounded-sm inline-block bg-[#3b82f6]" />Boys
+              </span>
+              <span className="flex items-center gap-1.5 text-[11px] text-gray-400 font-montserrat">
+                <span className="w-2.5 h-2.5 rounded-sm inline-block bg-[#f43f5e]" />Girls
+              </span>
+            </div>
           </div>
+          {boardingDemo.length === 0 ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#C9A84C]" />
+            </div>
+          ) : (
+            <>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={boardingDemo} barCategoryGap="40%" barGap={4}>
+                  <CartesianGrid {...CHART_GRID} />
+                  <XAxis dataKey="category" tick={AXIS_TICK} axisLine={AXIS_LINE} tickLine={false} />
+                  <YAxis domain={[0, 40]} ticks={[0, 10, 20, 30, 40]} tick={AXIS_TICK} axisLine={AXIS_LINE} tickLine={false} />
+                  <Tooltip
+                    {...TOOLTIP_STYLE}
+                    formatter={(value, name) => [value, name === 'boys' ? 'Boys' : 'Girls']}
+                  />
+                  <Bar dataKey="boys"  name="Boys"  fill="#3b82f6" radius={[4,4,0,0]} />
+                  <Bar dataKey="girls" name="Girls" fill="#f43f5e" radius={[4,4,0,0]} />
+                </BarChart>
+              </ResponsiveContainer>
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                {boardingDemo.map(d => (
+                  <div key={d.category} className="bg-white/5 rounded-lg px-4 py-3">
+                    <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest font-montserrat mb-2">{d.category}</p>
+                    <div className="flex justify-between">
+                      <div>
+                        <p className="text-xl font-bold text-[#3b82f6] font-playfair">{d.boys}</p>
+                        <p className="text-[10px] text-gray-500 font-montserrat">Boys</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xl font-bold text-[#f43f5e] font-playfair">{d.girls}</p>
+                        <p className="text-[10px] text-gray-500 font-montserrat">Girls</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -167,77 +242,45 @@ export default function Dashboard() {
       </div>
 
       {/* Tables row */}
-      <div className="grid grid-cols-2 gap-6">
-        {/* Recent enrolments */}
-        <div className={CARD_CLASS}>
-          <div className="flex justify-between items-center mb-4">
-            <h3 className={HEADING}>Recent Enrolments</h3>
-            <button onClick={() => navigate('/enrol')} className="text-xs text-[#C9A84C] hover:text-yellow-300 font-montserrat transition-colors">
-              Enrol new
-            </button>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-white/10">
-                  <th className={TH_CLASS}>Name</th>
-                  <th className={TH_CLASS}>Class</th>
-                  <th className={TH_CLASS}>Reg ID</th>
-                  <th className={TH_CLASS}>Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {mockRecentEnrolments.map((s, i) => (
-                  <tr key={i} className="border-b border-white/5 hover:bg-white/[0.03] transition-colors">
-                    <td className={TD_NAME}>{s.name}</td>
-                    <td className={TD_CLASS}>{s.class}</td>
-                    <td className={TD_CLASS}>{s.id}</td>
-                    <td className={TD_CLASS}>{s.date}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      <div className={CARD_CLASS}>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className={HEADING}>Recent Enrolments</h3>
+          <button onClick={() => navigate('/enrol')} className="text-xs text-[#C9A84C] hover:text-yellow-300 font-montserrat transition-colors">
+            Enrol new
+          </button>
         </div>
-
-        {/* Top arrears */}
-        <div className={CARD_CLASS}>
-          <div className="flex justify-between items-center mb-4">
-            <h3 className={HEADING}>Top Arrears Students</h3>
-            <button className="text-xs text-[#C9A84C] hover:text-yellow-300 font-montserrat transition-colors">
-              Export
-            </button>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-white/10">
-                  <th className={TH_CLASS}>Name</th>
-                  <th className={TH_CLASS}>Class</th>
-                  <th className={TH_CLASS}>Amount Owed</th>
-                </tr>
-              </thead>
-              <tbody>
-                {mockArrearStudents.map((s, i) => (
-                  <tr key={i} className="border-b border-white/5 hover:bg-white/[0.03] transition-colors">
-                    <td className={TD_NAME}>{s.name}</td>
-                    <td className={TD_CLASS}>{s.class}</td>
-                    <td className={TD_CLASS}>
-                      <span className={`px-2 py-1 rounded-full text-xs font-montserrat font-semibold border ${
-                        s.amount > 500
-                          ? 'bg-red-500/15 text-red-400 border-red-500/30'
-                          : s.amount > 200
-                            ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
-                            : 'bg-white/5 text-gray-400 border-white/10'
-                      }`}>
-                        ${s.amount.toFixed(2)}
-                      </span>
-                    </td>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-white/10">
+                <th className={TH_CLASS}>Name</th>
+                <th className={TH_CLASS}>Class</th>
+                <th className={TH_CLASS}>Reg ID</th>
+                <th className={TH_CLASS}>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentEnrolments.length === 0 ? (
+                [...Array(5)].map((_, i) => (
+                  <tr key={i} className="border-b border-white/5">
+                    <td className="py-3 px-4"><div className="h-3.5 w-28 bg-white/8 rounded animate-pulse" /></td>
+                    <td className="py-3 px-4"><div className="h-3.5 w-16 bg-white/8 rounded animate-pulse" /></td>
+                    <td className="py-3 px-4"><div className="h-3.5 w-24 bg-white/8 rounded animate-pulse" /></td>
+                    <td className="py-3 px-4"><div className="h-3.5 w-20 bg-white/8 rounded animate-pulse" /></td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                ))
+              ) : (
+                recentEnrolments.map((s) => (
+                  <tr key={s.id} className="border-b border-white/5 hover:bg-white/[0.03] transition-colors">
+                    <td className={TD_NAME}>{s.fullName}</td>
+                    <td className={TD_CLASS}>{s.class}</td>
+                    <td className={TD_CLASS}><span className="font-mono text-xs">{s.reg_number || '—'}</span></td>
+                    <td className={TD_CLASS}>{s.enrolmentDate || '—'}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 

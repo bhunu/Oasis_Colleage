@@ -6,13 +6,10 @@ import {
   MdPeople as IconUsers,
   MdEmojiEvents as IconFileCertificate,
   MdAnalytics as IconReportAnalytics,
-  MdReceiptLong as IconReceipt,
-  MdWarning as IconAlertTriangle,
-  MdLocalAtm as IconCash,
-  MdCalendarMonth as IconCalendarOff,
   MdSettings as IconSettings,
   MdLogout as IconLogout,
   MdBook as IconBook,
+  MdExitToApp as IconExeat,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
@@ -26,6 +23,7 @@ const NAV = [
     items: [
       { label: 'Enrol students',  icon: IconUserPlus, path: '/enrol' },
       { label: 'Student records', icon: IconUsers,    path: '/students' },
+      { label: 'Exeat Passes',    icon: IconExeat,    path: '/exeat' },
     ],
   },
   {
@@ -34,15 +32,6 @@ const NAV = [
       { label: 'Subjects',          icon: IconBook,            path: '/subjects' },
       { label: 'End of term exams', icon: IconFileCertificate, path: '/exams' },
       { label: 'Academic reports',  icon: IconReportAnalytics, path: '/reports' },
-    ],
-  },
-  {
-    section: 'FINANCE',
-    items: [
-      { label: 'Fees accounts',         icon: IconReceipt,       path: '/fees' },
-      { label: 'Fees arrears',          icon: IconAlertTriangle, path: '/arrears' },
-      { label: 'Payments',              icon: IconCash,          path: '/payments' },
-      { label: 'End of term procedure', icon: IconCalendarOff,   path: '/end-of-term', badge: 'Term 2' },
     ],
   },
   {

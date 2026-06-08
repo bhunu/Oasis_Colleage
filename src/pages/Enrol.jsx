@@ -35,6 +35,7 @@ const EMPTY_FORM = {
   homeAddress: '',
   enrolmentDate: new Date().toISOString().split('T')[0],
   studentType: 'new',
+  boardingStatus: 'day',
 }
 
 function validate(data) {
@@ -199,8 +200,9 @@ export default function Enrol() {
         guardianPhone: formData.guardianPhone.trim(),
         guardianEmail: formData.guardianEmail.trim().toLowerCase(),
         homeAddress:   formData.homeAddress.trim(),
-        enrolmentDate: formData.enrolmentDate,
-        studentType:   formData.studentType,
+        enrolmentDate:  formData.enrolmentDate,
+        studentType:    formData.studentType,
+        boardingStatus: formData.boardingStatus,
       })
 
       await addDoc(collection(db, 'feeAccounts'), {
@@ -446,7 +448,7 @@ export default function Enrol() {
               <h3 className="font-montserrat text-[10px] font-semibold text-[#C9A84C]/70 uppercase tracking-widest mb-4 pb-2 border-b border-white/10">
                 Enrolment Details
               </h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className={lCls}>Enrolment Date *</label>
                   <input type="date" name="enrolmentDate" value={formData.enrolmentDate} onChange={handleChange}
@@ -465,6 +467,14 @@ export default function Enrol() {
                       </label>
                     ))}
                   </div>
+                </div>
+                <div>
+                  <label className={lCls}>Boarding Status *</label>
+                  <select name="boardingStatus" value={formData.boardingStatus} onChange={handleChange}
+                    className={iCls()}>
+                    <option value="day">Day Scholar</option>
+                    <option value="boarder">Boarder</option>
+                  </select>
                 </div>
               </div>
             </section>

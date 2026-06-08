@@ -1,3 +1,4 @@
+import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import heroImg from '../assets/hero1.jpg'
@@ -94,10 +95,43 @@ export default function Home() {
   const { getUpcomingEvents } = useCalendar()
   const { photos } = useGallery()
   const upcomingEvents = getUpcomingEvents(3)
-  const previewPhotos = photos.slice(0, 6)
 
   const { getFeatured } = useStaff()
   const featuredTeam = getFeatured().slice(0, 3)
+
+  // Gallery carousel — 3 visible, auto-slides every 3 s, loops seamlessly
+  const SLIDE_VISIBLE = 3
+  const extended = useMemo(
+    () => (photos.length > 0 ? [...photos, ...photos.slice(0, SLIDE_VISIBLE)] : []),
+    [photos]
+  )
+  const [slideIdx, setSlideIdx] = useState(0)
+  const [animate, setAnimate]   = useState(true)
+
+  useEffect(() => {
+    if (!extended.length) return
+    const id = setInterval(() => setSlideIdx(p => p + 1), 3000)
+    return () => clearInterval(id)
+  }, [extended.length])
+
+  useEffect(() => {
+    if (slideIdx >= photos.length && photos.length > 0) {
+      const id = setTimeout(() => {
+        setAnimate(false)
+        setSlideIdx(0)
+      }, 500)
+      return () => clearTimeout(id)
+    }
+  }, [slideIdx, photos.length])
+
+  useEffect(() => {
+    if (!animate) {
+      const id = requestAnimationFrame(() =>
+        requestAnimationFrame(() => setAnimate(true))
+      )
+      return () => cancelAnimationFrame(id)
+    }
+  }, [animate])
 
   return (
     <>
@@ -423,31 +457,35 @@ export default function Home() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {previewPhotos.map((photo, i) => (
-              <motion.div
-                key={photo.id}
-                initial={{ opacity: 0, scale: 0.95 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.07 }}
-                className="group relative overflow-hidden rounded-xl cursor-pointer shadow-md hover:shadow-2xl"
-              >
-                <Link to="/gallery">
-                  <div className="aspect-[4/3] overflow-hidden">
-                    <img
-                      src={photo.src}
-                      alt={photo.caption}
-                      loading="lazy"
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                    />
-                  </div>
-                  <div className="absolute inset-0 bg-gradient-to-t from-navy/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
-                    <p className="text-white text-xs font-sans line-clamp-2">{photo.caption}</p>
-                  </div>
-                </Link>
-              </motion.div>
-            ))}
+          <div className="overflow-hidden -mx-2">
+            <div
+              className={`flex ${animate ? 'transition-transform duration-500 ease-in-out' : ''}`}
+              style={{ transform: `translateX(-${slideIdx * (100 / SLIDE_VISIBLE)}%)` }}
+            >
+              {extended.map((photo, i) => (
+                <div
+                  key={`${photo.id}-${i}`}
+                  className="flex-shrink-0 px-2"
+                  style={{ width: `${100 / SLIDE_VISIBLE}%` }}
+                >
+                  <Link to="/gallery">
+                    <div className="group relative overflow-hidden rounded-xl cursor-pointer shadow-md hover:shadow-2xl">
+                      <div className="aspect-[4/3] overflow-hidden">
+                        <img
+                          src={photo.src}
+                          alt={photo.caption}
+                          loading="lazy"
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        />
+                      </div>
+                      <div className="absolute inset-0 bg-gradient-to-t from-navy/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
+                        <p className="text-white text-xs font-sans line-clamp-2">{photo.caption}</p>
+                      </div>
+                    </div>
+                  </Link>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>

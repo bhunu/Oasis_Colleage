@@ -8,8 +8,10 @@ export function getTermLabel(termNumber, year) {
 }
 
 export function getCurrentTerm() {
-  // Default to Term 2, 2025
-  return { number: 2, year: 2025 }
+  const month = new Date().getMonth() + 1 // 1-12
+  const year  = new Date().getFullYear()
+  const number = month <= 4 ? 1 : month <= 8 ? 2 : 3
+  return { number, year }
 }
 
 export function getNextTerm(currentTerm) {

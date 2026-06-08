@@ -22,6 +22,18 @@ export default function StudentProtectedRoute({ children }) {
   return children
 }
 
+/* Boarder-only route — redirects day scholars to dashboard */
+export function BoarderRoute({ children }) {
+  const { studentData, loading, isBoarder } = useStudent()
+
+  if (loading) return <Spinner />
+  if (!studentData) return <Navigate to="/login?portal=student-portal" replace />
+  if (!studentData.hasSetupPassword) return <Navigate to="/student/setup-password" replace />
+  if (!isBoarder) return <Navigate to="/student/dashboard" replace />
+
+  return children
+}
+
 export function StudentAuthRoute({ children }) {
   const { studentData, loading, authLoading } = useStudent()
 

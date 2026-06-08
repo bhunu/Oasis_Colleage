@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import { doc, onSnapshot } from 'firebase/firestore'
+import { doc, onSnapshot, getDocs, query, collection, where, limit } from 'firebase/firestore'
 import { db } from '../firebase/config'
 
 const StudentContext = createContext(null)
@@ -17,6 +17,7 @@ export function StudentProvider({ children }) {
   const [studentData,    setStudentData]    = useState(null)
   const [portalSettings, setPortalSettings] = useState(DEFAULT_SETTINGS)
   const [loading,        setLoading]        = useState(true)
+  const [isBoarder,      setIsBoarder]      = useState(false)
 
   /* portalSettings — real-time; falls back to defaults if auth is unavailable */
   useEffect(() => {
@@ -43,14 +44,27 @@ export function StudentProvider({ children }) {
     setLoading(false)
   }, [])
 
+  /* Fetch boardingStatus once regNumber is known */
+  useEffect(() => {
+    if (!studentData?.regNumber) { setIsBoarder(false); return }
+    getDocs(
+      query(collection(db, 'students'), where('reg_number', '==', studentData.regNumber), limit(1))
+    )
+      .then(snap => {
+        setIsBoarder(!snap.empty && snap.docs[0].data().boardingStatus === 'boarder')
+      })
+      .catch(() => setIsBoarder(false))
+  }, [studentData?.regNumber])
+
   const logout = useCallback(() => {
     sessionStorage.removeItem('studentSession')
     sessionStorage.removeItem('studentSessionId')
     setStudentData(null)
+    setIsBoarder(false)
   }, [])
 
   return (
-    <StudentContext.Provider value={{ studentData, portalSettings, loading, authLoading: false, logout }}>
+    <StudentContext.Provider value={{ studentData, portalSettings, loading, authLoading: false, logout, isBoarder }}>
       {children}
     </StudentContext.Provider>
   )

@@ -22,7 +22,7 @@ import PrintReports         from './pages/bursar/PrintReports'
 import BursarSettings       from './pages/bursar/BursarSettings'
 // Student portal imports
 import { StudentProvider }  from './context/StudentContext'
-import StudentProtectedRoute, { StudentAuthRoute } from './components/auth/StudentProtectedRoute'
+import StudentProtectedRoute, { StudentAuthRoute, BoarderRoute } from './components/auth/StudentProtectedRoute'
 import StudentLayout        from './pages/student/StudentLayout'
 import StudentDashboard     from './pages/student/StudentDashboard'
 import StudentResults       from './pages/student/StudentResults'
@@ -69,6 +69,10 @@ import EndOfTerm from './pages/EndOfTerm'
 import StudentPortal from './pages/StudentPortal'
 import Settings from './pages/Settings'
 import Subjects from './pages/Subjects'
+import AccessPassPage from './pages/AccessPassPage'
+import ExeatManagementPage from './pages/ExeatManagementPage'
+import ExeatApplicationForm from './pages/student/ExeatApplicationForm'
+import MyExeatApplications from './pages/student/MyExeatApplications'
 
 const pageVariants = {
   initial: { opacity: 0, y: 12 },
@@ -102,7 +106,9 @@ export default function App() {
                      location.pathname.startsWith('/student-portal') ||
                      location.pathname.startsWith('/settings') ||
                      location.pathname.startsWith('/subjects') ||
-                     location.pathname.startsWith('/otp-manager')
+                     location.pathname.startsWith('/otp-manager') ||
+                     location.pathname.startsWith('/access-pass') ||
+                     location.pathname.startsWith('/exeat')
   const isLogin   = location.pathname === '/login' || location.pathname === '/staff-login'
   const isBursar  = location.pathname.startsWith('/bursar')
   const isStudent = location.pathname.startsWith('/student/')
@@ -119,7 +125,9 @@ export default function App() {
           <Route path="/student/results"    element={<StudentProtectedRoute><StudentLayout><StudentResults /></StudentLayout></StudentProtectedRoute>} />
           <Route path="/student/fees"       element={<StudentProtectedRoute><StudentLayout><StudentFees /></StudentLayout></StudentProtectedRoute>} />
           <Route path="/student/profile"    element={<StudentProtectedRoute><StudentLayout><StudentProfile /></StudentLayout></StudentProtectedRoute>} />
-          <Route path="/student/upload-pop" element={<StudentProtectedRoute><StudentLayout><StudentUploadPOP /></StudentLayout></StudentProtectedRoute>} />
+          <Route path="/student/upload-pop"            element={<StudentProtectedRoute><StudentLayout><StudentUploadPOP /></StudentLayout></StudentProtectedRoute>} />
+          <Route path="/student/exeat/apply"           element={<BoarderRoute><StudentLayout><ExeatApplicationForm /></StudentLayout></BoarderRoute>} />
+          <Route path="/student/exeat/my-applications" element={<BoarderRoute><StudentLayout><MyExeatApplications /></StudentLayout></BoarderRoute>} />
         </Routes>
       </StudentProvider>
     )
@@ -208,6 +216,12 @@ export default function App() {
           }/>
           <Route path="/otp-manager" element={
             <ProtectedRoute><Layout><StudentOTPManager /></Layout></ProtectedRoute>
+          }/>
+          <Route path="/access-pass" element={
+            <ProtectedRoute><Layout><AccessPassPage /></Layout></ProtectedRoute>
+          }/>
+          <Route path="/exeat" element={
+            <ProtectedRoute><Layout><ExeatManagementPage /></Layout></ProtectedRoute>
           }/>
         </Routes>
       </>

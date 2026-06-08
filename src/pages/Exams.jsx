@@ -1,8 +1,9 @@
 import { useState, useCallback } from 'react'
+import { getCurrentTerm } from '../utils/termHelpers'
 import { useDropzone } from 'react-dropzone'
 import Papa from 'papaparse'
 import { db } from '../firebase/config'
-import { doc, writeBatch, serverTimestamp, getDocs, collection, query } from 'firebase/firestore'
+import { doc, writeBatch, serverTimestamp, getDocs, collection, query, where } from 'firebase/firestore'
 import toast from 'react-hot-toast'
 import {
   MdCloudUpload, MdUploadFile, MdCheckCircle, MdError,
@@ -22,10 +23,11 @@ const CLASSES = [
   'Upper 6 Commercials','Upper 6 Arts','Upper 6 Sciences',
 ]
 
-const TERMS = ['Term 1 2025','Term 2 2025','Term 3 2025','Term 1 2026','Term 2 2026']
+const { number, year } = getCurrentTerm()
+const TERMS = [`Term ${number} ${year}`]
 
 // Reserved columns that are NOT subjects
-const NON_SUBJECT = new Set(['regno', 'comment'])
+const NON_SUBJECT = new Set(['regno', 'name', 'comment'])
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 function toTermId(term) {
@@ -95,16 +97,6 @@ function chunks(arr, n) {
   return out
 }
 
-// Download a sample CSV template
-function downloadTemplate() {
-  const header = 'regNo,maths,english,science,history,geography,agriculture,commerce,accounts,biology,comment'
-  const sample = 'R26001,78,65,82,70,55,90,60,72,68,'
-  const blob   = new Blob([header + '\n' + sample], { type: 'text/csv' })
-  const url    = URL.createObjectURL(blob)
-  const a      = document.createElement('a')
-  a.href = url; a.download = 'marks_template.csv'; a.click()
-  URL.revokeObjectURL(url)
-}
 
 // ── Shared style shortcuts ────────────────────────────────────────────────
 const sInput  = 'w-full bg-white/5 border border-white/10 focus:border-[#C9A84C]/50 focus:outline-none rounded-xl px-4 py-2.5 text-white font-montserrat text-sm placeholder-gray-600 transition-all'
@@ -117,7 +109,7 @@ const CARD    = '#0D1C35'
 export default function Exams() {
   const [teacher, setTeacher]       = useState('')
   const [className, setClassName]   = useState('')
-  const [term, setTerm]             = useState('')
+  const [term, setTerm]             = useState(TERMS[0])
   const [fileName, setFileName]     = useState('')
   const [parsed, setParsed]         = useState(null)   // { rows, subjectCols }
   const [verifying, setVerifying]   = useState(false)
@@ -249,6 +241,53 @@ export default function Exams() {
     setParsed(null); setFileName(''); setUploadDone(false); setProgress('')
   }
 
+  const [downloading, setDownloading] = useState(false)
+
+  const handleDownloadTemplate = async () => {
+    if (!className) { toast.error('Select a class first.'); return }
+    setDownloading(true)
+    try {
+      const [studentsSnap, subjectsSnap] = await Promise.all([
+        getDocs(collection(db, 'students')),
+        getDocs(query(collection(db, 'subjects'), where('classes', 'array-contains', className))),
+      ])
+
+      const students = studentsSnap.docs
+        .map(d => d.data())
+        .filter(s => s.class === className)
+        .sort((a, b) => (a.reg_number || '').localeCompare(b.reg_number || ''))
+
+      const subjects = subjectsSnap.docs
+        .map(d => d.data().name)
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b))
+
+      if (subjects.length === 0) {
+        toast('No subjects assigned to this class yet — add subjects in the Subjects page first.', { icon: '⚠️' })
+      }
+
+      const header    = ['regNo', 'name', ...subjects, 'comment'].join(',')
+      const emptyCols = subjects.map(() => '').join(',')
+      const rows = students.length
+        ? students.map(s => `${s.reg_number || ''},"${s.name || s.fullName || ''}",${emptyCols},`)
+        : [`R26001,"Student Name",${emptyCols},`]
+
+      const blob = new Blob([header + '\n' + rows.join('\n')], { type: 'text/csv' })
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href = url
+      a.download = `${className.replace(/\s+/g, '_')}_marks_template.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+
+      if (students.length === 0) toast('No students found for this class — blank template downloaded.', { icon: '⚠️' })
+    } catch {
+      toast.error('Failed to generate template.')
+    } finally {
+      setDownloading(false)
+    }
+  }
+
   const validCount = parsed ? parsed.rows.filter(r => r._valid).length : 0
   const errorCount = parsed ? parsed.rows.filter(r => !r._valid).length : 0
   const canUpload  = parsed && validCount > 0 && errorCount === 0 && !uploading && !uploadDone
@@ -272,11 +311,12 @@ export default function Exams() {
             </div>
           </div>
           <button
-            onClick={downloadTemplate}
-            className="flex items-center gap-1.5 text-xs font-montserrat font-semibold text-[#C9A84C] hover:text-yellow-300 transition-colors"
+            onClick={handleDownloadTemplate}
+            disabled={downloading}
+            className="flex items-center gap-1.5 text-xs font-montserrat font-semibold text-[#C9A84C] hover:text-yellow-300 disabled:opacity-50 transition-colors"
           >
             <MdDownload className="text-base" />
-            Download Template
+            {downloading ? 'Downloading…' : 'Download Template'}
           </button>
         </div>
 

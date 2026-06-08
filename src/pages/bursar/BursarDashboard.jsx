@@ -7,6 +7,7 @@ import {
 import {
   MdAttachMoney, MdWarning, MdReceiptLong, MdTrendingUp,
   MdPointOfSale, MdDescription, MdTableChart, MdBalance,
+  MdCheckCircle,
 } from 'react-icons/md'
 import { collection, getDocs, query, orderBy, limit, where } from 'firebase/firestore'
 import { db } from '../../firebase/config'
@@ -81,8 +82,9 @@ function StatCard({ label, value, icon: Icon, color }) {
 
 export default function BursarDashboard() {
   const navigate = useNavigate()
-  const [stats, setStats] = useState({ collected: 0, arrears: 0, expenses: 0, surplus: 0 })
+  const [stats, setStats] = useState({ collected: 0, arrears: 0, expenses: 0, surplus: 0, feesPaidFull: 0 })
   const [receipts, setReceipts] = useState([])
+  const [topArrears, setTopArrears] = useState([])
   const [term, setTerm] = useState('Term 2 2025')
   const [loading, setLoading] = useState(true)
 
@@ -105,21 +107,24 @@ export default function BursarDashboard() {
   useEffect(() => {
     async function load() {
       try {
-        const [feeSnap, expSnap, rcptSnap] = await Promise.all([
+        const [feeSnap, expSnap, rcptSnap, arrearsSnap] = await Promise.all([
           getDocs(collection(db, 'feeAccounts')),
           getDocs(collection(db, 'expenses')),
           getDocs(query(collection(db, 'receipts'), orderBy('issuedAt', 'desc'), limit(5))),
+          getDocs(query(collection(db, 'feeAccounts'), where('balanceType', '==', 'debit'), orderBy('balance', 'desc'), limit(5))),
         ])
-        let collected = 0, arrears = 0
+        let collected = 0, arrears = 0, feesPaidFull = 0
         feeSnap.forEach(d => {
           const data = d.data()
           collected += Number(data.totalPaid || 0)
           if (data.balanceType === 'debit') arrears += Number(data.balance || 0)
+          if (Number(data.totalCharged || 0) > 0 && Number(data.totalPaid || 0) >= Number(data.totalCharged || 0)) feesPaidFull++
         })
         let expTotal = 0
         expSnap.forEach(d => { expTotal += Number(d.data().amount || 0) })
-        setStats({ collected, arrears, expenses: expTotal, surplus: collected - expTotal })
+        setStats({ collected, arrears, expenses: expTotal, surplus: collected - expTotal, feesPaidFull })
         setReceipts(rcptSnap.docs.map(d => ({ id: d.id, ...d.data() })))
+        setTopArrears(arrearsSnap.docs.map(d => ({ id: d.id, ...d.data() })))
       } catch { /* fall back to 0s — Firestore may be empty */ }
       setLoading(false)
     }
@@ -131,6 +136,7 @@ export default function BursarDashboard() {
   const QUICK = [
     { label: 'Receive payment',  sub: 'Record incoming fees',  path: '/bursar/receive-payment' },
     { label: 'Issue receipt',    sub: 'Print student receipt',  path: '/bursar/issue-receipt' },
+    { label: 'Update Fees',      sub: 'Manage fee accounts',   path: '/fees' },
     { label: 'Record expense',   sub: 'Log school expense',    path: '/bursar/record-expense' },
     { label: 'Income statement', sub: 'View P&L statement',    path: '/bursar/income-statement' },
     { label: 'Balance sheet',    sub: 'Assets & liabilities',  path: '/bursar/balance-sheet' },
@@ -140,15 +146,16 @@ export default function BursarDashboard() {
     <div className="space-y-6">
 
       {/* ── Stat cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Fees Collected"     value={loading ? '...' : fmt(stats.collected)} icon={MdAttachMoney}  color={TEAL} />
-        <StatCard label="Outstanding Arrears" value={loading ? '...' : fmt(stats.arrears)}  icon={MdWarning}      color={RED}  />
-        <StatCard label="Total Expenses"      value={loading ? '...' : fmt(stats.expenses)} icon={MdReceiptLong}  color={GOLD} />
-        <StatCard label="Net Surplus"         value={loading ? '...' : fmt(stats.surplus)}  icon={MdTrendingUp}   color={BLUE} />
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <StatCard label="Fees Collected"     value={loading ? '...' : fmt(stats.collected)}     icon={MdAttachMoney}  color={TEAL} />
+        <StatCard label="Fees Paid in Full"  value={loading ? '...' : stats.feesPaidFull}        icon={MdCheckCircle}  color={TEAL} />
+        <StatCard label="Outstanding Arrears" value={loading ? '...' : fmt(stats.arrears)}       icon={MdWarning}      color={RED}  />
+        <StatCard label="Total Expenses"      value={loading ? '...' : fmt(stats.expenses)}      icon={MdReceiptLong}  color={GOLD} />
+        <StatCard label="Net Surplus"         value={loading ? '...' : fmt(stats.surplus)}       icon={MdTrendingUp}   color={BLUE} />
       </div>
 
       {/* ── Quick actions ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {QUICK.map(({ label, sub, path }) => (
           <button
             key={path}
@@ -367,7 +374,10 @@ export default function BursarDashboard() {
         </div>
       </div>
 
-      {/* ── Recent receipts ── */}
+      {/* ── Recent receipts + Top Arrears ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+      {/* Recent receipts */}
       <div className={CARD}>
         <div className="flex justify-between items-center mb-4">
           <h3 className={HEAD}>Recent Receipts</h3>
@@ -417,6 +427,61 @@ export default function BursarDashboard() {
           </div>
         )}
       </div>
+
+      {/* Top Arrears Students */}
+      <div className={CARD}>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className={HEAD}>Top Arrears Students</h3>
+          <button
+            onClick={() => navigate('/bursar/arrears')}
+            className="text-xs font-montserrat px-3 py-1.5 rounded-lg border transition-colors"
+            style={{ borderColor: '#0F6E56', color: '#1D9E75' }}
+          >
+            View all
+          </button>
+        </div>
+        {topArrears.length === 0 ? (
+          <p className="text-sm text-gray-500 font-montserrat py-6 text-center">
+            {loading ? 'Loading…' : 'No arrears on record.'}
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-white/10">
+                  <th className={TH}>Name</th>
+                  <th className={TH}>Class</th>
+                  <th className={TH}>Amount Owed</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topArrears.map((s) => {
+                  const amount = Number(s.balance || 0)
+                  return (
+                    <tr key={s.id} className="border-b border-white/5 hover:bg-white/[0.03] transition-colors">
+                      <td className={TD_W}>{s.studentName || '—'}</td>
+                      <td className={TD}>{s.class || '—'}</td>
+                      <td className={TD}>
+                        <span className={`px-2 py-1 rounded-full text-xs font-montserrat font-semibold border ${
+                          amount > 500
+                            ? 'bg-red-500/15 text-red-400 border-red-500/30'
+                            : amount > 200
+                              ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                              : 'bg-white/5 text-gray-400 border-white/10'
+                        }`}>
+                          {fmt(amount)}
+                        </span>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      </div>{/* end grid */}
 
     </div>
   )

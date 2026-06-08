@@ -6,24 +6,25 @@ import useStudentSessionGuard, { endStudentSession } from '../../hooks/useStuden
 import {
   MdDashboard, MdBarChart, MdReceipt, MdCloudUpload,
   MdPerson, MdLogout, MdMenu, MdClose, MdNotifications,
-  MdSchool,
+  MdSchool, MdExitToApp,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
 const GOLD = '#C9A84C'
 
 const NAV = [
-  { to: '/student/dashboard', icon: MdDashboard,   label: 'Dashboard'         },
-  { to: '/student/results',   icon: MdBarChart,    label: 'My Results'        },
-  { to: '/student/fees',      icon: MdReceipt,     label: 'My Fees'           },
-  { to: '/student/upload-pop',icon: MdCloudUpload, label: 'Upload Payment'    },
-  { to: '/student/profile',   icon: MdPerson,      label: 'My Profile'        },
+  { to: '/student/dashboard',             icon: MdDashboard,   label: 'Dashboard'      },
+  { to: '/student/results',               icon: MdBarChart,    label: 'My Results'     },
+  { to: '/student/fees',                  icon: MdReceipt,     label: 'My Fees'        },
+  { to: '/student/upload-pop',            icon: MdCloudUpload, label: 'Upload Payment' },
+  { to: '/student/exeat/my-applications', icon: MdExitToApp,   label: 'Exit Pass',     boarderOnly: true },
+  { to: '/student/profile',               icon: MdPerson,      label: 'My Profile'     },
 ]
 
 export default function StudentLayout({ children }) {
   useStudentSessionTimeout()
   const navigate  = useNavigate()
-  const { studentData, logout } = useStudent()
+  const { studentData, logout, isBoarder } = useStudent()
   const [open, setOpen] = useState(false)
 
   // Concurrent session guard — signs out if another device kills this session
@@ -77,7 +78,7 @@ export default function StudentLayout({ children }) {
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4">
-          {NAV.map(({ to, icon: Icon, label }) => (
+          {NAV.filter(item => !item.boarderOnly || isBoarder).map(({ to, icon: Icon, label }) => (
             <NavLink
               key={to}
               to={to}

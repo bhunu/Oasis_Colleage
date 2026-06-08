@@ -19,7 +19,7 @@ function generateOTP(len = 8) {
 
 // ── Required column headers (must match exactly) ──────────────────────────
 const REQUIRED_COLS  = ['fullName', 'dateOfBirth', 'gender', 'class', 'guardianName', 'guardianPhone', 'guardianEmail', 'homeAddress']
-const OPTIONAL_COLS  = ['enrolmentDate', 'studentType', 'studentEmail']
+const OPTIONAL_COLS  = ['enrolmentDate', 'studentType', 'boardingStatus', 'studentEmail']
 const ALL_COLS       = [...REQUIRED_COLS, ...OPTIONAL_COLS]
 
 const VALID_CLASSES = [
@@ -40,9 +40,10 @@ export function downloadTemplate() {
     guardianPhone: '+263771234567',
     guardianEmail: 'john.ncube@email.com',
     homeAddress:   '12 Mbare Road, Harare',
-    enrolmentDate: new Date().toISOString().split('T')[0],
-    studentType:   'new',
-    studentEmail:  'tatenda.ncube@gmail.com',
+    enrolmentDate:  new Date().toISOString().split('T')[0],
+    studentType:    'new',
+    boardingStatus: 'day',
+    studentEmail:   'tatenda.ncube@gmail.com',
   }]
 
   const ws = XLSX.utils.json_to_sheet(sample, { header: ALL_COLS })
@@ -143,9 +144,10 @@ export default function BulkImport() {
             guardianPhone: String(r.guardianPhone || '').trim(),
             guardianEmail: String(r.guardianEmail || '').trim().toLowerCase(),
             homeAddress:   String(r.homeAddress   || '').trim(),
-            enrolmentDate: parseDate(r.enrolmentDate) || new Date().toISOString().split('T')[0],
-            studentType:   String(r.studentType || 'new').trim().toLowerCase(),
-            studentEmail:  String(r.studentEmail || '').trim().toLowerCase(),
+            enrolmentDate:  parseDate(r.enrolmentDate) || new Date().toISOString().split('T')[0],
+            studentType:    String(r.studentType    || 'new').trim().toLowerCase(),
+            boardingStatus: String(r.boardingStatus || 'day').trim().toLowerCase(),
+            studentEmail:   String(r.studentEmail   || '').trim().toLowerCase(),
           }
           const errs = validateRow(row, i)
           return { ...row, _errors: errs, _status: errs.length === 0 ? 'valid' : 'error' }
@@ -207,8 +209,9 @@ export default function BulkImport() {
           guardianPhone: row.guardianPhone,
           guardianEmail: row.guardianEmail,
           homeAddress:   row.homeAddress,
-          enrolmentDate: row.enrolmentDate,
-          studentType:   row.studentType,
+          enrolmentDate:  row.enrolmentDate,
+          studentType:    row.studentType,
+          boardingStatus: row.boardingStatus,
         })
 
         await addDoc(collection(db, 'feeAccounts'), {

@@ -1,16 +1,27 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   collection, addDoc, getDocs, deleteDoc,
-  doc, serverTimestamp, orderBy, query,
+  doc, serverTimestamp,
 } from 'firebase/firestore'
 import { db } from '../firebase/config'
 import toast from 'react-hot-toast'
 import {
   MdAdd, MdDelete, MdClose, MdBook,
-  MdSearch,
+  MdSearch, MdExpandMore,
 } from 'react-icons/md'
 
 const CATEGORIES = ['Sciences', 'Humanities', 'Commercial', 'Languages', 'Technical', 'Other']
+
+const O_LEVEL_CLASSES = [
+  'Form 1A','Form 1B','Form 1C',
+  'Form 2A','Form 2B','Form 2C',
+  'Form 3A','Form 3B','Form 3C',
+  'Form 4A','Form 4B','Form 4C',
+]
+const A_LEVEL_CLASSES = [
+  'Lower 6 Commercials','Lower 6 Arts','Lower 6 Sciences',
+  'Upper 6 Commercials','Upper 6 Arts','Upper 6 Sciences',
+]
 
 const CATEGORY_COLORS = {
   Sciences:   'bg-blue-500/15 text-blue-400 border-blue-500/25',
@@ -32,17 +43,52 @@ export default function Subjects() {
   const [catFilter, setCatFilter] = useState('All')
   const [deleting, setDeleting]   = useState(null)
 
-  const [form, setForm] = useState({ name: '', code: '', category: '' })
-  const [saving, setSaving] = useState(false)
-  const [formErr, setFormErr] = useState({})
+  const [form, setForm]         = useState({ name: '', code: '', category: '', classes: [] })
+  const [saving, setSaving]     = useState(false)
+  const [formErr, setFormErr]   = useState({})
+  const [showClassDrop, setShowClassDrop] = useState(false)
+  const classDropRef = useRef(null)
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (classDropRef.current && !classDropRef.current.contains(e.target))
+        setShowClassDrop(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  function toggleClass(cls) {
+    setForm(f => ({
+      ...f,
+      classes: f.classes.includes(cls)
+        ? f.classes.filter(c => c !== cls)
+        : [...f.classes, cls],
+    }))
+  }
+
+  function toggleGroup(group) {
+    const all = group === 'olevel' ? O_LEVEL_CLASSES : A_LEVEL_CLASSES
+    const allSelected = all.every(c => form.classes.includes(c))
+    setForm(f => ({
+      ...f,
+      classes: allSelected
+        ? f.classes.filter(c => !all.includes(c))
+        : [...new Set([...f.classes, ...all])],
+    }))
+  }
 
   useEffect(() => { fetchSubjects() }, [])
 
   async function fetchSubjects() {
     setLoading(true)
     try {
-      const snap = await getDocs(query(collection(db, 'subjects'), orderBy('category'), orderBy('name')))
-      setSubjects(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+      const snap = await getDocs(collection(db, 'subjects'))
+      setSubjects(
+        snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name))
+      )
     } catch {
       toast.error('Failed to load subjects.')
     } finally {
@@ -73,13 +119,14 @@ export default function Subjects() {
         name:      form.name.trim(),
         code:      form.code.trim().toUpperCase(),
         category:  form.category,
+        classes:   form.classes,
         createdAt: serverTimestamp(),
       })
-      setSubjects(prev => [...prev, { id: docRef.id, name: form.name.trim(), code: form.code.trim().toUpperCase(), category: form.category }]
+      setSubjects(prev => [...prev, { id: docRef.id, name: form.name.trim(), code: form.code.trim().toUpperCase(), category: form.category, classes: form.classes }]
         .sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name))
       )
       toast.success(`"${form.name.trim()}" added successfully`)
-      setForm({ name: '', code: '', category: '' })
+      setForm({ name: '', code: '', category: '', classes: [] })
       setFormErr({})
       setShowForm(false)
     } catch {
@@ -149,7 +196,7 @@ export default function Subjects() {
           </div>
 
           <form onSubmit={handleAdd}>
-            <div className="grid grid-cols-3 gap-4 mb-5">
+            <div className="grid grid-cols-3 gap-4 mb-4">
               <div className="col-span-1">
                 <label className={sLabel}>Subject Name *</label>
                 <input
@@ -187,10 +234,110 @@ export default function Subjects() {
               </div>
             </div>
 
+            {/* Classes multi-select */}
+            <div className="mb-5" ref={classDropRef}>
+              <label className={sLabel}>
+                Classes <span className="normal-case text-gray-600">(optional — select which classes take this subject)</span>
+              </label>
+
+              {/* Trigger */}
+              <button
+                type="button"
+                onClick={() => setShowClassDrop(v => !v)}
+                className={`w-full flex items-center justify-between bg-white/5 border ${showClassDrop ? 'border-[#C9A84C]/50' : 'border-white/10 hover:border-white/20'} rounded-xl px-4 py-2.5 text-left transition-all`}
+              >
+                <span className="font-montserrat text-sm text-gray-400">
+                  {form.classes.length === 0
+                    ? 'Select classes…'
+                    : `${form.classes.length} class${form.classes.length !== 1 ? 'es' : ''} selected`}
+                </span>
+                <MdExpandMore className={`text-gray-500 text-lg transition-transform ${showClassDrop ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* Dropdown panel */}
+              {showClassDrop && (
+                <div className="mt-1 bg-[#0A1628] border border-white/10 rounded-xl overflow-hidden shadow-2xl z-20 relative">
+                  <div className="grid grid-cols-2 divide-x divide-white/5">
+
+                    {/* O Level */}
+                    <div className="p-3">
+                      <div className="flex items-center justify-between mb-2 pb-2 border-b border-white/5">
+                        <span className="font-montserrat text-[9px] font-bold uppercase tracking-widest text-[#C9A84C]">O Level</span>
+                        <button
+                          type="button"
+                          onClick={() => toggleGroup('olevel')}
+                          className="font-montserrat text-[9px] text-gray-500 hover:text-[#C9A84C] transition-colors uppercase tracking-wider"
+                        >
+                          {O_LEVEL_CLASSES.every(c => form.classes.includes(c)) ? 'Deselect All' : 'Select All'}
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1">
+                        {O_LEVEL_CLASSES.map(cls => (
+                          <label key={cls} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/5 cursor-pointer group">
+                            <input
+                              type="checkbox"
+                              checked={form.classes.includes(cls)}
+                              onChange={() => toggleClass(cls)}
+                              className="accent-[#C9A84C] w-3 h-3 rounded"
+                            />
+                            <span className="font-montserrat text-[11px] text-gray-400 group-hover:text-white transition-colors">{cls}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* A Level */}
+                    <div className="p-3">
+                      <div className="flex items-center justify-between mb-2 pb-2 border-b border-white/5">
+                        <span className="font-montserrat text-[9px] font-bold uppercase tracking-widest text-blue-400">A Level</span>
+                        <button
+                          type="button"
+                          onClick={() => toggleGroup('alevel')}
+                          className="font-montserrat text-[9px] text-gray-500 hover:text-blue-400 transition-colors uppercase tracking-wider"
+                        >
+                          {A_LEVEL_CLASSES.every(c => form.classes.includes(c)) ? 'Deselect All' : 'Select All'}
+                        </button>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        {A_LEVEL_CLASSES.map(cls => (
+                          <label key={cls} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/5 cursor-pointer group">
+                            <input
+                              type="checkbox"
+                              checked={form.classes.includes(cls)}
+                              onChange={() => toggleClass(cls)}
+                              className="accent-[#C9A84C] w-3 h-3 rounded"
+                            />
+                            <span className="font-montserrat text-[11px] text-gray-400 group-hover:text-white transition-colors">{cls}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Selected pills */}
+              {form.classes.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {form.classes.map(cls => (
+                    <span
+                      key={cls}
+                      className="inline-flex items-center gap-1 bg-[#C9A84C]/10 border border-[#C9A84C]/25 text-[#C9A84C] font-montserrat text-[10px] font-semibold px-2.5 py-0.5 rounded-full"
+                    >
+                      {cls}
+                      <button type="button" onClick={() => toggleClass(cls)} className="hover:text-white transition-colors leading-none">
+                        <MdClose className="text-xs" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="flex gap-3 justify-end">
               <button
                 type="button"
-                onClick={() => { setShowForm(false); setFormErr({}); setForm({ name: '', code: '', category: '' }) }}
+                onClick={() => { setShowForm(false); setFormErr({}); setForm({ name: '', code: '', category: '', classes: [] }) }}
                 className="bg-white/5 border border-white/10 hover:bg-white/10 text-gray-300 font-montserrat text-xs font-semibold uppercase tracking-wider px-5 py-2.5 rounded-xl transition-all"
               >
                 Cancel

@@ -12,7 +12,10 @@ export default function StatCard({ label, value, icon: Icon, trend, color = 'gol
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest font-montserrat mb-1">{label}</p>
-          <p className="text-3xl font-bold text-white font-playfair">{value}</p>
+          {value === null
+            ? <div className="h-9 w-16 bg-white/10 rounded-lg animate-pulse mt-1" />
+            : <p className="text-3xl font-bold text-white font-playfair">{value}</p>
+          }
           {trend && (
             <p className={`text-xs mt-2 font-montserrat ${trend.positive ? 'text-emerald-400' : 'text-red-400'}`}>
               {trend.text}

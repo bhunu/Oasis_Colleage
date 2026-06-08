@@ -4,6 +4,7 @@ import {
   MdDashboard,
   MdPointOfSale,
   MdReceipt,
+  MdReceiptLong,
   MdPeople,
   MdWarning,
   MdPieChart,
@@ -16,10 +17,16 @@ import {
   MdSettings,
   MdLogout,
   MdAccountBalance,
+  MdLocalAtm,
+  MdCalendarMonth,
 } from 'react-icons/md'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import toast from 'react-hot-toast'
+import { getCurrentTerm } from '../../utils/termHelpers'
+
+const { number: _tn, year: _ty } = getCurrentTerm()
+const CURRENT_TERM_LABEL = `Term ${_tn}`
 
 const TEAL = '#0F6E56'
 
@@ -54,6 +61,15 @@ const NAV = [
       { label: 'Balance sheet',         icon: MdBalance,      path: '/bursar/balance-sheet' },
       { label: 'Fee collection report', icon: MdTableChart,   path: '/bursar/collection-report' },
       { label: 'Print reports',         icon: MdPrint,        path: '/bursar/print-reports' },
+    ],
+  },
+  {
+    section: 'FINANCE',
+    items: [
+      { label: 'Fees accounts',         icon: MdReceiptLong,  path: '/fees' },
+      { label: 'Fees arrears',          icon: MdWarning,      path: '/arrears' },
+      { label: 'Payments',              icon: MdLocalAtm,     path: '/payments' },
+      { label: 'End of term procedure', icon: MdCalendarMonth, path: '/end-of-term', termBadge: true },
     ],
   },
   {
@@ -138,6 +154,11 @@ export default function BursarSidebar({ open, onClose }) {
                           {item.badge && arrearsCount > 0 && (
                             <span className="ml-auto bg-red-500/80 text-white text-[9px] font-bold font-montserrat px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-tight">
                               {arrearsCount}
+                            </span>
+                          )}
+                          {item.termBadge && (
+                            <span className="ml-auto bg-amber-500/20 text-amber-400 text-[9px] font-bold font-montserrat px-1.5 py-0.5 rounded-full">
+                              {CURRENT_TERM_LABEL}
                             </span>
                           )}
                         </>
