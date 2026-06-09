@@ -66,10 +66,10 @@ const NAV = [
   {
     section: 'FINANCE',
     items: [
-      { label: 'Fees accounts',         icon: MdReceiptLong,  path: '/fees' },
-      { label: 'Fees arrears',          icon: MdWarning,      path: '/arrears' },
-      { label: 'Payments',              icon: MdLocalAtm,     path: '/payments' },
-      { label: 'End of term procedure', icon: MdCalendarMonth, path: '/end-of-term', termBadge: true },
+      { label: 'Fees accounts',         icon: MdReceiptLong,   path: '/bursar/student-accounts' },
+      { label: 'Fees arrears',          icon: MdWarning,       path: '/bursar/arrears' },
+      { label: 'Payments',              icon: MdLocalAtm,      path: '/bursar/receive-payment' },
+      { label: 'End of term procedure', icon: MdCalendarMonth, path: '/bursar/collection-report', termBadge: true },
     ],
   },
   {

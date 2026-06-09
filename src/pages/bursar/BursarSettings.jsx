@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
 import { signOut } from 'firebase/auth'
 import { auth } from '../../firebase/config'
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, getDoc, setDoc, getDocs, collection, writeBatch, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import { MdLock, MdSave } from 'react-icons/md'
 import { useNavigate } from 'react-router-dom'
@@ -26,9 +26,38 @@ export default function BursarSettings() {
   const navigate = useNavigate()
   const session  = getBursarSession()
 
-  const [term,    setTerm]    = useState('Term 2')
-  const [year,    setYear]    = useState('2025')
-  const [currency, setCurrency] = useState('USD')
+  const [term,       setTerm]       = useState('Term 2')
+  const [year,       setYear]       = useState('2025')
+  const [currency,   setCurrency]   = useState('USD')
+  const [termFees,   setTermFees]   = useState('')
+  const [sysSaving,  setSysSaving]  = useState(false)
+  const [sysLoaded,  setSysLoaded]  = useState(false)
+
+  const [applying,     setApplying]     = useState(false)
+
+  const applyFeesToAllAccounts = async () => {
+    const fees = parseFloat(termFees)
+    if (!fees || fees <= 0) return toast.error('Set a valid term fee amount first.')
+    if (!confirm(`Apply $${fees.toFixed(2)} term fees to ALL student accounts? This will overwrite existing term fee values.`)) return
+    setApplying(true)
+    try {
+      const snap = await getDocs(collection(db, 'feeAccounts'))
+      const batch = writeBatch(db)
+      snap.docs.forEach(d => {
+        const data   = d.data()
+        const paid   = data.totalPaid || 0
+        const balance = Math.max(0, fees - paid)
+        const balanceType = paid >= fees ? (paid > fees ? 'credit' : 'nil') : 'debit'
+        batch.update(d.ref, { termFees: fees, balance, balanceType })
+      })
+      await batch.commit()
+      toast.success(`Term fees of $${fees.toFixed(2)} applied to ${snap.size} accounts.`)
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to apply fees to accounts.')
+    }
+    setApplying(false)
+  }
 
   // Results access gate
   const [threshold,    setThreshold]    = useState(75)
@@ -37,6 +66,21 @@ export default function BursarSettings() {
   const [gateLoaded,   setGateLoaded]   = useState(false)
 
   useEffect(() => {
+    // Load system settings (term fees, term, year, currency)
+    getDoc(doc(db, 'settings', 'portalConfig'))
+      .then(s => {
+        if (s.exists()) {
+          const d = s.data()
+          if (d.currentTerm)  setTerm(d.currentTerm)
+          if (d.currentYear)  setYear(d.currentYear)
+          if (d.currency)     setCurrency(d.currency)
+          if (d.termFees != null) setTermFees(String(d.termFees))
+        }
+      })
+      .catch(() => {})
+      .finally(() => setSysLoaded(true))
+
+    // Load results gate threshold
     getDoc(doc(db, 'portalSettings', 'main'))
       .then(s => {
         if (s.exists()) {
@@ -66,11 +110,29 @@ export default function BursarSettings() {
     setGateSaving(false)
   }
 
-  const exampleFees     = 800
+  const exampleFees     = parseFloat(termFees) || 0
   const thresholdAmount = Math.round((threshold / 100) * exampleFees)
 
-  const handleSave = () => {
-    toast.success('Settings saved')
+  const handleSave = async () => {
+    const fees = parseFloat(termFees)
+    if (termFees !== '' && (isNaN(fees) || fees < 0)) {
+      return toast.error('Term fees must be a valid positive number.')
+    }
+    setSysSaving(true)
+    try {
+      await setDoc(doc(db, 'settings', 'portalConfig'), {
+        currentTerm: term,
+        currentYear: year,
+        currency,
+        ...(termFees !== '' && { termFees: fees }),
+        updatedAt:   serverTimestamp(),
+        updatedBy:   session.name || 'Bursar',
+      }, { merge: true })
+      toast.success('Settings saved successfully.')
+    } catch {
+      toast.error('Failed to save settings.')
+    }
+    setSysSaving(false)
   }
 
   const handleLogout = async () => {
@@ -139,15 +201,52 @@ export default function BursarSettings() {
             <label className={LABEL}>School Name</label>
             <input value="Oasis Private College" readOnly className={`${INPUT} opacity-50 cursor-not-allowed`} />
           </div>
+          <div className="col-span-2">
+            <label className={LABEL}>Term Fees ({currency === 'USD' ? '$' : currency === 'ZWL' ? 'Z$' : 'R'})</label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={termFees}
+              onChange={e => setTermFees(e.target.value)}
+              placeholder="e.g. 800.00"
+              disabled={!sysLoaded}
+              className={`${INPUT} disabled:opacity-50`}
+            />
+            <p className="text-[10px] text-gray-600 font-montserrat mt-1.5">
+              The standard fee amount charged per student for {term} {year}. Used for fee balance calculations.
+            </p>
+          </div>
         </div>
 
-        <button
-          onClick={handleSave}
-          className="mt-5 px-6 py-3 rounded-xl text-sm font-semibold font-montserrat text-white transition"
-          style={{ backgroundColor: TEAL }}
-        >
-          Save Settings
-        </button>
+        <div className="mt-5 flex flex-wrap gap-3">
+          <button
+            onClick={handleSave}
+            disabled={sysSaving || !sysLoaded}
+            className="px-6 py-3 rounded-xl text-sm font-semibold font-montserrat text-white transition disabled:opacity-60 flex items-center gap-2"
+            style={{ backgroundColor: TEAL }}
+          >
+            <MdSave className="text-base" />
+            {sysSaving ? 'Saving…' : 'Save Settings'}
+          </button>
+
+          <button
+            onClick={applyFeesToAllAccounts}
+            disabled={applying || !termFees || parseFloat(termFees) <= 0}
+            className="px-6 py-3 rounded-xl text-sm font-semibold font-montserrat text-white transition disabled:opacity-60 flex items-center gap-2 bg-amber-600 hover:bg-amber-500"
+          >
+            {applying ? 'Applying…' : 'Apply fees to all accounts'}
+          </button>
+        </div>
+        {termFees && parseFloat(termFees) > 0 && (
+          <p className="text-[10px] text-gray-600 font-montserrat mt-3">
+            "Apply fees to all accounts" will set{' '}
+            <span className="text-amber-400 font-semibold">
+              {currency === 'USD' ? '$' : currency === 'ZWL' ? 'Z$' : 'R'}{parseFloat(termFees).toFixed(2)}
+            </span>{' '}
+            as the term fee on every student fee account and recalculate balances.
+          </p>
+        )}
       </div>
 
       {/* Results Access Gate */}

@@ -400,7 +400,7 @@ function ActiveOTPLogs() {
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search by name or reg no…"
+            placeholder="262681 or name…"
             className="bg-white/5 border border-white/10 focus:border-[#C9A84C]/50 focus:outline-none rounded-xl px-3 py-2 text-white font-montserrat text-xs placeholder-gray-600 w-52 transition-all"
           />
           <button onClick={load} className="p-2 rounded-lg border border-white/10 text-gray-400 hover:text-white hover:bg-white/5 transition">

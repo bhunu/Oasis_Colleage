@@ -8,7 +8,7 @@ export default function BursarLayout({ children }) {
   return (
     <div className="flex h-screen bg-[#0A1628] overflow-hidden font-sans">
       <BursarSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="flex-1 flex flex-col lg:ml-[210px] min-w-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <BursarTopbar onMenuClick={() => setSidebarOpen(true)} />
         <main className="flex-1 overflow-y-auto p-6">
           {children}

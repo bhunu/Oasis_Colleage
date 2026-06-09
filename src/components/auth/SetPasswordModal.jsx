@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { FaLock, FaEye, FaEyeSlash, FaGraduationCap, FaShieldAlt } from 'react-icons/fa'
-import { updateDoc, serverTimestamp } from 'firebase/firestore'
+import { updateDoc, getDocs, collection, query, where, limit, serverTimestamp } from 'firebase/firestore'
+import { db } from '../../firebase/config'
 import { hashPassword } from '../../utils/hash'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
@@ -28,14 +29,26 @@ export default function SetPasswordModal({ regNum, otpDoc, onClose }) {
     setSaving(true)
     try {
       const hashed = hashPassword(password)
+
+      // Fetch student profile to enrich the user record
+      const studentSnap = await getDocs(
+        query(collection(db, 'students'), where('reg_number', '==', regNum), limit(1))
+      )
+      const studentDoc  = studentSnap.empty ? null : studentSnap.docs[0]
+      const studentData = studentDoc?.data() ?? {}
+
       await updateDoc(otpDoc.ref, {
         password:         hashed,
         hasSetupPassword: true,
         otpUsed:          true,
+        studentId:        studentDoc?.id ?? otpDoc.data?.()?.studentId ?? regNum,
+        regNumber:        regNum,
+        name:             studentData.fullName || studentData.name || '',
+        class:            studentData.class    || '',
         updatedAt:        serverTimestamp(),
       })
       toast.success('Password set! Please log in with your student ID and password.')
-      navigate('/login')
+      navigate('/login', { state: { tab: 'returning' } })
     } catch (err) {
       console.error('SetPasswordModal error:', err.code, err.message)
       setError(err.message || 'Something went wrong. Please try again.')

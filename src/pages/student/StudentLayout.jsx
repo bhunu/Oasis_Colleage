@@ -6,13 +6,15 @@ import useStudentSessionGuard, { endStudentSession } from '../../hooks/useStuden
 import {
   MdDashboard, MdBarChart, MdReceipt, MdCloudUpload,
   MdPerson, MdLogout, MdMenu, MdClose, MdNotifications,
-  MdSchool, MdExitToApp,
+  MdSchool, MdExitToApp, MdSwapHoriz, MdVerifiedUser,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
 const GOLD = '#C9A84C'
 
-const NAV = [
+const GATED_EXIT_TYPES = ['OLevelCompletion', 'ALevelCompletion', 'Transfer']
+
+const BASE_NAV = [
   { to: '/student/dashboard',             icon: MdDashboard,   label: 'Dashboard'      },
   { to: '/student/results',               icon: MdBarChart,    label: 'My Results'     },
   { to: '/student/fees',                  icon: MdReceipt,     label: 'My Fees'        },
@@ -24,8 +26,21 @@ const NAV = [
 export default function StudentLayout({ children }) {
   useStudentSessionTimeout()
   const navigate  = useNavigate()
-  const { studentData, logout, isBoarder } = useStudent()
+  const { studentData, logout, isBoarder, firestoreStudent } = useStudent()
   const [open, setOpen] = useState(false)
+
+  const exitType    = firestoreStudent?.exitType
+  const status      = firestoreStudent?.status
+  const isGated     = GATED_EXIT_TYPES.includes(exitType)
+  const isActive    = !status || status === 'Active'
+  const cancelEnabled = firestoreStudent?.cancelTransferEnabled === true
+
+  const NAV = [
+    ...BASE_NAV,
+    ...(isActive ? [{ to: '/student/transfer', icon: MdSwapHoriz, label: 'Transfer Request' }] : []),
+    ...(isGated  ? [{ to: '/student/clearance/apply',  icon: MdVerifiedUser, label: 'Apply Clearance' }] : []),
+    ...(isGated  ? [{ to: '/student/clearance/status', icon: MdVerifiedUser, label: 'My Clearance' }] : []),
+  ]
 
   // Concurrent session guard — signs out if another device kills this session
   useStudentSessionGuard(studentData?.uid ?? null)

@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
 import * as XLSX from 'xlsx'
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
+import { addDoc, collection, getDocs, serverTimestamp } from 'firebase/firestore'
 import { db } from '../firebase/config'
 import { addStudent, getStudents } from '../firebase/students'
 import { generateRegNumber } from '../utils/generateRegNumber'
@@ -22,12 +22,34 @@ const REQUIRED_COLS  = ['fullName', 'dateOfBirth', 'gender', 'class', 'guardianN
 const OPTIONAL_COLS  = ['enrolmentDate', 'studentType', 'boardingStatus', 'studentEmail']
 const ALL_COLS       = [...REQUIRED_COLS, ...OPTIONAL_COLS]
 
-const VALID_CLASSES = [
+const FALLBACK_CLASSES = [
   'Form 1A','Form 1B','Form 1C','Form 2A','Form 2B','Form 2C',
   'Form 3A','Form 3B','Form 3C','Form 4A','Form 4B','Form 4C',
   'Lower 6 Commercials','Lower 6 Arts','Lower 6 Sciences',
   'Upper 6 Commercials','Upper 6 Arts','Upper 6 Sciences',
 ]
+
+async function fetchValidClasses() {
+  try {
+    const snap = await getDocs(collection(db, 'classes'))
+    const names = snap.docs.map(d => d.data().name).filter(Boolean)
+    return names.length > 0 ? names : FALLBACK_CLASSES
+  } catch {
+    return FALLBACK_CLASSES
+  }
+}
+
+function normalizeClass(raw) {
+  if (!raw) return raw
+  const s = String(raw).trim()
+  // Already a valid full name
+  if (FALLBACK_CLASSES.includes(s)) return s
+  // "1A", "2B", "3C", "4A" → "Form 1A" etc.
+  if (/^[1-4][A-Ca-c]$/.test(s)) return `Form ${s.toUpperCase()}`
+  // "Form 1a" → "Form 1A"
+  if (/^[Ff]orm\s*[1-4][A-Ca-c]$/.test(s)) return `Form ${s.replace(/^[Ff]orm\s*/,'').toUpperCase()}`
+  return s
+}
 
 // ── Download Excel template ───────────────────────────────────────────────
 export function downloadTemplate() {
@@ -64,7 +86,7 @@ export function downloadTemplate() {
 }
 
 // ── Row validator ─────────────────────────────────────────────────────────
-function validateRow(row, idx) {
+function validateRow(row, idx, validClasses) {
   const errs = []
   const nameRegex = /^[a-zA-Z]+([ '-][a-zA-Z]+)+$/
 
@@ -79,7 +101,7 @@ function validateRow(row, idx) {
 
   if (!['Male','Female'].includes(row.gender))      errs.push('Gender must be Male or Female')
 
-  if (!VALID_CLASSES.includes(row.class))           errs.push('Invalid class')
+  if (!validClasses.includes(row.class))            errs.push('Invalid class')
 
   if (!row.guardianName?.trim())                    errs.push('Guardian name missing')
 
@@ -134,12 +156,14 @@ export default function BulkImport() {
           return
         }
 
+        const validClasses = await fetchValidClasses()
+
         const parsed = raw.map((r, i) => {
           const row = {
             fullName:      String(r.fullName   || '').trim(),
             dateOfBirth:   parseDate(r.dateOfBirth),
             gender:        String(r.gender     || '').trim(),
-            class:         String(r.class      || '').trim(),
+            class:         String(r.class || '').trim(),
             guardianName:  String(r.guardianName  || '').trim(),
             guardianPhone: String(r.guardianPhone || '').trim(),
             guardianEmail: String(r.guardianEmail || '').trim().toLowerCase(),
@@ -149,7 +173,7 @@ export default function BulkImport() {
             boardingStatus: String(r.boardingStatus || 'day').trim().toLowerCase(),
             studentEmail:   String(r.studentEmail   || '').trim().toLowerCase(),
           }
-          const errs = validateRow(row, i)
+          const errs = validateRow(row, i, validClasses)
           return { ...row, _errors: errs, _status: errs.length === 0 ? 'valid' : 'error' }
         })
 

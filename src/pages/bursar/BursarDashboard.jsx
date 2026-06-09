@@ -9,7 +9,7 @@ import {
   MdPointOfSale, MdDescription, MdTableChart, MdBalance,
   MdCheckCircle,
 } from 'react-icons/md'
-import { collection, getDocs, query, orderBy, limit, where } from 'firebase/firestore'
+import { collection, getDocs } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 
 /* ── chart theme ── */
@@ -105,30 +105,51 @@ export default function BursarDashboard() {
   const netPosition = assets.total - liabilities.total
 
   useEffect(() => {
-    async function load() {
-      try {
-        const [feeSnap, expSnap, rcptSnap, arrearsSnap] = await Promise.all([
-          getDocs(collection(db, 'feeAccounts')),
-          getDocs(collection(db, 'expenses')),
-          getDocs(query(collection(db, 'receipts'), orderBy('issuedAt', 'desc'), limit(5))),
-          getDocs(query(collection(db, 'feeAccounts'), where('balanceType', '==', 'debit'), orderBy('balance', 'desc'), limit(5))),
-        ])
+    let pending = 3
+    const done = () => { if (--pending === 0) setLoading(false) }
+
+    /* fee accounts — stats: collected, arrears, feesPaidFull + top arrears list */
+    getDocs(collection(db, 'feeAccounts'))
+      .then(snap => {
         let collected = 0, arrears = 0, feesPaidFull = 0
-        feeSnap.forEach(d => {
+        const arrearsRows = []
+        snap.forEach(d => {
           const data = d.data()
           collected += Number(data.totalPaid || 0)
-          if (data.balanceType === 'debit') arrears += Number(data.balance || 0)
-          if (Number(data.totalCharged || 0) > 0 && Number(data.totalPaid || 0) >= Number(data.totalCharged || 0)) feesPaidFull++
+          if (data.balanceType === 'debit') {
+            arrears += Number(data.balance || 0)
+            arrearsRows.push({ id: d.id, ...data })
+          }
+          if (Number(data.termFees || 0) > 0 && Number(data.totalPaid || 0) >= Number(data.termFees || 0)) feesPaidFull++
         })
+        arrearsRows.sort((a, b) => Number(b.balance || 0) - Number(a.balance || 0))
+        setStats(prev => ({ ...prev, collected, arrears, feesPaidFull, surplus: collected - prev.expenses }))
+        setTopArrears(arrearsRows.slice(0, 5))
+      })
+      .catch(() => {})
+      .finally(done)
+
+    /* expenses */
+    getDocs(collection(db, 'expenses'))
+      .then(snap => {
         let expTotal = 0
-        expSnap.forEach(d => { expTotal += Number(d.data().amount || 0) })
-        setStats({ collected, arrears, expenses: expTotal, surplus: collected - expTotal, feesPaidFull })
-        setReceipts(rcptSnap.docs.map(d => ({ id: d.id, ...d.data() })))
-        setTopArrears(arrearsSnap.docs.map(d => ({ id: d.id, ...d.data() })))
-      } catch { /* fall back to 0s — Firestore may be empty */ }
-      setLoading(false)
-    }
-    load()
+        snap.forEach(d => { expTotal += Number(d.data().amount || 0) })
+        setStats(prev => ({ ...prev, expenses: expTotal, surplus: prev.collected - expTotal }))
+      })
+      .catch(() => {})
+      .finally(done)
+
+    /* recent receipts — sort in JS to avoid index requirement */
+    getDocs(collection(db, 'receipts'))
+      .then(snap => {
+        const sorted = snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => (b.issuedAt?.seconds ?? 0) - (a.issuedAt?.seconds ?? 0))
+          .slice(0, 5)
+        setReceipts(sorted)
+      })
+      .catch(() => {})
+      .finally(done)
   }, [])
 
   const fmt = v => `$${Number(v).toLocaleString()}`

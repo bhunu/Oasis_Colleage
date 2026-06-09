@@ -71,8 +71,16 @@ import Settings from './pages/Settings'
 import Subjects from './pages/Subjects'
 import AccessPassPage from './pages/AccessPassPage'
 import ExeatManagementPage from './pages/ExeatManagementPage'
-import ExeatApplicationForm from './pages/student/ExeatApplicationForm'
-import MyExeatApplications from './pages/student/MyExeatApplications'
+import ClassPerformancePage from './pages/admin/ClassPerformancePage'
+import Classes from './pages/Classes'
+import ExeatApplicationForm      from './pages/student/ExeatApplicationForm'
+import MyExeatApplications       from './pages/student/MyExeatApplications'
+import TransferRequestForm        from './pages/student/TransferRequestForm'
+import ClearanceApplicationForm   from './pages/student/ClearanceApplicationForm'
+import MyClearanceStatus          from './pages/student/MyClearanceStatus'
+import ClearanceManagementPage    from './pages/ClearanceManagementPage'
+import VerifyClearancePage        from './pages/VerifyClearancePage'
+import VerifyBalancePage          from './pages/VerifyBalancePage'
 
 const pageVariants = {
   initial: { opacity: 0, y: 12 },
@@ -92,7 +100,7 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const location  = useLocation()
   const isAdmin   = location.pathname.startsWith('/admin')
-  const isDashboard = location.pathname.startsWith('/dashboard') || 
+  const isDashboard = location.pathname.startsWith('/dashboard') ||
                      location.pathname.startsWith('/enrol') ||
                      location.pathname.startsWith('/students') ||
                      location.pathname.startsWith('/registration') ||
@@ -108,7 +116,10 @@ export default function App() {
                      location.pathname.startsWith('/subjects') ||
                      location.pathname.startsWith('/otp-manager') ||
                      location.pathname.startsWith('/access-pass') ||
-                     location.pathname.startsWith('/exeat')
+                     location.pathname.startsWith('/exeat') ||
+                     location.pathname.startsWith('/clearance') ||
+                     location.pathname.startsWith('/class-performance') ||
+                     location.pathname.startsWith('/classes')
   const isLogin   = location.pathname === '/login' || location.pathname === '/staff-login'
   const isBursar  = location.pathname.startsWith('/bursar')
   const isStudent = location.pathname.startsWith('/student/')
@@ -128,6 +139,9 @@ export default function App() {
           <Route path="/student/upload-pop"            element={<StudentProtectedRoute><StudentLayout><StudentUploadPOP /></StudentLayout></StudentProtectedRoute>} />
           <Route path="/student/exeat/apply"           element={<BoarderRoute><StudentLayout><ExeatApplicationForm /></StudentLayout></BoarderRoute>} />
           <Route path="/student/exeat/my-applications" element={<BoarderRoute><StudentLayout><MyExeatApplications /></StudentLayout></BoarderRoute>} />
+          <Route path="/student/transfer"              element={<StudentProtectedRoute><StudentLayout><TransferRequestForm /></StudentLayout></StudentProtectedRoute>} />
+          <Route path="/student/clearance/apply"       element={<StudentProtectedRoute><StudentLayout><ClearanceApplicationForm /></StudentLayout></StudentProtectedRoute>} />
+          <Route path="/student/clearance/status"      element={<StudentProtectedRoute><StudentLayout><MyClearanceStatus /></StudentLayout></StudentProtectedRoute>} />
         </Routes>
       </StudentProvider>
     )
@@ -223,6 +237,15 @@ export default function App() {
           <Route path="/exeat" element={
             <ProtectedRoute><Layout><ExeatManagementPage /></Layout></ProtectedRoute>
           }/>
+          <Route path="/clearance" element={
+            <ProtectedRoute><Layout><ClearanceManagementPage /></Layout></ProtectedRoute>
+          }/>
+          <Route path="/class-performance" element={
+            <ProtectedRoute><Layout><ClassPerformancePage /></Layout></ProtectedRoute>
+          }/>
+          <Route path="/classes" element={
+            <ProtectedRoute><Layout><Classes /></Layout></ProtectedRoute>
+          }/>
         </Routes>
       </>
     )
@@ -250,6 +273,8 @@ export default function App() {
             <Route path="/login"        element={<Login />} />
             <Route path="/staff-login" element={<StaffLogin />} />
             <Route path="/users"       element={<PageWrapper><Users      /></PageWrapper>} />
+            <Route path="/verify/:clearanceSerial" element={<VerifyClearancePage />} />
+            <Route path="/verify-balance/:regNumber" element={<VerifyBalancePage />} />
             <Route path="*"            element={<Navigate to="/" replace />} />
           </Routes>
         </AnimatePresence>

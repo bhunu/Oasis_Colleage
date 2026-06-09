@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { collection, getDocs, query, where, orderBy, doc, getDoc } from 'firebase/firestore'
+import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import { useStudent } from '../../context/StudentContext'
 import ExeatPass from '../../components/ExeatPass'
@@ -30,18 +30,17 @@ export default function MyExeatApplications() {
   const [passLoading, setPassLoading]   = useState(false)
 
   useEffect(() => {
-    if (!studentData?.studentId) return
-    getDocs(
-      query(
-        collection(db, 'exeatApplications'),
-        where('studentId', '==', studentData.studentId),
-        orderBy('appliedAt', 'desc')
-      )
-    )
-      .then(snap => setApplications(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
+    if (!studentData?.regNumber) return
+    getDocs(query(collection(db, 'exeatApplications'), where('regNo', '==', studentData.regNumber)))
+      .then(snap => {
+        const sorted = snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => (b.appliedAt?.seconds ?? 0) - (a.appliedAt?.seconds ?? 0))
+        setApplications(sorted)
+      })
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [studentData?.studentId])
+  }, [studentData?.regNumber])
 
   const handleViewPass = async (passSerial) => {
     setPassLoading(true)

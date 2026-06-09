@@ -10,7 +10,7 @@ import toast from 'react-hot-toast'
 import {
   MdSearch, MdClose, MdPrint, MdCheck, MdBlock, MdOpenInNew,
   MdBadge, MdAdd, MdPersonSearch, MdGroups,
-  MdCheckBox, MdCheckBoxOutlineBlank, MdWarning,
+  MdCheckBox, MdCheckBoxOutlineBlank, MdWarning, MdDownload,
 } from 'react-icons/md'
 
 const { number: TERM_NUM, year: TERM_YEAR } = getCurrentTerm()
@@ -111,9 +111,8 @@ function CreatePassModal({ onClose, onCreated }) {
       const data = snap.docs[0].data()
       const s = { id: snap.docs[0].id, ...data }
       setStudent(s)
-      if (data.parentName)    setGuardianName(data.parentName)
-      if (data.parentPhone)   setGuardianPhone(data.parentPhone)
-      if (data.parentContact && !data.parentPhone) setGuardianPhone(data.parentContact)
+      if (data.guardianName)  setGuardianName(data.guardianName)
+      if (data.guardianPhone) setGuardianPhone(data.guardianPhone)
     } catch {
       toast.error('Search failed. Please try again.')
     } finally {
@@ -135,7 +134,7 @@ function CreatePassModal({ onClose, onCreated }) {
     try {
       const serial      = buildSerial(student.reg_number)
       const now         = serverTimestamp()
-      const studentName = student.name || '—'
+      const studentName = student.fullName || '—'
       const cls         = student.class || ''
 
       const appData = {
@@ -298,11 +297,11 @@ function CreatePassModal({ onClose, onCreated }) {
                       <img src={student.photoURL} alt={student.name} className="w-12 h-12 rounded-full object-cover border border-white/10 shrink-0" />
                     ) : (
                       <div className="w-12 h-12 rounded-full bg-[#C9A84C]/20 border border-white/10 flex items-center justify-center shrink-0">
-                        <span className="text-[#C9A84C] font-bold text-lg font-playfair">{(student.name || '?')[0]}</span>
+                        <span className="text-[#C9A84C] font-bold text-lg font-playfair">{(student.fullName || '?')[0]}</span>
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-white font-montserrat">{student.name || '—'}</p>
+                      <p className="text-sm font-bold text-white font-montserrat">{student.fullName || '—'}</p>
                       <p className="text-xs text-gray-400 font-montserrat">{student.class || '—'} · {student.reg_number}</p>
                       {student.boardingStatus && (
                         <span className="text-[9px] font-semibold text-emerald-400 font-montserrat uppercase tracking-wider">{student.boardingStatus}</span>
@@ -1095,11 +1094,54 @@ export default function ExeatManagementPage() {
     setApplications(prev => [...apps, ...prev])
   }
 
+  const downloadCSV = () => {
+    const rows = [
+      ['Student', 'Reg No', 'Class', 'Reason', 'Departure', 'Return', 'Applied', 'Status', 'Source'],
+      ...filtered.map(a => [
+        a.studentName || '',
+        a.regNo || '',
+        a.class || '',
+        a.reason || '',
+        fmtDate(a.departureDate),
+        fmtDate(a.returnDate),
+        fmtDate(a.appliedAt),
+        a.status || '',
+        a.source || '',
+      ]),
+    ]
+    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    a.href     = url
+    a.download = `exeat-applications-${activeTab.toLowerCase()}-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const TH = 'text-left py-3 px-4 text-[10px] font-semibold text-gray-500 uppercase tracking-widest font-montserrat'
   const TD = 'py-3 px-4 text-sm text-gray-300 font-montserrat'
 
   return (
     <div className="space-y-6">
+
+      <style>{`
+        @media print {
+          body * { visibility: hidden !important; }
+          #exeat-print-table, #exeat-print-table * { visibility: visible !important; }
+          #exeat-print-table {
+            position: absolute; top: 0; left: 0; width: 100%;
+            background: #fff !important;
+          }
+          #exeat-print-table * {
+            color: #111 !important;
+            background: transparent !important;
+            border-color: #ccc !important;
+          }
+          #exeat-print-table thead tr { background: #f3f4f6 !important; }
+          #exeat-print-table thead * { background: #f3f4f6 !important; color: #374151 !important; }
+        }
+      `}</style>
 
       {/* Header */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -1113,6 +1155,14 @@ export default function ExeatManagementPage() {
           </div>
         </div>
         <div className="flex gap-2 shrink-0">
+          <button
+            onClick={downloadCSV}
+            disabled={filtered.length === 0}
+            className="flex items-center gap-2 bg-white/10 hover:bg-white/15 border border-white/10 disabled:opacity-40 text-white font-montserrat font-bold text-xs uppercase tracking-wider px-4 py-2.5 rounded-xl transition"
+          >
+            <MdDownload className="text-base" />
+            Download
+          </button>
           <button
             onClick={() => setShowBulk(true)}
             className="flex items-center gap-2 bg-white/10 hover:bg-white/15 border border-white/10 text-white font-montserrat font-bold text-xs uppercase tracking-wider px-4 py-2.5 rounded-xl transition"
@@ -1130,7 +1180,7 @@ export default function ExeatManagementPage() {
         </div>
       </div>
 
-      <div className="bg-[#0D1C35] border border-white/10 rounded-2xl overflow-hidden">
+      <div id="exeat-print-table" className="bg-[#0D1C35] border border-white/10 rounded-2xl overflow-hidden">
 
         {/* Filters + search */}
         <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-4 border-b border-white/10">
@@ -1154,7 +1204,7 @@ export default function ExeatManagementPage() {
             <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-lg" />
             <input
               type="text"
-              placeholder="Search name or reg no…"
+              placeholder="262681 or name…"
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="bg-white/5 border border-white/10 focus:border-[#C9A84C]/40 focus:outline-none rounded-xl pl-9 pr-4 py-2 text-white font-montserrat text-xs placeholder-gray-600 w-52"

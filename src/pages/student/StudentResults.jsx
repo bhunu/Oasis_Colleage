@@ -1,32 +1,59 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { collection, getDocs, query, where, orderBy, onSnapshot, doc, limit } from 'firebase/firestore'
+import { collection, getDocs, query, where, limit } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import { useStudent } from '../../context/StudentContext'
 import { MdLock, MdCloudUpload } from 'react-icons/md'
+import ClearanceRequiredBlock from '../../components/ClearanceRequiredBlock'
+
+const GATED_EXIT_TYPES = ['OLevelCompletion', 'ALevelCompletion', 'Transfer']
 
 export default function StudentResults() {
   const navigate = useNavigate()
-  const { studentData, portalSettings } = useStudent()
+  const { studentData, portalSettings, firestoreStudent } = useStudent()
 
-  const [results,    setResults]    = useState([])
-  const [feeAccount, setFeeAccount] = useState(null)
-  const [loading,    setLoading]    = useState(true)
+  const [results,       setResults]       = useState([])
+  const [feeAccount,    setFeeAccount]    = useState(null)
+  const [loading,       setLoading]       = useState(true)
+  const [clearancePass, setClearancePass] = useState(null)
+  const [clearanceChecked, setClearanceChecked] = useState(false)
 
   /* ── threshold comes in real-time via portalSettings (onSnapshot in context) ── */
   const threshold = portalSettings?.resultsAccessThreshold ?? 75
 
   useEffect(() => {
-    if (!studentData?.studentId) return
+    if (!studentData?.regNumber) return
+    let done = 0
+    const finish = () => { if (++done === 2) setLoading(false) }
 
-    Promise.all([
-      getDocs(query(collection(db, 'academicResults'), where('studentId', '==', studentData.studentId), orderBy('uploadedAt', 'desc'))),
-      getDocs(query(collection(db, 'feeAccounts'), where('studentId', '==', studentData.studentId), limit(1))),
-    ]).then(([resSnap, feeSnap]) => {
-      setResults(resSnap.docs.map(d => ({ id: d.id, ...d.data() })))
-      if (!feeSnap.empty) setFeeAccount({ id: feeSnap.docs[0].id, ...feeSnap.docs[0].data() })
-    }).catch(() => {}).finally(() => setLoading(false))
-  }, [studentData?.studentId])
+    /* fee account — must not be blocked by results query failure */
+    getDocs(query(collection(db, 'feeAccounts'), where('reg_number', '==', studentData.regNumber), limit(1)))
+      .then(snap => { if (!snap.empty) setFeeAccount({ id: snap.docs[0].id, ...snap.docs[0].data() }) })
+      .catch(() => {}).finally(finish)
+
+    /* academic results — sort in JS to avoid composite index requirement */
+    getDocs(query(collection(db, 'academicResults'), where('studentId', '==', studentData.studentId)))
+      .then(snap => {
+        const sorted = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => (b.uploadedAt?.seconds ?? 0) - (a.uploadedAt?.seconds ?? 0))
+        setResults(sorted)
+      })
+      .catch(() => {}).finally(finish)
+  }, [studentData?.regNumber])
+
+  /* Check clearance pass for gated exit types */
+  useEffect(() => {
+    const exitType = firestoreStudent?.exitType
+    if (!studentData?.regNumber || !GATED_EXIT_TYPES.includes(exitType)) {
+      setClearanceChecked(true)
+      return
+    }
+    getDocs(
+      query(collection(db, 'clearancePasses'), where('regNo', '==', studentData.regNumber), where('valid', '==', true), limit(1))
+    ).then(snap => {
+      setClearancePass(snap.empty ? null : { id: snap.docs[0].id, ...snap.docs[0].data() })
+    }).catch(() => setClearancePass(null)).finally(() => setClearanceChecked(true))
+  }, [studentData?.regNumber, firestoreStudent?.exitType])
 
   const termFees   = feeAccount?.termFees  || 0
   const totalPaid  = feeAccount?.totalPaid || 0
@@ -35,7 +62,7 @@ export default function StudentResults() {
   const amountNeeded   = termFees > 0 ? Math.max(0, (threshold / 100) * termFees - totalPaid) : 0
   const fmt = v => `$${Number(v || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
 
-  if (loading) {
+  if (loading || !clearanceChecked) {
     return (
       <div className="flex items-center justify-center py-24">
         <div className="w-8 h-8 border-2 border-[#C9A84C] border-t-transparent rounded-full animate-spin" />
@@ -43,7 +70,17 @@ export default function StudentResults() {
     )
   }
 
-  /* ── Locked screen ── */
+  /* ── Clearance gate (targeted to completing/transferring students only) ── */
+  if (GATED_EXIT_TYPES.includes(firestoreStudent?.exitType) && !clearancePass) {
+    return (
+      <ClearanceRequiredBlock
+        studentName={studentData?.name || 'Student'}
+        exitType={firestoreStudent.exitType}
+      />
+    )
+  }
+
+  /* ── Fee threshold locked screen ── */
   if (!resultUnlocked) {
     return (
       <div className="max-w-lg mx-auto text-center py-12">

@@ -2,12 +2,14 @@ import { useState, useEffect, useMemo } from 'react'
 import { collection, getDocs, orderBy, query } from 'firebase/firestore'
 import { db } from '../firebase/config'
 import { useNavigate } from 'react-router-dom'
+import * as XLSX from 'xlsx'
 import {
   MdSearch as IconSearch,
   MdPersonAdd as IconUserPlus,
   MdPerson as IconPerson,
   MdArrowBack,
   MdPrint,
+  MdTableChart as IconExcel,
 } from 'react-icons/md'
 
 export default function Students() {
@@ -38,7 +40,10 @@ export default function Students() {
     return ['All classes', ...unique]
   }, [students])
 
+  const EXCLUDED_EXIT_TYPES = new Set(['Transfer', 'OLevelCompletion', 'ALevelCompletion'])
+
   const filtered = students.filter(s => {
+    if (EXCLUDED_EXIT_TYPES.has(s.exitType)) return false
     const matchSearch =
       s.fullName?.toLowerCase().includes(search.toLowerCase()) ||
       s.reg_number?.toLowerCase().includes(search.toLowerCase())
@@ -81,6 +86,11 @@ export default function Students() {
                 <Row label="Reg Number"     value={selected.reg_number} />
                 <Row label="Date of Birth"  value={selected.dateOfBirth} />
                 <Row label="Gender"         value={selected.gender} />
+                <Row label="Boarding Status" value={
+                  selected.boardingStatus === 'boarder' ? 'Boarder' :
+                  selected.boardingStatus === 'day'     ? 'Day Scholar' :
+                  selected.boardingStatus || '—'
+                } />
                 <Row label="Home Address"   value={selected.homeAddress} />
                 <Row label="Student Type"   value={selected.studentType === 'returning' ? 'Returning' : 'New'} />
                 <Row label="Enrolment Date" value={selected.enrolmentDate} />
@@ -99,7 +109,7 @@ export default function Students() {
 
           <div className="mt-8 pt-6 border-t border-white/10 flex gap-3">
             <button
-              onClick={() => navigate('/fees')}
+              onClick={() => navigate(`/fees?studentId=${selected.firestoreId}`)}
               className="bg-[#C9A84C] hover:bg-yellow-400 text-[#0A1628] font-montserrat text-xs font-bold uppercase tracking-wider px-5 py-2.5 rounded-xl transition-all"
             >
               View Fee Account
@@ -183,6 +193,29 @@ export default function Students() {
     win.close()
   }
 
+  const exportToExcel = () => {
+    const label = classFilter === 'All classes' ? 'All Classes' : classFilter
+    const rows = filtered.map((s, i) => ({
+      '#': i + 1,
+      'Full Name': s.fullName || '',
+      'Reg Number': s.reg_number || '',
+      'Class': s.class || '',
+      'Gender': s.gender || '',
+      'Date of Birth': s.dateOfBirth || '',
+      'Home Address': s.homeAddress || '',
+      'Guardian Name': s.guardianName || '',
+      'Guardian Phone': s.guardianPhone || '',
+      'Guardian Email': s.guardianEmail || '',
+      'Student Email': s.studentEmail || '',
+      'Student Type': s.studentType === 'returning' ? 'Returning' : 'New',
+      'Enrolment Date': s.enrolmentDate || '',
+    }))
+    const ws = XLSX.utils.json_to_sheet(rows)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Students')
+    XLSX.writeFile(wb, `Oasis_Students_${label.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`)
+  }
+
   // ── List view ─────────────────────────────────────────────────────────────
   return (
     <div className="space-y-4">
@@ -193,7 +226,7 @@ export default function Students() {
           <IconSearch size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" />
           <input
             type="text"
-            placeholder="Search by name or reg number…"
+            placeholder="262681 or name…"
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-2.5 bg-white/5 border border-white/10 focus:border-[#C9A84C]/40 focus:outline-none rounded-xl text-white font-montserrat text-sm placeholder-gray-600 transition-all"
@@ -215,6 +248,15 @@ export default function Students() {
         >
           <MdPrint size={16} />
           Print List
+        </button>
+
+        <button
+          onClick={exportToExcel}
+          disabled={filtered.length === 0}
+          className="flex items-center gap-2 bg-white/5 border border-white/10 hover:bg-white/10 disabled:opacity-40 text-gray-300 font-montserrat text-xs font-semibold uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all"
+        >
+          <IconExcel size={16} />
+          Export Excel
         </button>
 
         <button

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore'
+import { collection, getDocs, query, where, limit } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import { useStudent } from '../../context/StudentContext'
 
@@ -18,15 +18,18 @@ export default function StudentFees() {
   const [loading,  setLoading]  = useState(true)
 
   useEffect(() => {
-    if (!studentData?.studentId) return
+    if (!studentData?.regNumber) return
     Promise.all([
-      getDocs(query(collection(db, 'feeAccounts'), where('studentId', '==', studentData.studentId), limit(1))),
-      getDocs(query(collection(db, 'receipts'), where('studentId', '==', studentData.studentId), orderBy('issuedAt', 'desc'))),
+      getDocs(query(collection(db, 'feeAccounts'), where('reg_number', '==', studentData.regNumber), limit(1))),
+      getDocs(query(collection(db, 'receipts'), where('regNumber', '==', studentData.regNumber))),
     ]).then(([feeSnap, rcptSnap]) => {
       if (!feeSnap.empty) setAccount({ id: feeSnap.docs[0].id, ...feeSnap.docs[0].data() })
-      setReceipts(rcptSnap.docs.map(d => ({ id: d.id, ...d.data() })))
-    }).catch(() => {}).finally(() => setLoading(false))
-  }, [studentData?.studentId])
+      const sorted = rcptSnap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (b.issuedAt?.seconds || 0) - (a.issuedAt?.seconds || 0))
+      setReceipts(sorted)
+    }).catch(err => console.error('Fee load error:', err)).finally(() => setLoading(false))
+  }, [studentData?.regNumber])
 
   const termFees  = account?.termFees  || 0
   const totalPaid = account?.totalPaid || 0

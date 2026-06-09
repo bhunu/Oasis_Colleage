@@ -1,11 +1,11 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { collection, getDocs, query, where, orderBy, doc, deleteDoc } from 'firebase/firestore'
+import { collection, getDocs, query, where, orderBy, doc, deleteDoc, setDoc } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import {
   FaTimes, FaTrash, FaUserCheck, FaUserSlash,
-  FaUsers, FaClock, FaFilter, FaUserGraduate, FaKey, FaBan,
+  FaUsers, FaClock, FaFilter, FaUserGraduate, FaKey, FaBan, FaLockOpen,
 } from 'react-icons/fa'
 import { MdSearch } from 'react-icons/md'
 import toast from 'react-hot-toast'
@@ -24,6 +24,7 @@ const roleStyle = (role) => ROLE_STYLE[role] ?? 'bg-white/10 text-gray-300 borde
 
 function portalStatus(student) {
   const u = student.portalUser
+  if (student.locked) return 'locked'
   if (!u) return 'none'
   if (u.hasSetupPassword) return 'active'
   if (u.otpCode && !u.otpUsed) {
@@ -35,13 +36,15 @@ function portalStatus(student) {
 }
 
 const PORTAL_STATUS_STYLE = {
-  active:      'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+  active:        'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
   'otp-pending': 'bg-amber-500/15 text-amber-300 border-amber-500/30',
-  none:        'bg-white/10 text-gray-500 border-white/20',
+  locked:        'bg-red-500/15 text-red-400 border-red-500/30',
+  none:          'bg-white/10 text-gray-500 border-white/20',
 }
 const PORTAL_STATUS_LABEL = {
   active:        'Active',
   'otp-pending': 'OTP Pending',
+  locked:        '🔒 Locked',
   none:          'Not Activated',
 }
 
@@ -73,19 +76,31 @@ export default function AdminUsers() {
     if (studentsLoaded) return
     setStudentsLoading(true)
     try {
-      const [studSnap, userSnap] = await Promise.all([
+      const [studSnap, userSnap, lockSnap] = await Promise.all([
         getDocs(query(collection(db, 'students'), orderBy('createdAt', 'desc'))),
         getDocs(query(collection(db, 'users'), where('role', '==', 'student'))),
+        getDocs(query(collection(db, 'loginAttempts'), where('portal', '==', 'student'))),
       ])
       const usersMap = {}
       userSnap.docs.forEach(d => {
         const data = d.data()
         if (data.studentId) usersMap[data.studentId] = { docId: d.id, ref: d.ref, ...data }
       })
+      // Build map of reg_number (lowercase) → locked bool
+      const now = new Date()
+      const lockedMap = {}
+      lockSnap.docs.forEach(d => {
+        const data = d.data()
+        const until = data.lockedUntil?.toDate ? data.lockedUntil.toDate() : data.lockedUntil ? new Date(data.lockedUntil) : null
+        if (until && until > now) {
+          lockedMap[data.identifier?.toUpperCase()] = true
+        }
+      })
       setStudents(studSnap.docs.map(d => ({
         id: d.id,
         ...d.data(),
         portalUser: usersMap[d.id] || null,
+        locked: lockedMap[d.data().reg_number?.toUpperCase()] ?? false,
       })))
       setStudentsLoaded(true)
     } catch {
@@ -93,6 +108,26 @@ export default function AdminUsers() {
     }
     setStudentsLoading(false)
   }, [studentsLoaded])
+
+  const handleUnlock = async (student) => {
+    setBusy(b => ({ ...b, [student.id]: true }))
+    try {
+      const identifier = student.reg_number
+      const docId = `student__${identifier.toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 80)}`
+      await setDoc(doc(db, 'loginAttempts', docId), {
+        identifier,
+        portal:        'student',
+        failedAttempts: 0,
+        lockedUntil:   null,
+        lastFailedAt:  null,
+      }, { merge: true })
+      setStudents(prev => prev.map(s => s.id === student.id ? { ...s, locked: false } : s))
+      toast.success(`${student.fullName || student.reg_number} unlocked`)
+    } catch {
+      setError('Failed to unlock student.')
+    }
+    setBusy(b => ({ ...b, [student.id]: false }))
+  }
 
   useEffect(() => {
     if (tab === 'students') loadStudents()
@@ -219,7 +254,7 @@ export default function AdminUsers() {
                 <input
                   value={studentSearch}
                   onChange={e => setStudentSearch(e.target.value)}
-                  placeholder="Search by name, reg no, or class…"
+                  placeholder="262681, name, or class…"
                   className="flex-1 bg-transparent text-white font-montserrat text-sm outline-none placeholder-gray-600"
                 />
               </div>
@@ -272,6 +307,16 @@ export default function AdminUsers() {
                             </td>
                             <td className="px-5 py-4">
                               <div className="flex items-center justify-end gap-2">
+                                {status === 'locked' && (
+                                  <ActionBtn
+                                    onClick={() => handleUnlock(student)}
+                                    disabled={busy[student.id]}
+                                    title="Unlock portal access"
+                                    colorClass="hover:bg-emerald-500/20 hover:text-emerald-400"
+                                    icon={<FaLockOpen className="text-xs" />}
+                                    highlight
+                                  />
+                                )}
                                 <ActionBtn
                                   onClick={() => navigate('/admin/student-otp', { state: { regNumber: student.reg_number } })}
                                   title="Generate OTP"
@@ -415,20 +460,95 @@ export default function AdminUsers() {
   )
 }
 
+const STATUS_DOT = {
+  Pending:  'bg-amber-400',
+  Approved: 'bg-emerald-400',
+  Rejected: 'bg-red-400',
+}
+
 function ActivityModal({ student, onClose }) {
   const [logs,    setLogs]    = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    getDocs(query(collection(db, 'portalActivityLog'), where('studentId', '==', student.id)))
-      .then(snap => {
-        const list = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-        list.sort((a, b) => (b.timestamp?.seconds ?? 0) - (a.timestamp?.seconds ?? 0))
-        setLogs(list)
+    const reg = student.reg_number
+    const docId = student.id
+
+    Promise.all([
+      // Clearance / transfer applications
+      getDocs(query(collection(db, 'clearanceApplications'), where('regNo', '==', reg))),
+      // Exeat applications
+      getDocs(query(collection(db, 'exeatApplications'), where('regNo', '==', reg))),
+      // OTP generations (keyed by Firestore doc ID)
+      getDocs(query(collection(db, 'otpLogs'), where('studentId', '==', docId))),
+    ]).then(([clearSnap, exeatSnap, otpSnap]) => {
+      const entries = []
+
+      clearSnap.docs.forEach(d => {
+        const data = d.data()
+        const exitLabel = data.exitType === 'Transfer' ? 'Transfer'
+          : data.exitType === 'OLevelCompletion' ? 'O Level Completion'
+          : data.exitType === 'ALevelCompletion' ? 'A Level Completion'
+          : (data.exitType || 'Clearance')
+        entries.push({
+          id:        d.id,
+          action:    `Clearance application — ${exitLabel}`,
+          status:    data.status,
+          ts:        data.appliedAt,
+          dot:       STATUS_DOT[data.status] || 'bg-gray-500',
+        })
       })
-      .catch(() => {})
+
+      exeatSnap.docs.forEach(d => {
+        const data = d.data()
+        entries.push({
+          id:        d.id,
+          action:    `Exeat application — to ${data.destination || 'N/A'}`,
+          status:    data.status,
+          ts:        data.appliedAt,
+          dot:       STATUS_DOT[data.status] || 'bg-gray-500',
+        })
+      })
+
+      otpSnap.docs.forEach(d => {
+        const data = d.data()
+        entries.push({
+          id:        d.id,
+          action:    `OTP generated by ${data.generatedBy || 'Admin'}`,
+          status:    null,
+          ts:        data.generatedAt,
+          dot:       'bg-[#C9A84C]',
+        })
+      })
+
+      // Account setup from portalUser record
+      const pu = student.portalUser
+      if (pu?.hasSetupPassword && pu?.updatedAt) {
+        entries.push({
+          id:     'setup',
+          action: 'Password set — portal activated',
+          status: null,
+          ts:     pu.updatedAt,
+          dot:    'bg-emerald-400',
+        })
+      }
+
+      entries.sort((a, b) => {
+        const ta = a.ts?.seconds ?? a.ts?.toDate?.()?.getTime?.() / 1000 ?? 0
+        const tb = b.ts?.seconds ?? b.ts?.toDate?.()?.getTime?.() / 1000 ?? 0
+        return tb - ta
+      })
+
+      setLogs(entries)
+    }).catch(err => console.error('Activity load error:', err))
       .finally(() => setLoading(false))
-  }, [student.id])
+  }, [student.id, student.reg_number, student.portalUser])
+
+  const fmtDate = (ts) => {
+    if (!ts) return '—'
+    const d = ts.toDate ? ts.toDate() : new Date(ts)
+    return d.toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  }
 
   return (
     <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={onClose}>
@@ -452,15 +572,23 @@ function ActivityModal({ student, onClose }) {
           ) : logs.length === 0 ? (
             <p className="text-gray-500 font-montserrat text-sm text-center py-8">No portal activity logged for this student.</p>
           ) : (
-            <ul className="space-y-2">
+            <ul className="space-y-1">
               {logs.map(l => (
-                <li key={l.id} className="flex items-start gap-3 py-2 border-b border-white/5">
-                  <span className="w-1.5 h-1.5 mt-1.5 rounded-full bg-[#C9A84C] shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-sm text-gray-200 font-montserrat">{l.action || 'Login'}</p>
-                    <p className="text-[10px] text-gray-500 font-montserrat mt-0.5">
-                      {l.timestamp?.toDate ? l.timestamp.toDate().toLocaleString() : '—'}
-                    </p>
+                <li key={l.id} className="flex items-start gap-3 py-2.5 border-b border-white/5">
+                  <span className={`w-2 h-2 mt-1.5 rounded-full shrink-0 ${l.dot}`} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm text-gray-200 font-montserrat">{l.action}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <p className="text-[10px] text-gray-500 font-montserrat">{fmtDate(l.ts)}</p>
+                      {l.status && (
+                        <span className={`text-[9px] font-montserrat font-bold uppercase tracking-wider px-1.5 py-0.5 rounded
+                          ${l.status === 'Approved' ? 'bg-emerald-500/20 text-emerald-300'
+                          : l.status === 'Rejected' ? 'bg-red-500/20 text-red-300'
+                          : 'bg-amber-500/20 text-amber-300'}`}>
+                          {l.status}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </li>
               ))}

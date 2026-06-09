@@ -2,7 +2,6 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import {
   MdDashboard, MdArticle, MdEvent, MdPeople, MdPhotoLibrary,
   MdLogout, MdManageAccounts, MdKey, MdTune, MdSecurity,
-  MdLeaderboard,
 } from 'react-icons/md'
 import { FaGraduationCap } from 'react-icons/fa'
 import { useEffect, useState } from 'react'
@@ -18,7 +17,6 @@ const MAIN_NAV = [
   { to: '/admin/staff',   icon: MdPeople,         label: 'Staff' },
   { to: '/admin/gallery', icon: MdPhotoLibrary,   label: 'Gallery' },
   { to: '/admin/users',             icon: MdManageAccounts, label: 'User Management' },
-  { to: '/admin/class-performance', icon: MdLeaderboard,    label: 'Class Performance' },
 ]
 
 function SidebarLink({ to, icon: Icon, label, badgeCount, onClose }) {

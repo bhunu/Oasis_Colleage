@@ -9,9 +9,13 @@ const LABEL = 'block text-[10px] font-semibold uppercase tracking-widest text-gr
 const CARD  = 'bg-[#0D1C35] border border-white/10 rounded-xl p-6'
 
 export default function StudentProfile() {
-  const { studentData } = useStudent()
-  const [email,     setEmail]     = useState(studentData?.email || '')
-  const [phone,     setPhone]     = useState(studentData?.phone || '')
+  const { studentData, firestoreStudent } = useStudent()
+  const [email,     setEmail]     = useState(
+    firestoreStudent?.email || firestoreStudent?.studentEmail || studentData?.email || ''
+  )
+  const [phone,     setPhone]     = useState(
+    firestoreStudent?.phone || firestoreStudent?.guardianPhone || studentData?.guardianPhone || ''
+  )
   const [saving,    setSaving]    = useState(false)
 
   const initials = studentData?.name
@@ -19,10 +23,11 @@ export default function StudentProfile() {
     : 'ST'
 
   const handleSave = async () => {
-    if (!studentData?.studentDocId) return
+    const docId = firestoreStudent?.id || studentData?.studentDocId
+    if (!docId) { toast.error('Unable to identify student record'); return }
     setSaving(true)
     try {
-      await updateDoc(doc(db, 'students', studentData.studentDocId), {
+      await updateDoc(doc(db, 'students', docId), {
         email:     email.trim(),
         phone:     phone.trim(),
         hasEmail:  email.trim().length > 0,

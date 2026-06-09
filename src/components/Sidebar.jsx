@@ -10,6 +10,9 @@ import {
   MdLogout as IconLogout,
   MdBook as IconBook,
   MdExitToApp as IconExeat,
+  MdVerifiedUser as IconClearance,
+  MdLeaderboard as IconLeaderboard,
+  MdClass as IconClass,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
@@ -21,17 +24,20 @@ const NAV = [
   {
     section: 'STUDENTS',
     items: [
-      { label: 'Enrol students',  icon: IconUserPlus, path: '/enrol' },
-      { label: 'Student records', icon: IconUsers,    path: '/students' },
-      { label: 'Exeat Passes',    icon: IconExeat,    path: '/exeat' },
+      { label: 'Enrol students',  icon: IconUserPlus,  path: '/enrol' },
+      { label: 'Student records', icon: IconUsers,     path: '/students' },
+      { label: 'Classes',         icon: IconClass,     path: '/classes' },
+      { label: 'Clearance',       icon: IconClearance, path: '/clearance' },
+      { label: 'Exeat Passes',    icon: IconExeat,     path: '/exeat' },
     ],
   },
   {
     section: 'ACADEMICS',
     items: [
-      { label: 'Subjects',          icon: IconBook,            path: '/subjects' },
-      { label: 'End of term exams', icon: IconFileCertificate, path: '/exams' },
-      { label: 'Academic reports',  icon: IconReportAnalytics, path: '/reports' },
+      { label: 'Subjects',           icon: IconBook,            path: '/subjects' },
+      { label: 'End of term exams',  icon: IconFileCertificate, path: '/exams' },
+      { label: 'Academic reports',   icon: IconReportAnalytics, path: '/reports' },
+      { label: 'Class Performance',  icon: IconLeaderboard,     path: '/class-performance' },
     ],
   },
   {

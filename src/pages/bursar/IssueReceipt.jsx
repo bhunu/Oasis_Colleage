@@ -2,10 +2,13 @@ import { useState } from 'react'
 import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import toast from 'react-hot-toast'
+import { QRCodeSVG } from 'qrcode.react'
 
 const TEAL  = '#0F6E56'
 const INPUT = 'w-full bg-white/5 border border-white/10 focus:border-[#0F6E56]/50 focus:outline-none rounded-xl px-4 py-3 text-white font-montserrat text-sm placeholder-gray-600 transition-all'
 const CARD  = 'bg-[#0D1C35] border border-white/10 rounded-xl p-6'
+
+const METHOD_LABEL = { cash: 'Cash', bank: 'Bank Transfer', mobile: 'Mobile Money' }
 
 function getBursarSession() {
   try { return JSON.parse(sessionStorage.getItem('bursarSession') || '{}') } catch { return {} }
@@ -19,8 +22,6 @@ function formatDate(ts) {
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })
 }
 
-const METHOD_LABEL = { cash: 'Cash', bank: 'Bank Transfer', mobile: 'Mobile Money' }
-
 export default function IssueReceipt() {
   const session = getBursarSession()
   const [search,    setSearch]   = useState('')
@@ -32,41 +33,34 @@ export default function IssueReceipt() {
     if (!search.trim()) return
     setSearching(true)
     try {
-      const [byNum, byName, byId] = await Promise.all([
-        getDocs(query(collection(db, 'receipts'), where('receiptNumber', '==', search.trim().toUpperCase()), limit(5))),
-        getDocs(query(collection(db, 'receipts'), where('studentName', '>=', search.trim()), where('studentName', '<=', search.trim() + ''), limit(10))),
-        getDocs(query(collection(db, 'receipts'), where('studentId', '==', search.trim()), limit(10))),
+      const term    = search.trim()
+      const regTerm = /^\d+$/.test(term) ? 'R' + term : term.toUpperCase()
+      const [byNum, byName, byReg] = await Promise.all([
+        getDocs(query(collection(db, 'receipts'), where('receiptNumber', '==', term.toUpperCase()), limit(5))),
+        getDocs(query(collection(db, 'receipts'), where('studentName', '>=', term), where('studentName', '<=', term + ''), limit(10))),
+        getDocs(query(collection(db, 'receipts'), where('regNumber', '==', regTerm), limit(10))),
       ])
       const merged = new Map()
-      ;[...byNum.docs, ...byName.docs, ...byId.docs].forEach(d => merged.set(d.id, { id: d.id, ...d.data() }))
-      setResults([...merged.values()].sort((a, b) => (b.issuedAt?.seconds || 0) - (a.issuedAt?.seconds || 0)))
-    } catch {
+      ;[...byNum.docs, ...byName.docs, ...byReg.docs].forEach(d => merged.set(d.id, { id: d.id, ...d.data() }))
+      const list = [...merged.values()].sort((a, b) => (b.issuedAt?.seconds || 0) - (a.issuedAt?.seconds || 0))
+      setResults(list)
+      if (list.length === 0) toast.error('No receipts found')
+    } catch (err) {
+      console.error(err)
       toast.error('Search failed')
     }
     setSearching(false)
   }
 
-  const handlePrint = () => {
-    window.print()
-  }
-
-  const handleEmail = () => {
-    if (!receipt) return
-    const subject = encodeURIComponent(`Oasis College Receipt ${receipt.receiptNumber}`)
-    const body    = encodeURIComponent(
-      `Dear Parent/Guardian,\n\nPlease find below the payment receipt for ${receipt.studentName}.\n\nReceipt No: ${receipt.receiptNumber}\nDate: ${formatDate(receipt.issuedAt)}\nAmount: ${fmt(receipt.amount)}\nPayment Method: ${METHOD_LABEL[receipt.paymentMethod] || receipt.paymentMethod}\n\nThank you.\nOasis Private College Bursar`
-    )
-    window.open(`mailto:?subject=${subject}&body=${body}`)
-  }
-
   return (
     <>
-      {/* Print styles — receipt only */}
       <style>{`
         @media print {
-          body > * { display: none !important; }
-          #print-receipt { display: block !important; }
+          body * { visibility: hidden !important; }
+          #print-receipt, #print-receipt * { visibility: visible !important; }
+          #print-receipt { position: absolute; top: 0; left: 0; width: 100%; }
           #print-receipt * { color: #000 !important; background: #fff !important; border-color: #ccc !important; }
+          .no-print { display: none !important; }
         }
       `}</style>
 
@@ -74,22 +68,28 @@ export default function IssueReceipt() {
 
         {/* Search */}
         <div className={CARD}>
-          <h3 className="font-playfair font-semibold text-white mb-4">Search Receipts</h3>
+          <h3 className="font-playfair font-semibold text-white mb-1">Reprint Receipt</h3>
+          <p className="font-montserrat text-xs text-gray-500 mb-4">
+            Search for a previously issued receipt to reprint it.
+          </p>
           <div className="flex gap-3">
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleSearch()}
-              placeholder="Student name, ID, or receipt number…"
-              className={`${INPUT} flex-1`}
-            />
+            <div className="flex-1 flex items-center bg-white/5 border border-white/10 focus-within:border-[#0F6E56]/50 rounded-xl overflow-hidden transition-all">
+              <span className="pl-4 pr-3 text-[#0F6E56] font-mono font-bold text-sm shrink-0 border-r border-white/10 py-3">R</span>
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSearch()}
+                placeholder="262681, student name, or receipt number..."
+                className="flex-1 bg-transparent outline-none px-3 py-3 text-white font-montserrat text-sm placeholder-gray-600"
+              />
+            </div>
             <button
               onClick={handleSearch}
               disabled={searching}
               className="px-5 py-3 rounded-xl text-sm font-semibold font-montserrat text-white shrink-0"
               style={{ backgroundColor: TEAL }}
             >
-              {searching ? '…' : 'Search'}
+              {searching ? '...' : 'Search'}
             </button>
           </div>
 
@@ -102,125 +102,123 @@ export default function IssueReceipt() {
                   className="w-full text-left px-4 py-3 hover:bg-white/5 border-b border-white/5 last:border-0 transition"
                 >
                   <p className="text-sm text-white font-montserrat">{r.studentName} — {r.receiptNumber}</p>
-                  <p className="text-xs text-gray-500 font-montserrat">{formatDate(r.issuedAt)} · {fmt(r.amount)}</p>
+                  <p className="text-xs text-gray-500 font-montserrat">{formatDate(r.issuedAt)} &middot; {fmt(r.amount)}</p>
                 </button>
               ))}
             </div>
           )}
         </div>
 
-        {/* Receipt card */}
+        {/* Receipt */}
         {receipt && (
-          <>
-            {/* Printable receipt */}
-            <div id="print-receipt" className={CARD}>
-              <div className="border border-white/20 rounded-xl p-8 font-montserrat">
-                {/* Header */}
-                <div className="text-center border-b border-white/10 pb-5 mb-5">
-                  <div className="w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-3" style={{ backgroundColor: TEAL }}>
-                    <span className="text-white font-bold text-xl">O</span>
-                  </div>
-                  <h2 className="font-playfair text-xl font-bold text-white tracking-wide">OASIS PRIVATE COLLEGE</h2>
-                  <p className="text-xs text-gray-400 uppercase tracking-[0.2em] mt-0.5">Checheche, Zimbabwe</p>
-                  <div className="mt-3 inline-flex px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest" style={{ backgroundColor: `${TEAL}22`, color: TEAL }}>
-                    Official Receipt
-                  </div>
+          <div id="print-receipt" className={CARD}>
+            <div className="border border-white/20 rounded-xl p-8 font-montserrat">
+              <div className="text-center border-b border-white/10 pb-5 mb-5">
+                <div className="w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-3" style={{ backgroundColor: TEAL }}>
+                  <span className="text-white font-bold text-xl">O</span>
                 </div>
-
-                {/* Meta */}
-                <div className="grid grid-cols-2 gap-4 text-sm mb-5">
-                  <div>
-                    <p className="text-[10px] text-gray-500 uppercase tracking-widest">Receipt No.</p>
-                    <p className="text-white font-semibold mt-0.5">{receipt.receiptNumber}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[10px] text-gray-500 uppercase tracking-widest">Date</p>
-                    <p className="text-white font-semibold mt-0.5">{formatDate(receipt.issuedAt)}</p>
-                  </div>
-                </div>
-
-                {/* Student */}
-                <div className="bg-white/5 rounded-xl p-4 mb-5 space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Received from</span>
-                    <span className="text-white font-semibold">{receipt.studentName}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Student ID</span>
-                    <span className="text-white">{receipt.studentId}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Class</span>
-                    <span className="text-white">{receipt.class || '—'}</span>
-                  </div>
-                </div>
-
-                {/* Payment */}
-                <div className="space-y-2 text-sm border-t border-white/10 pt-4 mb-5">
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Description</span>
-                    <span className="text-white">{receipt.term || 'Term'} fees</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Payment method</span>
-                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${
-                      receipt.paymentMethod === 'cash'   ? 'bg-purple-500/20 text-purple-300' :
-                      receipt.paymentMethod === 'bank'   ? 'bg-blue-500/20 text-blue-300'    :
-                      'bg-teal-500/20 text-teal-300'
-                    }`}>
-                      {METHOD_LABEL[receipt.paymentMethod] || receipt.paymentMethod}
-                    </span>
-                  </div>
-                  {receipt.reference && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Reference</span>
-                      <span className="text-white">{receipt.reference}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Amount */}
-                <div className="rounded-xl p-4 flex justify-between items-center" style={{ backgroundColor: `${TEAL}18` }}>
-                  <span className="font-bold text-white text-base">Amount Paid</span>
-                  <span className="font-bold text-2xl" style={{ color: TEAL }}>{fmt(receipt.amount)}</span>
-                </div>
-
-                {/* Footer */}
-                <div className="border-t border-white/10 mt-5 pt-4 text-xs text-gray-500 text-center">
-                  Issued by: <span className="text-gray-400">{receipt.issuedBy || session.name || 'Bursar'}</span>
-                  <br />This is an official receipt of Oasis Private College.
+                <h2 className="font-playfair text-xl font-bold text-white tracking-wide">OASIS PRIVATE COLLEGE</h2>
+                <p className="text-xs text-gray-400 uppercase tracking-[0.2em] mt-0.5">Checheche, Zimbabwe</p>
+                <div className="mt-3 inline-flex px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest" style={{ backgroundColor: `${TEAL}22`, color: TEAL }}>
+                  Official Receipt
                 </div>
               </div>
 
-              {/* Actions */}
-              <div className="flex gap-3 mt-5">
-                <button
-                  onClick={handlePrint}
-                  className="flex-1 py-3 rounded-xl text-sm font-semibold font-montserrat text-white border border-white/20 hover:bg-white/5 transition"
-                >
-                  Print
-                </button>
-                <button
-                  onClick={handleEmail}
-                  className="flex-1 py-3 rounded-xl text-sm font-semibold font-montserrat text-white border border-white/20 hover:bg-white/5 transition"
-                >
-                  Email to parent
-                </button>
-                <button
-                  onClick={handlePrint}
-                  className="flex-1 py-3 rounded-xl text-sm font-semibold font-montserrat text-white transition"
-                  style={{ backgroundColor: TEAL }}
-                >
-                  Download PDF
-                </button>
+              <div className="grid grid-cols-2 gap-4 text-sm mb-5">
+                <div>
+                  <p className="text-[10px] text-gray-500 uppercase tracking-widest">Receipt No.</p>
+                  <p className="text-white font-semibold mt-0.5">{receipt.receiptNumber}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] text-gray-500 uppercase tracking-widest">Date</p>
+                  <p className="text-white font-semibold mt-0.5">{formatDate(receipt.issuedAt)}</p>
+                </div>
+              </div>
+
+              <div className="bg-white/5 rounded-xl p-4 mb-5 space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Received from</span>
+                  <span className="text-white font-semibold">{receipt.studentName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Reg Number</span>
+                  <span className="text-white">{receipt.regNumber || receipt.studentId}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Class</span>
+                  <span className="text-white">{receipt.class || '—'}</span>
+                </div>
+              </div>
+
+              <div className="space-y-2 text-sm border-t border-white/10 pt-4 mb-5">
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Description</span>
+                  <span className="text-white">{receipt.term || 'Term'} fees</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Payment method</span>
+                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${
+                    receipt.paymentMethod === 'cash'   ? 'bg-purple-500/20 text-purple-300' :
+                    receipt.paymentMethod === 'bank'   ? 'bg-blue-500/20 text-blue-300'    :
+                    'bg-teal-500/20 text-teal-300'
+                  }`}>
+                    {METHOD_LABEL[receipt.paymentMethod] || receipt.paymentMethod}
+                  </span>
+                </div>
+                {receipt.reference && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Reference</span>
+                    <span className="text-white">{receipt.reference}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-xl p-4 flex justify-between items-center" style={{ backgroundColor: `${TEAL}18` }}>
+                <span className="font-bold text-white text-base">Amount Paid</span>
+                <span className="font-bold text-2xl" style={{ color: TEAL }}>{fmt(receipt.amount)}</span>
+              </div>
+
+              {/* QR code */}
+              <div className="border-t border-white/10 mt-5 pt-5 flex flex-col items-center gap-2">
+                <QRCodeSVG
+                  value={`${window.location.origin}/verify-balance/${receipt.regNumber || receipt.studentId}`}
+                  size={96}
+                  bgColor="transparent"
+                  fgColor="#000000"
+                  level="M"
+                />
+                <p className="font-montserrat text-[10px] text-gray-500 uppercase tracking-widest">Scan to verify balance</p>
+              </div>
+
+              <div className="border-t border-white/10 mt-4 pt-4 text-xs text-gray-500 text-center">
+                Issued by: <span className="text-gray-400">{receipt.issuedBy || session.name || 'Bursar'}</span>
+                <br />This is an official receipt of Oasis Private College.
               </div>
             </div>
-          </>
+
+            <div className="no-print flex gap-3 mt-5">
+              <button
+                onClick={() => window.print()}
+                className="flex-1 py-3 rounded-xl text-sm font-semibold font-montserrat text-white transition"
+                style={{ backgroundColor: TEAL }}
+              >
+                Print Receipt
+              </button>
+              <button
+                onClick={() => setReceipt(null)}
+                className="flex-1 py-3 rounded-xl text-sm font-semibold font-montserrat text-gray-400 border border-white/10 hover:bg-white/5 transition"
+              >
+                Back to search
+              </button>
+            </div>
+          </div>
         )}
 
         {!receipt && results.length === 0 && (
           <div className={`${CARD} text-center py-12`}>
-            <p className="text-gray-500 font-montserrat text-sm">Search by student name, registration number, or receipt number to view a receipt.</p>
+            <p className="text-gray-500 font-montserrat text-sm">
+              Search by student name, registration number, or receipt number to reprint a receipt.
+            </p>
           </div>
         )}
       </div>

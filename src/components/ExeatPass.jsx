@@ -259,7 +259,12 @@ export default function ExeatPass({ passData, allowPrint = false, onPrint }) {
             min-height: 210mm !important;
             margin: 0 !important;
             box-shadow: none !important;
+            background: #fff !important;
           }
+          #opc-exeat-pass p,
+          #opc-exeat-pass span,
+          #opc-exeat-pass h1,
+          #opc-exeat-pass h2 { color: #111 !important; }
           @page { size: A5 portrait; margin: 10mm; }
         }
       `}</style>

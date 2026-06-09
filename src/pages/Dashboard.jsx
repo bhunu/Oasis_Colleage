@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { collection, getCountFromServer, getDocs, query, where, orderBy } from 'firebase/firestore'
+import { collection, getCountFromServer, getDocs, getDoc, updateDoc, setDoc, doc, query, where, orderBy, serverTimestamp } from 'firebase/firestore'
 import { db } from '../firebase/config'
 import StatCard from '../components/StatCard'
 import {
@@ -9,8 +9,7 @@ import {
   MdHotel as IconBoarder,
 } from 'react-icons/md'
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ResponsiveContainer, LineChart, Line,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts'
 
 const CHART_GRID   = { stroke: 'rgba(255,255,255,0.06)', strokeDasharray: '3 3' }
@@ -26,27 +25,18 @@ const LEVEL_ORDER = ['Form 1', 'Form 2', 'Form 3', 'Form 4', 'Lower 6', 'Upper 6
 
 function classToLevel(cls = '') {
   const c = cls.trim()
-  if (/form\s*1/i.test(c)) return 'Form 1'
-  if (/form\s*2/i.test(c)) return 'Form 2'
-  if (/form\s*3/i.test(c)) return 'Form 3'
-  if (/form\s*4/i.test(c)) return 'Form 4'
-  if (/lower\s*6|l\.?6/i.test(c)) return 'Lower 6'
-  if (/upper\s*6|u\.?6/i.test(c)) return 'Upper 6'
+  if (/form\s*1/i.test(c) || /^1[a-z]$/i.test(c)) return 'Form 1'
+  if (/form\s*2/i.test(c) || /^2[a-z]$/i.test(c)) return 'Form 2'
+  if (/form\s*3/i.test(c) || /^3[a-z]$/i.test(c)) return 'Form 3'
+  if (/form\s*4/i.test(c) || /^4[a-z]$/i.test(c)) return 'Form 4'
+  if (/lower\s*6|l\.?6/i.test(c) || /^l6/i.test(c)) return 'Lower 6'
+  if (/upper\s*6|u\.?6/i.test(c) || /^u6/i.test(c)) return 'Upper 6'
   return null
 }
 
 function isMale(g = '') {
   return /^(m|male|boy|boys)$/i.test(String(g).trim())
 }
-
-const mockChartData = {
-  trendData: [
-    { term: 'Term 1', '2023': 12000, '2024': 15000, '2025': 8000 },
-    { term: 'Term 2', '2023': 11000, '2024': 13000, '2025': 9500 },
-    { term: 'Term 3', '2023': 10000, '2024': 12000, '2025': 0 },
-  ],
-}
-
 
 
 const CARD_CLASS = 'bg-[#0D1C35] border border-white/10 rounded-xl p-6'
@@ -61,6 +51,72 @@ export default function Dashboard() {
   const [recentEnrolments, setRecent]   = useState([])
   const [demographics, setDemographics] = useState([])
   const [boardingDemo, setBoardingDemo] = useState([])
+  const [batchBanner, setBatchBanner]   = useState(null)
+  const [chartLoaded, setChartLoaded]   = useState(false)
+
+  /* ── Auto-batch: set exitType on Term 3 closing day ── */
+  useEffect(() => {
+    async function runBatch() {
+      try {
+        const today       = new Date()
+        const currentYear = today.getFullYear()
+
+        const [batchSnap, portalSnap] = await Promise.all([
+          getDoc(doc(db, 'settings', 'batchFlags')),
+          getDoc(doc(db, 'settings', 'portalConfig')),
+        ])
+
+        if (batchSnap.exists() && batchSnap.data()?.exitTypeBatchYear === currentYear) return
+
+        if (!portalSnap.exists()) return
+        const { currentTerm: termId } = portalSnap.data()
+        if (!termId) return
+
+        const termSnap = await getDoc(doc(db, 'terms', termId))
+        if (!termSnap.exists()) return
+        const { termNumber, closingDate } = termSnap.data()
+        if (!termNumber || !closingDate) return
+
+        const closing = closingDate.toDate()
+        if (termNumber !== 3 || today < closing) return
+
+        let oLevelCount = 0
+        let aLevelCount = 0
+
+        const form4Classes  = ['4A', '4B', '4C', 'Form 4']
+        const upper6Classes = ['Upper 6 Arts', 'Upper 6 Sciences', 'Upper 6 Commercials']
+
+        const [form4Snap, upper6Snap] = await Promise.all([
+          getDocs(query(collection(db, 'students'), where('class', 'in', form4Classes), where('status', '==', 'Active'))),
+          getDocs(query(collection(db, 'students'), where('class', 'in', upper6Classes), where('status', '==', 'Active'))),
+        ])
+
+        for (const d of form4Snap.docs) {
+          await updateDoc(d.ref, { exitType: 'OLevelCompletion', status: 'Completing' })
+          oLevelCount++
+        }
+        for (const d of upper6Snap.docs) {
+          await updateDoc(d.ref, { exitType: 'ALevelCompletion', status: 'Completing' })
+          aLevelCount++
+        }
+
+        await setDoc(doc(db, 'settings', 'batchFlags'), {
+          exitTypeBatchYear: currentYear,
+          lastBatchRanAt:    serverTimestamp(),
+        }, { merge: true })
+
+        if (oLevelCount > 0 || aLevelCount > 0) {
+          setBatchBanner({
+            oLevelCount, aLevelCount,
+            message: `Exit status updated: ${oLevelCount} O Level student(s) and ${aLevelCount} A Level student(s) have been marked as Completing. They will need clearance letters before their results can be released.`,
+          })
+        }
+      } catch (err) {
+        console.error('Batch exit type error:', err)
+      }
+    }
+    runBatch()
+  }, [])
 
   useEffect(() => {
     Promise.all([
@@ -97,12 +153,28 @@ export default function Dashboard() {
           { category: 'Boarders',     boys: bd.boarders.boys, girls: bd.boarders.girls },
           { category: 'Day Scholars', boys: bd.day.boys,      girls: bd.day.girls      },
         ])
+        setChartLoaded(true)
       })
-      .catch(() => setStats({ totalStudents: '—', dayScholars: '—', boarders: '—' }))
+      .catch(() => { setStats({ totalStudents: '—', dayScholars: '—', boarders: '—' }); setChartLoaded(true) })
   }, [])
 
   return (
     <div className="space-y-6">
+
+      {/* Batch exit-type summary banner */}
+      {batchBanner && (
+        <div className="flex items-start gap-3 bg-blue-500/10 border border-blue-500/30 rounded-xl px-5 py-4">
+          <div className="flex-1">
+            <p className="font-montserrat text-xs font-semibold text-blue-300 mb-0.5 uppercase tracking-wider">
+              System: Exit Status Updated
+            </p>
+            <p className="font-montserrat text-xs text-gray-300 leading-relaxed">{batchBanner.message}</p>
+          </div>
+          <button onClick={() => setBatchBanner(null)} className="text-gray-500 hover:text-white transition mt-0.5">
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Stat cards */}
       <div className="grid grid-cols-3 gap-4">
@@ -146,10 +218,12 @@ export default function Dashboard() {
               </span>
             </div>
           </div>
-          {demographics.length === 0 ? (
+          {!chartLoaded ? (
             <div className="flex items-center justify-center h-64">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#C9A84C]" />
             </div>
+          ) : demographics.length === 0 ? (
+            <div className="flex items-center justify-center h-64 text-gray-500 font-montserrat text-sm">No student data</div>
           ) : (
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={demographics} layout="vertical" barCategoryGap="30%" barGap={3}>
@@ -183,10 +257,12 @@ export default function Dashboard() {
               </span>
             </div>
           </div>
-          {boardingDemo.length === 0 ? (
+          {!chartLoaded ? (
             <div className="flex items-center justify-center h-64">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#C9A84C]" />
             </div>
+          ) : boardingDemo.length === 0 ? (
+            <div className="flex items-center justify-center h-64 text-gray-500 font-montserrat text-sm">No student data</div>
           ) : (
             <>
               <ResponsiveContainer width="100%" height={200}>
@@ -222,23 +298,6 @@ export default function Dashboard() {
             </>
           )}
         </div>
-      </div>
-
-      {/* Charts row 2 */}
-      <div className={CARD_CLASS}>
-        <h3 className={`${HEADING} mb-4`}>Fees Arrears Trend</h3>
-        <ResponsiveContainer width="100%" height={280}>
-          <LineChart data={mockChartData.trendData}>
-            <CartesianGrid {...CHART_GRID} />
-            <XAxis dataKey="term" tick={AXIS_TICK} axisLine={AXIS_LINE} tickLine={false} />
-            <YAxis tick={AXIS_TICK} axisLine={AXIS_LINE} tickLine={false} />
-            <Tooltip {...TOOLTIP_STYLE} />
-            <Legend wrapperStyle={{ color: '#9ca3af', fontSize: 11, fontFamily: 'Montserrat' }} />
-            <Line type="monotone" dataKey="2023" stroke="#ef4444" strokeDasharray="5 5" strokeWidth={2} dot={false} />
-            <Line type="monotone" dataKey="2024" stroke="#3b82f6" strokeDasharray="5 5" strokeWidth={2} dot={false} />
-            <Line type="monotone" dataKey="2025" stroke="#10b981" strokeWidth={2} dot={false} />
-          </LineChart>
-        </ResponsiveContainer>
       </div>
 
       {/* Tables row */}

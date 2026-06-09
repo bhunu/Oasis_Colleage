@@ -11,8 +11,6 @@ import AdminUsers         from '../../pages/admin/Users'
 import StudentOTPManager  from '../../pages/webadmin/StudentOTPManager'
 import PortalSettings     from '../../pages/webadmin/PortalSettings'
 import SecurityLogs       from '../../pages/webadmin/SecurityLogs'
-import ClassPerformancePage from '../../pages/admin/ClassPerformancePage'
-
 const TITLES = {
   '/admin':                  'Dashboard',
   '/admin/news':             'News & Announcements',
@@ -23,7 +21,6 @@ const TITLES = {
   '/admin/student-otp':      'Student OTP Manager',
   '/admin/portal-settings':  'Portal Settings',
   '/admin/security-logs':    'Security Logs',
-  '/admin/class-performance': 'Class Performance & Rankings',
 }
 
 export default function AdminLayout() {
@@ -49,7 +46,6 @@ export default function AdminLayout() {
             <Route path="/admin/student-otp"      element={<StudentOTPManager />} />
             <Route path="/admin/portal-settings"  element={<PortalSettings />} />
             <Route path="/admin/security-logs"       element={<SecurityLogs />} />
-            <Route path="/admin/class-performance" element={<ClassPerformancePage />} />
             <Route path="*"                        element={<Navigate to="/admin" replace />} />
           </Routes>
         </main>

@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useState, useEffect } from 'react'
 import {
@@ -29,13 +29,14 @@ function attemptsMessage(remaining) {
 }
 
 export default function Login() {
-  const navigate = useNavigate()
+  const navigate     = useNavigate()
+  const { state: locationState } = useLocation()
 
   const [showPass,   setShowPass]   = useState(false)
   const [form,       setForm]       = useState({ credential: '', password: '' })
   const [authError,  setAuthError]  = useState('')
   const [loading,    setLoading]    = useState(false)
-  const [useOTP,     setUseOTP]     = useState(false)
+  const [useOTP,     setUseOTP]     = useState(locationState?.tab !== 'returning')
   const [pendingOTP, setPendingOTP] = useState(null)
 
   const [lockInfo,  setLockInfo]  = useState(null)
@@ -73,9 +74,15 @@ export default function Login() {
     if (!regNum || !otp) return setAuthError('Enter your student ID and OTP code.')
 
     try {
+      // Resolve reg_number → Firestore student doc ID
+      const studentSnap = await getDocs(
+        query(collection(db, 'students'), where('reg_number', '==', regNum), limit(1))
+      )
+      const studentDocId = studentSnap.empty ? null : studentSnap.docs[0].id
+
       const snap = await getDocs(
         query(collection(db, 'users'),
-          where('studentId', '==', regNum),
+          where('studentId', '==', studentDocId ?? regNum),
           where('role',      '==', 'student'),
           where('otpUsed',   '==', false),
           limit(1)
@@ -112,9 +119,15 @@ export default function Login() {
     const pass   = form.password
     if (!regNum || !pass) return setAuthError('Enter your student ID and password.')
     try {
+      // Resolve reg_number → Firestore student doc ID
+      const studentSnap = await getDocs(
+        query(collection(db, 'students'), where('reg_number', '==', regNum), limit(1))
+      )
+      const studentDocId = studentSnap.empty ? null : studentSnap.docs[0].id
+
       const snap = await getDocs(
         query(collection(db, 'users'),
-          where('studentId',        '==', regNum),
+          where('studentId',        '==', studentDocId ?? regNum),
           where('role',             '==', 'student'),
           where('hasSetupPassword', '==', true),
           limit(1)

@@ -19,10 +19,10 @@ export default function StudentDashboard() {
   const threshold = portalSettings?.resultsAccessThreshold ?? 75
 
   useEffect(() => {
-    if (!studentData?.studentId) return
+    if (!studentData?.regNumber) return
 
     /* fee account */
-    getDocs(query(collection(db, 'feeAccounts'), where('studentId', '==', studentData.studentId), limit(1)))
+    getDocs(query(collection(db, 'feeAccounts'), where('reg_number', '==', studentData.regNumber), limit(1)))
       .then(snap => { if (!snap.empty) setFeeAccount({ id: snap.docs[0].id, ...snap.docs[0].data() }) })
       .catch(() => {})
 
@@ -37,10 +37,10 @@ export default function StudentDashboard() {
       .catch(() => {})
 
     /* recent receipts */
-    getDocs(query(collection(db, 'receipts'), where('studentId', '==', studentData.studentId), orderBy('issuedAt', 'desc'), limit(3)))
+    getDocs(query(collection(db, 'receipts'), where('regNumber', '==', studentData.regNumber), orderBy('issuedAt', 'desc'), limit(3)))
       .then(snap => setReceipts(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
       .catch(() => {})
-  }, [studentData?.studentId])
+  }, [studentData?.regNumber])
 
   const termFees   = feeAccount?.termFees  || 0
   const totalPaid  = feeAccount?.totalPaid || 0
