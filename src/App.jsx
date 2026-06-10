@@ -73,6 +73,7 @@ import AccessPassPage from './pages/AccessPassPage'
 import ExeatManagementPage from './pages/ExeatManagementPage'
 import ClassPerformancePage from './pages/admin/ClassPerformancePage'
 import Classes from './pages/Classes'
+import GradeSettings from './pages/GradeSettings'
 import ExeatApplicationForm      from './pages/student/ExeatApplicationForm'
 import MyExeatApplications       from './pages/student/MyExeatApplications'
 import TransferRequestForm        from './pages/student/TransferRequestForm'
@@ -119,7 +120,8 @@ export default function App() {
                      location.pathname.startsWith('/exeat') ||
                      location.pathname.startsWith('/clearance') ||
                      location.pathname.startsWith('/class-performance') ||
-                     location.pathname.startsWith('/classes')
+                     location.pathname.startsWith('/classes') ||
+                     location.pathname.startsWith('/grade-settings')
   const isLogin   = location.pathname === '/login' || location.pathname === '/staff-login'
   const isBursar  = location.pathname.startsWith('/bursar')
   const isStudent = location.pathname.startsWith('/student/')
@@ -245,6 +247,9 @@ export default function App() {
           }/>
           <Route path="/classes" element={
             <ProtectedRoute><Layout><Classes /></Layout></ProtectedRoute>
+          }/>
+          <Route path="/grade-settings" element={
+            <ProtectedRoute><Layout><GradeSettings /></Layout></ProtectedRoute>
           }/>
         </Routes>
       </>

@@ -12,16 +12,11 @@ import {
 
 const CATEGORIES = ['Sciences', 'Humanities', 'Commercial', 'Languages', 'Technical', 'Other']
 
-const O_LEVEL_CLASSES = [
-  'Form 1A','Form 1B','Form 1C',
-  'Form 2A','Form 2B','Form 2C',
-  'Form 3A','Form 3B','Form 3C',
-  'Form 4A','Form 4B','Form 4C',
-]
-const A_LEVEL_CLASSES = [
-  'Lower 6 Commercials','Lower 6 Arts','Lower 6 Sciences',
-  'Upper 6 Commercials','Upper 6 Arts','Upper 6 Sciences',
-]
+function classLevel(name = '') {
+  if (/^(Form\s+)?[1-4]/i.test(name)) return 'olevel'
+  if (/^(Lower|Upper) 6/i.test(name)) return 'alevel'
+  return 'other'
+}
 
 const CATEGORY_COLORS = {
   Sciences:   'bg-blue-500/15 text-blue-400 border-blue-500/25',
@@ -48,6 +43,17 @@ export default function Subjects() {
   const [formErr, setFormErr]   = useState({})
   const [showClassDrop, setShowClassDrop] = useState(false)
   const classDropRef = useRef(null)
+  const [allClasses, setAllClasses] = useState([])
+
+  useEffect(() => {
+    getDocs(collection(db, 'classes')).then(snap => {
+      const names = snap.docs.map(d => d.data().name).filter(Boolean).sort()
+      setAllClasses(names)
+    })
+  }, [])
+
+  const oLevelClasses = allClasses.filter(c => classLevel(c) === 'olevel')
+  const aLevelClasses = allClasses.filter(c => classLevel(c) === 'alevel')
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -68,8 +74,8 @@ export default function Subjects() {
   }
 
   function toggleGroup(group) {
-    const all = group === 'olevel' ? O_LEVEL_CLASSES : A_LEVEL_CLASSES
-    const allSelected = all.every(c => form.classes.includes(c))
+    const all = group === 'olevel' ? oLevelClasses : aLevelClasses
+    const allSelected = all.length > 0 && all.every(c => form.classes.includes(c))
     setForm(f => ({
       ...f,
       classes: allSelected
@@ -268,11 +274,13 @@ export default function Subjects() {
                           onClick={() => toggleGroup('olevel')}
                           className="font-montserrat text-[9px] text-gray-500 hover:text-[#C9A84C] transition-colors uppercase tracking-wider"
                         >
-                          {O_LEVEL_CLASSES.every(c => form.classes.includes(c)) ? 'Deselect All' : 'Select All'}
+                          {oLevelClasses.length > 0 && oLevelClasses.every(c => form.classes.includes(c)) ? 'Deselect All' : 'Select All'}
                         </button>
                       </div>
                       <div className="grid grid-cols-2 gap-1">
-                        {O_LEVEL_CLASSES.map(cls => (
+                        {oLevelClasses.length === 0 ? (
+                          <p className="col-span-2 font-montserrat text-[10px] text-gray-600 italic py-2 px-1">No O Level classes yet — add them in the Classes page.</p>
+                        ) : oLevelClasses.map(cls => (
                           <label key={cls} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/5 cursor-pointer group">
                             <input
                               type="checkbox"
@@ -295,11 +303,11 @@ export default function Subjects() {
                           onClick={() => toggleGroup('alevel')}
                           className="font-montserrat text-[9px] text-gray-500 hover:text-blue-400 transition-colors uppercase tracking-wider"
                         >
-                          {A_LEVEL_CLASSES.every(c => form.classes.includes(c)) ? 'Deselect All' : 'Select All'}
+                          {aLevelClasses.every(c => form.classes.includes(c)) ? 'Deselect All' : 'Select All'}
                         </button>
                       </div>
                       <div className="flex flex-col gap-1">
-                        {A_LEVEL_CLASSES.map(cls => (
+                        {aLevelClasses.map(cls => (
                           <label key={cls} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/5 cursor-pointer group">
                             <input
                               type="checkbox"

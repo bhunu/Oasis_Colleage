@@ -13,6 +13,7 @@ import {
   MdVerifiedUser as IconClearance,
   MdLeaderboard as IconLeaderboard,
   MdClass as IconClass,
+  MdGrade as IconGrade,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
@@ -38,6 +39,7 @@ const NAV = [
       { label: 'End of term exams',  icon: IconFileCertificate, path: '/exams' },
       { label: 'Academic reports',   icon: IconReportAnalytics, path: '/reports' },
       { label: 'Class Performance',  icon: IconLeaderboard,     path: '/class-performance' },
+      { label: 'Grade Settings',     icon: IconGrade,           path: '/grade-settings' },
     ],
   },
   {

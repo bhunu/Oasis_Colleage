@@ -1,27 +1,19 @@
-import { useState, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { getCurrentTerm } from '../utils/termHelpers'
 import { useDropzone } from 'react-dropzone'
 import Papa from 'papaparse'
 import { db } from '../firebase/config'
-import { doc, writeBatch, serverTimestamp, getDocs, collection, query, where } from 'firebase/firestore'
+import { doc, writeBatch, serverTimestamp, getDocs, deleteDoc, collection, query, where } from 'firebase/firestore'
 import toast from 'react-hot-toast'
 import {
   MdCloudUpload, MdUploadFile, MdCheckCircle, MdError,
-  MdWarning, MdClose, MdVisibility, MdDownload,
+  MdWarning, MdClose, MdVisibility, MdDownload, MdDelete, MdRefresh,
 } from 'react-icons/md'
 import { FaGraduationCap } from 'react-icons/fa'
 
 // ── Constants ─────────────────────────────────────────────────────────────
 const SCHOOL_ID = 'oasis'
 
-const CLASSES = [
-  'Form 1A','Form 1B','Form 1C',
-  'Form 2A','Form 2B','Form 2C',
-  'Form 3A','Form 3B','Form 3C',
-  'Form 4A','Form 4B','Form 4C',
-  'Lower 6 Commercials','Lower 6 Arts','Lower 6 Sciences',
-  'Upper 6 Commercials','Upper 6 Arts','Upper 6 Sciences',
-]
 
 const { number, year } = getCurrentTerm()
 const TERMS = [`Term ${number} ${year}`]
@@ -72,8 +64,8 @@ function parseCSV(results) {
 
     const subjects = {}
     for (const col of subjectCols) {
-      const raw = Object.entries(r).find(([k]) => k.trim() === col)
-      subjects[col] = raw ? String(raw[1] ?? '').trim() : ''
+      const found = Object.entries(r).find(([k]) => k.trim().toLowerCase() === col.toLowerCase())
+      subjects[col] = found ? String(found[1] ?? '').trim() : ''
     }
 
     const row = {
@@ -107,6 +99,7 @@ const CARD    = '#0D1C35'
 
 // ── Main component ────────────────────────────────────────────────────────
 export default function Exams() {
+  const [classes,   setClasses]     = useState([])
   const [teacher, setTeacher]       = useState('')
   const [className, setClassName]   = useState('')
   const [term, setTerm]             = useState(TERMS[0])
@@ -243,6 +236,13 @@ export default function Exams() {
 
   const [downloading, setDownloading] = useState(false)
 
+  useEffect(() => {
+    getDocs(collection(db, 'classes')).then(snap => {
+      const names = snap.docs.map(d => d.data().name).filter(Boolean).sort()
+      if (names.length > 0) setClasses(names)
+    })
+  }, [])
+
   const handleDownloadTemplate = async () => {
     if (!className) { toast.error('Select a class first.'); return }
     setDownloading(true)
@@ -288,9 +288,81 @@ export default function Exams() {
     }
   }
 
-  const validCount = parsed ? parsed.rows.filter(r => r._valid).length : 0
-  const errorCount = parsed ? parsed.rows.filter(r => !r._valid).length : 0
-  const canUpload  = parsed && validCount > 0 && errorCount === 0 && !uploading && !uploadDone
+  const validCount  = parsed ? parsed.rows.filter(r => r._valid).length : 0
+  const errorCount  = parsed ? parsed.rows.filter(r => !r._valid).length : 0
+  const canUpload   = parsed && validCount > 0 && errorCount === 0 && !uploading && !uploadDone
+  const allMarksBlank = parsed && parsed.subjectCols.length > 0 &&
+    parsed.rows.every(row => parsed.subjectCols.every(col => !row.subjects[col]))
+
+  // ── Manage uploaded marks ─────────────────────────────────────────────────
+  const [mgmtClass,    setMgmtClass]    = useState('')
+  const [mgmtTerm,     setMgmtTerm]     = useState(TERMS[0])
+  const [mgmtRows,     setMgmtRows]     = useState(null)   // null = not loaded yet
+  const [mgmtCols,     setMgmtCols]     = useState([])
+  const [mgmtLoading,  setMgmtLoading]  = useState(false)
+  const [selected,     setSelected]     = useState(new Set())
+  const [deleting,     setDeleting]     = useState(false)
+
+  async function loadMgmtMarks() {
+    if (!mgmtClass || !mgmtTerm) { toast.error('Select a class and term.'); return }
+    setMgmtLoading(true)
+    setSelected(new Set())
+    try {
+      const path = `schools/${SCHOOL_ID}/terms/${toTermId(mgmtTerm)}/classes/${toClassId(mgmtClass)}/students`
+      const snap = await getDocs(collection(db, path))
+      const rows = snap.docs.map(d => ({ _docId: d.id, ...d.data() }))
+        .sort((a, b) => (a.regNo || '').localeCompare(b.regNo || ''))
+      const allSubjects = [...new Set(rows.flatMap(r => Object.keys(r.subjects || {})))].sort()
+      setMgmtCols(allSubjects)
+      setMgmtRows(rows)
+      if (rows.length === 0) toast('No marks found for this class and term.', { icon: 'ℹ️' })
+    } catch {
+      toast.error('Failed to load marks.')
+    } finally {
+      setMgmtLoading(false)
+    }
+  }
+
+  function toggleSelect(docId) {
+    setSelected(prev => {
+      const next = new Set(prev)
+      next.has(docId) ? next.delete(docId) : next.add(docId)
+      return next
+    })
+  }
+
+  function toggleSelectAll() {
+    if (!mgmtRows) return
+    setSelected(selected.size === mgmtRows.length ? new Set() : new Set(mgmtRows.map(r => r._docId)))
+  }
+
+  async function deleteSelected() {
+    if (selected.size === 0) return
+    setDeleting(true)
+    const path = `schools/${SCHOOL_ID}/terms/${toTermId(mgmtTerm)}/classes/${toClassId(mgmtClass)}/students`
+    try {
+      await Promise.all([...selected].map(docId => deleteDoc(doc(db, path, docId))))
+      setMgmtRows(prev => prev.filter(r => !selected.has(r._docId)))
+      setSelected(new Set())
+      toast.success(`${selected.size} record${selected.size !== 1 ? 's' : ''} deleted`)
+    } catch {
+      toast.error('Failed to delete some records.')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  async function deleteSingle(row) {
+    const path = `schools/${SCHOOL_ID}/terms/${toTermId(mgmtTerm)}/classes/${toClassId(mgmtClass)}/students`
+    try {
+      await deleteDoc(doc(db, path, row._docId))
+      setMgmtRows(prev => prev.filter(r => r._docId !== row._docId))
+      setSelected(prev => { const n = new Set(prev); n.delete(row._docId); return n })
+      toast.success(`${row.regNo} removed`)
+    } catch {
+      toast.error('Failed to delete record.')
+    }
+  }
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -331,7 +403,7 @@ export default function Exams() {
             <label className={sLabel}>Class *</label>
             <select value={className} onChange={e => setClassName(e.target.value)} className={sInput}>
               <option value="">Select class…</option>
-              {CLASSES.map(c => <option key={c} value={c} className="bg-[#0D1C35]">{c}</option>)}
+              {classes.map(c => <option key={c} value={c} className="bg-[#0D1C35]">{c}</option>)}
             </select>
           </div>
           <div>
@@ -450,11 +522,25 @@ export default function Exams() {
                 )}
               </div>
             </div>
-            {errorCount > 0 && (
-              <p className="font-montserrat text-[11px] text-amber-400">
-                Fix all errors before uploading
-              </p>
-            )}
+            <div className="flex items-center gap-4">
+              {allMarksBlank && (
+                <p className="font-montserrat text-[11px] text-amber-400 flex items-center gap-1">
+                  <MdWarning className="text-sm shrink-0" />
+                  All mark cells are blank — fill in the marks then re-upload
+                </p>
+              )}
+              {!allMarksBlank && errorCount > 0 && (
+                <p className="font-montserrat text-[11px] text-amber-400">
+                  Fix all errors before uploading
+                </p>
+              )}
+              <button
+                onClick={reset}
+                className="flex items-center gap-1 font-montserrat text-[11px] font-semibold text-gray-500 hover:text-red-400 uppercase tracking-wider transition-colors"
+              >
+                <MdClose className="text-sm" /> Clear
+              </button>
+            </div>
           </div>
 
           {/* Scrollable table */}
@@ -515,6 +601,133 @@ export default function Exams() {
           </div>
         </div>
       )}
+
+      {/* ── Manage Uploaded Marks ─────────────────────────────────────────── */}
+      <div className="bg-[#0D1C35] border border-white/10 rounded-2xl p-6">
+        <div className="flex items-center gap-2 mb-5">
+          <MdDelete className="text-red-400" />
+          <h3 className="font-playfair text-base font-bold text-white">Manage Uploaded Marks</h3>
+          <span className="font-montserrat text-[10px] text-gray-600 uppercase tracking-wider ml-1">browse &amp; delete records</span>
+        </div>
+
+        {/* Selectors */}
+        <div className="grid grid-cols-3 gap-4 mb-4">
+          <div>
+            <label className={sLabel}>Class</label>
+            <select value={mgmtClass} onChange={e => { setMgmtClass(e.target.value); setMgmtRows(null) }} className={sInput}>
+              <option value="">Select class…</option>
+              {classes.map(c => <option key={c} value={c} className="bg-[#0D1C35]">{c}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className={sLabel}>Term</label>
+            <select value={mgmtTerm} onChange={e => { setMgmtTerm(e.target.value); setMgmtRows(null) }} className={sInput}>
+              {TERMS.map(t => <option key={t} value={t} className="bg-[#0D1C35]">{t}</option>)}
+            </select>
+          </div>
+          <div className="flex items-end">
+            <button
+              onClick={loadMgmtMarks}
+              disabled={!mgmtClass || mgmtLoading}
+              className="w-full flex items-center justify-center gap-2 bg-white/5 border border-white/10 hover:bg-white/10 disabled:opacity-50 text-white font-montserrat text-xs font-semibold uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all"
+            >
+              <MdRefresh className={`text-base ${mgmtLoading ? 'animate-spin' : ''}`} />
+              {mgmtLoading ? 'Loading…' : 'Load Marks'}
+            </button>
+          </div>
+        </div>
+
+        {/* Bulk delete bar */}
+        {mgmtRows && mgmtRows.length > 0 && (
+          <div className="flex items-center justify-between mb-3">
+            <span className="font-montserrat text-xs text-gray-500">
+              {mgmtRows.length} record{mgmtRows.length !== 1 ? 's' : ''}
+              {selected.size > 0 && <span className="text-[#C9A84C] ml-2">· {selected.size} selected</span>}
+            </span>
+            {selected.size > 0 && (
+              <button
+                onClick={deleteSelected}
+                disabled={deleting}
+                className="flex items-center gap-1.5 bg-red-500/15 border border-red-500/30 hover:bg-red-500/25 disabled:opacity-50 text-red-400 font-montserrat text-xs font-semibold uppercase tracking-wider px-4 py-1.5 rounded-lg transition-all"
+              >
+                <MdDelete className="text-sm" />
+                {deleting ? 'Deleting…' : `Delete ${selected.size} selected`}
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Table */}
+        {mgmtRows && mgmtRows.length > 0 && (
+          <div className="overflow-auto rounded-xl border border-white/10">
+            <table className="w-full text-xs font-montserrat">
+              <thead className="bg-[#0A1628] border-b border-white/10">
+                <tr>
+                  <th className="px-3 py-3 w-8">
+                    <input
+                      type="checkbox"
+                      checked={selected.size === mgmtRows.length && mgmtRows.length > 0}
+                      onChange={toggleSelectAll}
+                      className="accent-[#C9A84C] w-3 h-3"
+                    />
+                  </th>
+                  <th className="text-left px-4 py-3 text-gray-500 uppercase tracking-wider">Reg No</th>
+                  {mgmtCols.map(col => (
+                    <th key={col} className="text-center px-3 py-3 text-gray-500 uppercase tracking-wider whitespace-nowrap">{col}</th>
+                  ))}
+                  <th className="text-left px-4 py-3 text-gray-500 uppercase tracking-wider">Comment</th>
+                  <th className="text-left px-4 py-3 text-gray-500 uppercase tracking-wider">Uploaded By</th>
+                  <th className="px-3 py-3 w-10" />
+                </tr>
+              </thead>
+              <tbody>
+                {mgmtRows.map((row, i) => (
+                  <tr key={row._docId} className={`border-b border-white/5 transition-colors ${selected.has(row._docId) ? 'bg-red-500/8' : 'hover:bg-white/[0.02]'}`}>
+                    <td className="px-3 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(row._docId)}
+                        onChange={() => toggleSelect(row._docId)}
+                        className="accent-[#C9A84C] w-3 h-3"
+                      />
+                    </td>
+                    <td className="px-4 py-3 font-mono font-semibold text-[#C9A84C]">{row.regNo}</td>
+                    {mgmtCols.map(col => {
+                      const val = row.subjects?.[col]
+                      return (
+                        <td key={col} className={`px-3 py-3 text-center font-semibold ${val != null && val !== '' ? 'text-white' : 'text-gray-600'}`}>
+                          {val != null && val !== '' ? val : '—'}
+                        </td>
+                      )
+                    })}
+                    <td className="px-4 py-3 text-gray-400 max-w-[120px] truncate">{row.comment || '—'}</td>
+                    <td className="px-4 py-3 text-gray-500">{row.uploadedBy || '—'}</td>
+                    <td className="px-3 py-3">
+                      <button
+                        onClick={() => deleteSingle(row)}
+                        className="text-gray-600 hover:text-red-400 transition-colors p-1 rounded hover:bg-red-500/10"
+                        title="Delete this record"
+                      >
+                        <MdDelete className="text-base" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {mgmtRows && mgmtRows.length === 0 && (
+          <div className="text-center py-10 text-gray-600 font-montserrat text-sm">
+            No marks found for <span className="text-gray-400">{mgmtClass}</span> — <span className="text-gray-400">{mgmtTerm}</span>
+          </div>
+        )}
+
+        {!mgmtRows && !mgmtLoading && (
+          <p className="font-montserrat text-xs text-gray-700 italic">Select a class and term, then click Load Marks to browse records.</p>
+        )}
+      </div>
 
     </div>
   )

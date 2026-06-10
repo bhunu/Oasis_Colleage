@@ -48,7 +48,7 @@ export default function ReceivePayment() {
   const [submitting,  setSubmitting] = useState(false)
   const [receiptData, setReceiptData] = useState(null)   // set on success
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = new Date().toLocaleDateString('en-CA')
   const [form, setForm] = useState({
     amount: '', date: today, method: 'cash', bankRef: '', mobileRef: '', notes: '',
   })

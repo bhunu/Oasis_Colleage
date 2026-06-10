@@ -3,7 +3,7 @@ import { useState } from 'react'
 export default function PaymentModal({ isOpen, onClose, onSave, studentId, studentName }) {
   const [formData, setFormData] = useState({
     amount: '',
-    date: new Date().toISOString().split('T')[0],
+    date: new Date().toLocaleDateString('en-CA'),
     method: 'bank_transfer',
     reference: '',
   })
@@ -11,7 +11,7 @@ export default function PaymentModal({ isOpen, onClose, onSave, studentId, stude
   const handleSubmit = (e) => {
     e.preventDefault()
     onSave(formData)
-    setFormData({ amount: '', date: new Date().toISOString().split('T')[0], method: 'bank_transfer', reference: '' })
+    setFormData({ amount: '', date: new Date().toLocaleDateString('en-CA'), method: 'bank_transfer', reference: '' })
   }
 
   if (!isOpen) return null

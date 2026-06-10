@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { collection, getDocs, query, where } from 'firebase/firestore'
+import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import { getCurrentTerm } from '../../utils/termHelpers'
 import {
@@ -15,6 +15,22 @@ import { FaGraduationCap } from 'react-icons/fa'
 
 // ── Constants & helpers ───────────────────────────────────────────────────────
 const SCHOOL_ID   = 'oasis'
+
+const DEFAULT_O_GRADES = [
+  { grade: 'A', min: 75, max: 100 },
+  { grade: 'B', min: 65, max: 74 },
+  { grade: 'C', min: 50, max: 64 },
+  { grade: 'D', min: 40, max: 49 },
+  { grade: 'U', min: 0,  max: 39  },
+]
+
+const DEFAULT_A_GRADES = [
+  { grade: 'A', min: 80, max: 100, points: 5 },
+  { grade: 'B', min: 70, max: 79,  points: 4 },
+  { grade: 'C', min: 60, max: 69,  points: 3 },
+  { grade: 'D', min: 50, max: 59,  points: 2 },
+  { grade: 'U', min: 0,  max: 49,  points: 0 },
+]
 const { number: CURR_NUM, year: CURR_YEAR } = getCurrentTerm()
 
 function getAdminName() {
@@ -34,19 +50,19 @@ function generateTermOptions() {
   return opts
 }
 
-function computeGrade(avg) {
-  if (avg === null) return '—'
-  if (avg >= 75) return 'A'
-  if (avg >= 65) return 'B'
-  if (avg >= 55) return 'C'
-  if (avg >= 45) return 'D'
-  if (avg >= 35) return 'E'
-  return 'F'
+function computeGrade(avg, gradeTable) {
+  if (avg === null || avg === undefined) return '—'
+  const entry = gradeTable.find(g => Number(avg) >= g.min && Number(avg) <= g.max)
+  return entry?.grade || gradeTable[gradeTable.length - 1]?.grade || '—'
 }
 
 const GRADE_COLORS = {
-  A: 'text-emerald-400', B: 'text-blue-400', C: 'text-[#C9A84C]',
-  D: 'text-orange-400',  E: 'text-red-400',  F: 'text-red-600', '—': 'text-gray-500',
+  A: 'text-emerald-400',
+  B: 'text-emerald-400',
+  C: 'text-[#C9A84C]',
+  D: 'text-orange-400',
+  U: 'text-red-400',
+  '—': 'text-gray-500',
 }
 
 function studentStatus(avg) {
@@ -102,7 +118,7 @@ const TH = 'text-left py-3 px-4 text-[10px] font-semibold text-gray-500 uppercas
 const TD = 'py-3 px-4 text-sm text-gray-300 font-montserrat'
 
 // ── Student Subject Breakdown Modal ──────────────────────────────────────────
-function StudentBreakdownModal({ student, rank, classTotal, onClose }) {
+function StudentBreakdownModal({ student, rank, classTotal, onClose, gradeTable }) {
   const chartData = student.marks
     .sort((a, b) => a.subject.localeCompare(b.subject))
     .map(m => ({
@@ -218,7 +234,7 @@ function StudentBreakdownModal({ student, rank, classTotal, onClose }) {
                     <tr><td colSpan={4} className="py-6 text-center text-sm text-gray-500 font-montserrat">No marks recorded</td></tr>
                   ) : (
                     [...student.marks].sort((a, b) => b.mark - a.mark).map(({ subject, mark }) => {
-                      const g = computeGrade(mark)
+                      const g = computeGrade(mark, gradeTable)
                       const isFail = mark < 50
                       return (
                         <tr key={subject} className={`border-b border-white/5 ${isFail ? 'bg-red-500/5' : ''}`}>
@@ -259,6 +275,19 @@ export default function ClassPerformancePage() {
   const [sortDir,      setSortDir]      = useState('asc')
   const [search,       setSearch]       = useState('')
   const [selected,     setSelected]     = useState(null)
+  const [gradeSettings, setGradeSettings] = useState(null)
+
+  /* Fetch grade settings once */
+  useEffect(() => {
+    getDoc(doc(db, 'config', 'gradeSettings'))
+      .then(snap => { if (snap.exists()) setGradeSettings(snap.data()) })
+      .catch(() => {})
+  }, [])
+
+  const isALevel   = /^(Lower|Upper)\s*6/i.test(selectedClass)
+  const gradeTable = isALevel
+    ? (gradeSettings?.aLevel?.length ? gradeSettings.aLevel : DEFAULT_A_GRADES)
+    : (gradeSettings?.oLevel?.length ? gradeSettings.oLevel : DEFAULT_O_GRADES)
 
   /* Load class list on mount */
   useEffect(() => {
@@ -328,7 +357,7 @@ export default function ClassPerformancePage() {
           ...s,
           marks,
           avg,
-          grade:       computeGrade(avg),
+          grade:       computeGrade(avg, gradeTable),
           bestSubject: sorted[0]?.subject                         || '—',
           worstSubject: sorted[sorted.length - 1]?.subject       || '—',
         }
@@ -797,6 +826,7 @@ export default function ClassPerformancePage() {
           rank={selected.rank}
           classTotal={rankings.filter(s => s.avg !== null).length}
           onClose={() => setSelected(null)}
+          gradeTable={gradeTable}
         />
       )}
     </>
