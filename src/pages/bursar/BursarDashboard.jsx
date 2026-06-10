@@ -11,6 +11,7 @@ import {
 } from 'react-icons/md'
 import { collection, getDocs } from 'firebase/firestore'
 import { db } from '../../firebase/config'
+import { useTermDates, fmtTermDate, getDaysUntilTermEnd, isTermEnded } from '../../hooks/useTermDates'
 
 /* ── chart theme ── */
 const GRID    = { stroke: 'rgba(255,255,255,0.06)', strokeDasharray: '3 3' }
@@ -82,6 +83,7 @@ function StatCard({ label, value, icon: Icon, color }) {
 
 export default function BursarDashboard() {
   const navigate = useNavigate()
+  const { termStartDate, termEndDate } = useTermDates()
   const [stats, setStats] = useState({ collected: 0, arrears: 0, expenses: 0, surplus: 0, feesPaidFull: 0 })
   const [receipts, setReceipts] = useState([])
   const [topArrears, setTopArrears] = useState([])
@@ -163,8 +165,50 @@ export default function BursarDashboard() {
     { label: 'Balance sheet',    sub: 'Assets & liabilities',  path: '/bursar/balance-sheet' },
   ]
 
+  const daysLeft  = getDaysUntilTermEnd(termEndDate)
+  const terminated = isTermEnded(termEndDate)
+
   return (
     <div className="space-y-6">
+
+      {/* ── Term countdown banner ── */}
+      {termEndDate && (
+        <div className={`flex items-center justify-between gap-4 flex-wrap px-5 py-3.5 rounded-xl border ${
+          terminated
+            ? 'bg-red-500/10 border-red-500/20'
+            : daysLeft !== null && daysLeft <= 7
+              ? 'bg-amber-500/10 border-amber-500/20'
+              : 'bg-white/5 border-white/10'
+        }`}>
+          <div className="flex items-center gap-3">
+            <div>
+              <p className="font-montserrat text-[10px] uppercase tracking-widest text-gray-500 mb-0.5">Current Term Period</p>
+              <p className="font-montserrat text-sm font-semibold text-white">
+                {termStartDate ? fmtTermDate(termStartDate) : '—'} → {fmtTermDate(termEndDate)}
+              </p>
+            </div>
+          </div>
+          <div className="text-right">
+            {terminated ? (
+              <p className="font-montserrat text-sm font-bold text-red-400">
+                Term ended {Math.abs(daysLeft)} day{Math.abs(daysLeft) !== 1 ? 's' : ''} ago
+              </p>
+            ) : daysLeft === 0 ? (
+              <p className="font-montserrat text-sm font-bold text-amber-400">Term ends today</p>
+            ) : (
+              <p className={`font-montserrat text-sm font-bold ${daysLeft <= 7 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                {daysLeft} day{daysLeft !== 1 ? 's' : ''} until term end
+              </p>
+            )}
+            {terminated && (
+              <p className="font-montserrat text-[10px] text-red-300 mt-0.5">Outstanding arrears are now overdue</p>
+            )}
+            {!terminated && daysLeft !== null && daysLeft <= 7 && (
+              <p className="font-montserrat text-[10px] text-amber-300 mt-0.5">Collect outstanding fees urgently</p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Stat cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">

@@ -3,6 +3,8 @@ import { collection, getDocs, orderBy, query } from 'firebase/firestore'
 import { db } from '../firebase/config'
 import { useNavigate } from 'react-router-dom'
 import * as XLSX from 'xlsx'
+import { backfillStudentCategories } from '../firebase/students'
+import toast from 'react-hot-toast'
 import {
   MdSearch as IconSearch,
   MdPersonAdd as IconUserPlus,
@@ -10,6 +12,7 @@ import {
   MdArrowBack,
   MdPrint,
   MdTableChart as IconExcel,
+  MdAutoFixHigh,
 } from 'react-icons/md'
 
 export default function Students() {
@@ -19,6 +22,20 @@ export default function Students() {
   const [search, setSearch]         = useState('')
   const [classFilter, setClassFilter] = useState('All classes')
   const [selected, setSelected]     = useState(null)
+  const [backfilling, setBackfilling] = useState(false)
+
+  const handleBackfill = async () => {
+    setBackfilling(true)
+    try {
+      const count = await backfillStudentCategories()
+      if (count === 0) toast('All students already have a category assigned.', { icon: 'ℹ️' })
+      else toast.success(`student_category added to ${count} student${count !== 1 ? 's' : ''}.`)
+    } catch {
+      toast.error('Backfill failed. Check your connection.')
+    } finally {
+      setBackfilling(false)
+    }
+  }
 
   useEffect(() => {
     async function load() {
@@ -257,6 +274,16 @@ export default function Students() {
         >
           <IconExcel size={16} />
           Export Excel
+        </button>
+
+        <button
+          onClick={handleBackfill}
+          disabled={backfilling}
+          title="Add student_category to all existing students who are missing it"
+          className="flex items-center gap-2 bg-white/5 border border-white/10 hover:bg-white/10 disabled:opacity-40 text-gray-300 font-montserrat text-xs font-semibold uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all"
+        >
+          <MdAutoFixHigh size={16} />
+          {backfilling ? 'Fixing…' : 'Fix Categories'}
         </button>
 
         <button

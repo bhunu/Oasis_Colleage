@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { collection, getDocs, query, where } from 'firebase/firestore'
+import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore'
 import { db } from '../firebase/config'
 import { getCurrentTerm } from '../utils/termHelpers'
 import { MdPrint as IconPrint } from 'react-icons/md'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
+import { useTermDates, fmtTermDate } from '../hooks/useTermDates'
 
 const SCHOOL_ID = 'oasis'
 const { number: CURR_NUM, year: CURR_YEAR } = getCurrentTerm()
@@ -18,27 +19,71 @@ function generateTerms() {
   return opts
 }
 
-function computeGrade(mark) {
-  if (mark === null || mark === undefined) return { grade: '—', color: 'text-gray-400' }
-  if (mark >= 75) return { grade: 'A', color: 'text-green-600' }
-  if (mark >= 65) return { grade: 'B', color: 'text-blue-600' }
-  if (mark >= 55) return { grade: 'C', color: 'text-amber-600' }
-  if (mark >= 45) return { grade: 'D', color: 'text-orange-500' }
-  if (mark >= 35) return { grade: 'E', color: 'text-orange-600' }
-  return { grade: 'F', color: 'text-red-600' }
+const DEFAULT_O_GRADES = [
+  { grade: 'A', min: 75, max: 100 },
+  { grade: 'B', min: 65, max: 74 },
+  { grade: 'C', min: 50, max: 64 },
+  { grade: 'D', min: 40, max: 49 },
+  { grade: 'U', min: 0,  max: 39 },
+]
+const DEFAULT_A_GRADES = [
+  { grade: 'A', min: 80, max: 100, points: 5 },
+  { grade: 'B', min: 70, max: 79,  points: 4 },
+  { grade: 'C', min: 60, max: 69,  points: 3 },
+  { grade: 'D', min: 50, max: 59,  points: 2 },
+  { grade: 'U', min: 0,  max: 49,  points: 0 },
+]
+
+function gradeColor(letter) {
+  if (!letter || letter === '—') return 'text-gray-400'
+  const g = letter.toUpperCase()
+  if (g === 'A') return 'text-green-600'
+  if (g === 'B') return 'text-blue-600'
+  if (g === 'C') return 'text-amber-600'
+  if (g === 'D') return 'text-orange-500'
+  return 'text-red-600'
+}
+
+function gradeStatus(letter) {
+  if (!letter || letter === '—') return { label: 'No Data', cls: 'bg-gray-100 text-gray-500' }
+  const g = letter.toUpperCase()
+  if (g === 'A' || g === 'B') return { label: 'Distinction', cls: 'bg-green-100 text-green-700' }
+  if (g === 'C')              return { label: 'Merit',       cls: 'bg-blue-100 text-blue-700' }
+  if (g === 'D')              return { label: 'Pass',        cls: 'bg-amber-100 text-amber-700' }
+  return                             { label: 'Fail',        cls: 'bg-red-100 text-red-700' }
+}
+
+function resolveGrade(mark, gradeTable) {
+  if (mark === null || mark === undefined) return '—'
+  const n = Math.round(Number(mark))
+  const sorted = [...gradeTable].sort((a, b) => b.min - a.min)
+  return sorted.find(g => n >= g.min)?.grade || '—'
 }
 
 const TERMS = generateTerms()
 
 export default function Reports() {
-  const [classes,      setClasses]      = useState([])
+  const [classes,       setClasses]       = useState([])
   const [selectedClass, setSelectedClass] = useState('')
   const [selectedTerm,  setSelectedTerm]  = useState(`Term ${CURR_NUM} ${CURR_YEAR}`)
-  const [students,     setStudents]     = useState([])      // from students collection
-  const [marksDocs,    setMarksDocs]    = useState([])      // from schools/.../students subcollection
-  const [loading,      setLoading]      = useState(false)
-  const [loaded,       setLoaded]       = useState(false)
-  const [view,         setView]         = useState('class')
+  const [students,      setStudents]      = useState([])
+  const [marksDocs,     setMarksDocs]     = useState([])
+  const [loading,       setLoading]       = useState(false)
+  const [loaded,        setLoaded]        = useState(false)
+  const [view,          setView]          = useState('class')
+  const [gradeSettings, setGradeSettings] = useState(null)
+  const { termStartDate, termEndDate } = useTermDates()
+
+  useEffect(() => {
+    getDoc(doc(db, 'config', 'gradeSettings'))
+      .then(snap => { if (snap.exists()) setGradeSettings(snap.data()) })
+      .catch(() => {})
+  }, [])
+
+  const isALevel   = /^(Lower|Upper)\s*6/i.test(selectedClass)
+  const gradeTable = isALevel
+    ? (gradeSettings?.aLevel?.length ? gradeSettings.aLevel : DEFAULT_A_GRADES)
+    : (gradeSettings?.oLevel?.length ? gradeSettings.oLevel : DEFAULT_O_GRADES)
 
   /* Load class list on mount */
   useEffect(() => {
@@ -277,7 +322,11 @@ export default function Reports() {
           <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
             <div>
               <h3 className="font-semibold text-gray-900">Student Results — {selectedClass}</h3>
-              <p className="text-xs text-gray-400 mt-0.5">{selectedTerm} · ranked by overall average</p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {selectedTerm}
+                {termStartDate && termEndDate && ` · ${fmtTermDate(termStartDate)} – ${fmtTermDate(termEndDate)}`}
+                {' · ranked by overall average'}
+              </p>
             </div>
             <button
               onClick={() => window.print()}
@@ -304,14 +353,11 @@ export default function Reports() {
                 </thead>
                 <tbody>
                   {rankings.map((s, i) => {
-                    const { grade, color } = computeGrade(s.avg)
+                    const grade  = resolveGrade(s.avg, gradeTable)
+                    const color  = gradeColor(grade)
+                    const status = gradeStatus(grade)
                     const isFail = s.avg !== null && s.avg < 50
                     const medal  = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : null
-                    const status = s.avg === null ? { label: 'No Data', cls: 'bg-gray-100 text-gray-500' }
-                      : s.avg >= 70 ? { label: 'Distinction', cls: 'bg-green-100 text-green-700' }
-                      : s.avg >= 60 ? { label: 'Merit', cls: 'bg-blue-100 text-blue-700' }
-                      : s.avg >= 50 ? { label: 'Pass', cls: 'bg-amber-100 text-amber-700' }
-                      : { label: 'Fail', cls: 'bg-red-100 text-red-700' }
                     return (
                       <tr key={s.firestoreId} className={`border-b border-gray-100 hover:bg-gray-50 ${isFail ? 'bg-red-50/60' : i < 3 ? 'bg-amber-50/40' : ''}`}>
                         <td className="py-3 px-6 text-gray-600 font-semibold">

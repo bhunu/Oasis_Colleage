@@ -29,6 +29,7 @@ function gradeChip(grade) {
   return 'bg-red-500/15 text-red-400 border-red-500/30'
 }
 
+
 function NumCell({ value, onChange }) {
   return (
     <input

@@ -26,32 +26,53 @@ export default function BursarSettings() {
   const navigate = useNavigate()
   const session  = getBursarSession()
 
-  const [term,       setTerm]       = useState('Term 2')
-  const [year,       setYear]       = useState('2025')
-  const [currency,   setCurrency]   = useState('USD')
-  const [termFees,   setTermFees]   = useState('')
-  const [sysSaving,  setSysSaving]  = useState(false)
-  const [sysLoaded,  setSysLoaded]  = useState(false)
+  const [term,             setTerm]             = useState('Term 2')
+  const [year,             setYear]             = useState('2025')
+  const [currency,         setCurrency]         = useState('USD')
+  const [oLevelFees,       setOLevelFees]       = useState('')
+  const [aLevelFees,       setALevelFees]       = useState('')
+  const [sysSaving,        setSysSaving]        = useState(false)
+  const [sysLoaded,        setSysLoaded]        = useState(false)
 
   const [applying,     setApplying]     = useState(false)
 
   const applyFeesToAllAccounts = async () => {
-    const fees = parseFloat(termFees)
-    if (!fees || fees <= 0) return toast.error('Set a valid term fee amount first.')
-    if (!confirm(`Apply $${fees.toFixed(2)} term fees to ALL student accounts? This will overwrite existing term fee values.`)) return
+    const oFees = parseFloat(oLevelFees)
+    const aFees = parseFloat(aLevelFees)
+    if ((!oFees || oFees <= 0) && (!aFees || aFees <= 0)) {
+      return toast.error('Set a valid term fee amount first.')
+    }
+    const sym = currency === 'USD' ? '$' : currency === 'ZWL' ? 'Z$' : 'R'
+    if (!confirm(
+      `Apply fees to ALL student accounts?\n` +
+      `O Level: ${sym}${(oFees || 0).toFixed(2)}\n` +
+      `A Level: ${sym}${(aFees || 0).toFixed(2)}\n\n` +
+      `This will overwrite existing term fee values.`
+    )) return
     setApplying(true)
     try {
-      const snap = await getDocs(collection(db, 'feeAccounts'))
+      const [accSnap, stuSnap] = await Promise.all([
+        getDocs(collection(db, 'feeAccounts')),
+        getDocs(collection(db, 'students')),
+      ])
+      const categoryMap = {}
+      stuSnap.docs.forEach(d => { categoryMap[d.id] = d.data().student_category || 'O Level' })
+
       const batch = writeBatch(db)
-      snap.docs.forEach(d => {
-        const data   = d.data()
-        const paid   = data.totalPaid || 0
-        const balance = Math.max(0, fees - paid)
+      let count = 0
+      accSnap.docs.forEach(d => {
+        const data     = d.data()
+        const cat      = categoryMap[data.studentId] || 'O Level'
+        const fees     = cat === 'A Level' ? (aFees || oFees || 0) : (oFees || aFees || 0)
+        if (!fees) return
+        const paid        = data.totalPaid || 0
+        const balance     = Math.max(0, fees - paid)
         const balanceType = paid >= fees ? (paid > fees ? 'credit' : 'nil') : 'debit'
         batch.update(d.ref, { termFees: fees, balance, balanceType })
+        count++
       })
       await batch.commit()
-      toast.success(`Term fees of $${fees.toFixed(2)} applied to ${snap.size} accounts.`)
+      toast.success(`Term fees applied to ${count} accounts.`)
     } catch (err) {
       console.error(err)
       toast.error('Failed to apply fees to accounts.')
@@ -66,15 +87,16 @@ export default function BursarSettings() {
   const [gateLoaded,   setGateLoaded]   = useState(false)
 
   useEffect(() => {
-    // Load system settings (term fees, term, year, currency)
-    getDoc(doc(db, 'settings', 'portalConfig'))
+    // Load system settings from schoolSettings
+    getDoc(doc(db, 'config', 'schoolSettings'))
       .then(s => {
         if (s.exists()) {
           const d = s.data()
-          if (d.currentTerm)  setTerm(d.currentTerm)
+          if (d.currentTerm)  setTerm(`Term ${d.currentTerm}`)
           if (d.currentYear)  setYear(d.currentYear)
-          if (d.currency)     setCurrency(d.currency)
-          if (d.termFees != null) setTermFees(String(d.termFees))
+          const legacy = d.feesPerTerm || ''
+          setOLevelFees(String(d.oLevelFeesPerTerm || legacy || ''))
+          setALevelFees(String(d.aLevelFeesPerTerm || legacy || ''))
         }
       })
       .catch(() => {})
@@ -110,24 +132,28 @@ export default function BursarSettings() {
     setGateSaving(false)
   }
 
-  const exampleFees     = parseFloat(termFees) || 0
+  const exampleFees     = parseFloat(oLevelFees) || 0
   const thresholdAmount = Math.round((threshold / 100) * exampleFees)
 
   const handleSave = async () => {
-    const fees = parseFloat(termFees)
-    if (termFees !== '' && (isNaN(fees) || fees < 0)) {
-      return toast.error('Term fees must be a valid positive number.')
-    }
+    const oFees = parseFloat(oLevelFees)
+    const aFees = parseFloat(aLevelFees)
+    if (oLevelFees !== '' && (isNaN(oFees) || oFees < 0)) return toast.error('O Level fees must be a valid positive number.')
+    if (aLevelFees !== '' && (isNaN(aFees) || aFees < 0)) return toast.error('A Level fees must be a valid positive number.')
     setSysSaving(true)
     try {
-      await setDoc(doc(db, 'settings', 'portalConfig'), {
-        currentTerm: term,
+      const snap    = await getDoc(doc(db, 'config', 'schoolSettings'))
+      const existing = snap.exists() ? snap.data() : {}
+      await setDoc(doc(db, 'config', 'schoolSettings'), {
+        ...existing,
+        currentTerm: term.replace('Term ', ''),
         currentYear: year,
         currency,
-        ...(termFees !== '' && { termFees: fees }),
+        ...(oLevelFees !== '' && { oLevelFeesPerTerm: oFees }),
+        ...(aLevelFees !== '' && { aLevelFeesPerTerm: aFees }),
         updatedAt:   serverTimestamp(),
         updatedBy:   session.name || 'Bursar',
-      }, { merge: true })
+      })
       toast.success('Settings saved successfully.')
     } catch {
       toast.error('Failed to save settings.')
@@ -201,20 +227,35 @@ export default function BursarSettings() {
             <label className={LABEL}>School Name</label>
             <input value="Oasis Private College" readOnly className={`${INPUT} opacity-50 cursor-not-allowed`} />
           </div>
-          <div className="col-span-2">
-            <label className={LABEL}>Term Fees ({currency === 'USD' ? '$' : currency === 'ZWL' ? 'Z$' : 'R'})</label>
+          <div>
+            <label className={LABEL}>O Level Fees · Forms 1–4 ({currency === 'USD' ? '$' : currency === 'ZWL' ? 'Z$' : 'R'})</label>
             <input
               type="number"
               min="0"
               step="0.01"
-              value={termFees}
-              onChange={e => setTermFees(e.target.value)}
-              placeholder="e.g. 800.00"
+              value={oLevelFees}
+              onChange={e => setOLevelFees(e.target.value)}
+              placeholder="e.g. 250.00"
               disabled={!sysLoaded}
               className={`${INPUT} disabled:opacity-50`}
             />
-            <p className="text-[10px] text-gray-600 font-montserrat mt-1.5">
-              The standard fee amount charged per student for {term} {year}. Used for fee balance calculations.
+          </div>
+          <div>
+            <label className={LABEL}>A Level Fees · Lower/Upper 6 ({currency === 'USD' ? '$' : currency === 'ZWL' ? 'Z$' : 'R'})</label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={aLevelFees}
+              onChange={e => setALevelFees(e.target.value)}
+              placeholder="e.g. 400.00"
+              disabled={!sysLoaded}
+              className={`${INPUT} disabled:opacity-50`}
+            />
+          </div>
+          <div className="col-span-2">
+            <p className="text-[10px] text-gray-600 font-montserrat">
+              Fee amounts charged per student for {term} {year}. "Apply to all accounts" sets each student's fee based on their category.
             </p>
           </div>
         </div>
@@ -232,21 +273,12 @@ export default function BursarSettings() {
 
           <button
             onClick={applyFeesToAllAccounts}
-            disabled={applying || !termFees || parseFloat(termFees) <= 0}
+            disabled={applying || (!parseFloat(oLevelFees) && !parseFloat(aLevelFees))}
             className="px-6 py-3 rounded-xl text-sm font-semibold font-montserrat text-white transition disabled:opacity-60 flex items-center gap-2 bg-amber-600 hover:bg-amber-500"
           >
             {applying ? 'Applying…' : 'Apply fees to all accounts'}
           </button>
         </div>
-        {termFees && parseFloat(termFees) > 0 && (
-          <p className="text-[10px] text-gray-600 font-montserrat mt-3">
-            "Apply fees to all accounts" will set{' '}
-            <span className="text-amber-400 font-semibold">
-              {currency === 'USD' ? '$' : currency === 'ZWL' ? 'Z$' : 'R'}{parseFloat(termFees).toFixed(2)}
-            </span>{' '}
-            as the term fee on every student fee account and recalculate balances.
-          </p>
-        )}
       </div>
 
       {/* Results Access Gate */}

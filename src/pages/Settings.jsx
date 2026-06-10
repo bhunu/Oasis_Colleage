@@ -16,7 +16,6 @@ export default function Settings() {
     currentYear: '2025',
     termStartDate: '',
     termEndDate: '',
-    feesPerTerm: '800',
   })
   const [displayName, setDisplayName] = useState('')
   const [saving, setSaving] = useState(false)
@@ -28,7 +27,8 @@ export default function Settings() {
       try {
         const snap = await getDoc(doc(db, 'config', 'schoolSettings'))
         if (snap.exists()) {
-          setSchoolConfig(prev => ({ ...prev, ...snap.data() }))
+          const data = snap.data()
+          setSchoolConfig(prev => ({ ...prev, ...data }))
         }
       } catch {
         // defaults ok
@@ -153,15 +153,6 @@ export default function Settings() {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Standard Fees Per Term ($)</label>
-            <input
-              type="number"
-              value={schoolConfig.feesPerTerm}
-              onChange={e => setSchoolConfig(p => ({ ...p, feesPerTerm: e.target.value }))}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-            />
-          </div>
         </div>
 
         <div className="mt-5">

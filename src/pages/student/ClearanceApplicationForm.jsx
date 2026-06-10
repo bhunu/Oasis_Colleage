@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react'
 import { collection, addDoc, getDocs, query, where, limit, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import { useStudent } from '../../context/StudentContext'
-import { MdCheckCircle, MdSend, MdInfo } from 'react-icons/md'
+import { MdCheckCircle, MdSend, MdInfo, MdSchedule } from 'react-icons/md'
 import toast from 'react-hot-toast'
+import { useTermDates, fmtTermDate, isTermEnded } from '../../hooks/useTermDates'
 
 const EXIT_LABELS = {
   OLevelCompletion: 'O Level Completion',
@@ -20,6 +21,9 @@ export default function ClearanceApplicationForm() {
   const regNo      = studentData?.regNumber
   const fullName   = studentData?.name || 'Student'
   const studentClass = studentData?.class || firestoreStudent?.class || ''
+
+  const { termEndDate } = useTermDates()
+  const termHasEnded = isTermEnded(termEndDate)
 
   const [form, setForm]       = useState({
     guardianName:  firestoreStudent?.guardianName  || studentData?.guardianName  || '',
@@ -145,6 +149,21 @@ export default function ClearanceApplicationForm() {
         </p>
       </div>
 
+      {/* Term gate — block before term ends */}
+      {termEndDate && !termHasEnded && (
+        <div className="flex gap-3 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-4">
+          <MdSchedule className="text-amber-400 text-xl shrink-0 mt-0.5" />
+          <div>
+            <p className="font-montserrat text-sm font-bold text-amber-400 mb-1">Too early to apply</p>
+            <p className="font-montserrat text-xs text-amber-300 leading-relaxed">
+              Clearance applications can only be submitted after the term ends on{' '}
+              <span className="font-bold">{fmtTermDate(termEndDate)}</span>.
+              Please return after that date to complete your clearance.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="flex gap-3 bg-blue-500/10 border border-blue-500/20 rounded-xl px-4 py-3">
         <MdInfo className="text-blue-400 text-lg shrink-0 mt-0.5" />
         <p className="font-montserrat text-xs text-blue-300 leading-relaxed">
@@ -207,11 +226,15 @@ export default function ClearanceApplicationForm() {
 
         <button
           type="submit"
-          disabled={loading}
-          className="w-full flex items-center justify-center gap-2 bg-[#C9A84C] hover:bg-yellow-400 disabled:opacity-60 text-[#0A1628] font-montserrat font-bold text-sm py-3 rounded-xl transition"
+          disabled={loading || (termEndDate ? !termHasEnded : false)}
+          className="w-full flex items-center justify-center gap-2 bg-[#C9A84C] hover:bg-yellow-400 disabled:opacity-60 disabled:cursor-not-allowed text-[#0A1628] font-montserrat font-bold text-sm py-3 rounded-xl transition"
         >
           <MdSend className="text-base" />
-          {loading ? 'Checking fees & submitting…' : 'Submit Clearance Application'}
+          {loading
+            ? 'Checking fees & submitting…'
+            : termEndDate && !termHasEnded
+              ? `Available after ${fmtTermDate(termEndDate)}`
+              : 'Submit Clearance Application'}
         </button>
       </form>
 

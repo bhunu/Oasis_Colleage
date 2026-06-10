@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import { getCurrentTerm } from '../../utils/termHelpers'
+import { useTermDates, fmtTermDate } from '../../hooks/useTermDates'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine,
@@ -52,8 +53,9 @@ function generateTermOptions() {
 
 function computeGrade(avg, gradeTable) {
   if (avg === null || avg === undefined) return '—'
-  const entry = gradeTable.find(g => Number(avg) >= g.min && Number(avg) <= g.max)
-  return entry?.grade || gradeTable[gradeTable.length - 1]?.grade || '—'
+  const n = Math.round(Number(avg))
+  const sorted = [...gradeTable].sort((a, b) => b.min - a.min)
+  return sorted.find(g => n >= g.min)?.grade || '—'
 }
 
 const GRADE_COLORS = {
@@ -65,23 +67,33 @@ const GRADE_COLORS = {
   '—': 'text-gray-500',
 }
 
-function studentStatus(avg) {
-  if (avg === null)  return { label: 'No Data', cls: 'bg-gray-500/10 text-gray-500 border-gray-500/20' }
-  if (avg >= 70)     return { label: 'Distinction', cls: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' }
-  if (avg >= 60)     return { label: 'Merit', cls: 'bg-blue-500/15 text-blue-400 border-blue-500/30' }
-  if (avg >= 50)     return { label: 'Pass', cls: 'bg-amber-500/15 text-amber-400 border-amber-500/30' }
-  return              { label: 'Fail', cls: 'bg-red-500/15 text-red-400 border-red-500/30' }
+function studentStatus(grade) {
+  if (!grade || grade === '—') return { label: 'No Data', cls: 'bg-gray-500/10 text-gray-500 border-gray-500/20' }
+  const g = grade.toUpperCase()
+  if (g === 'A' || g === 'B') return { label: 'Distinction', cls: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' }
+  if (g === 'C')              return { label: 'Merit',       cls: 'bg-blue-500/15 text-blue-400 border-blue-500/30' }
+  if (g === 'D')              return { label: 'Pass',        cls: 'bg-amber-500/15 text-amber-400 border-amber-500/30' }
+  return                             { label: 'Fail',        cls: 'bg-red-500/15 text-red-400 border-red-500/30' }
 }
 
-function subjectStatus(avg) {
-  if (avg >= 70) return { label: 'Strong', cls: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' }
-  if (avg >= 50) return { label: 'Fair',   cls: 'bg-amber-500/15 text-amber-400 border-amber-500/30' }
-  return          { label: 'Weak',   cls: 'bg-red-500/15 text-red-400 border-red-500/30' }
+function subjectStatus(avg, gradeTable) {
+  if (avg === null || avg === undefined) return { label: 'No Data', cls: 'bg-gray-500/10 text-gray-500 border-gray-500/20' }
+  const sorted = [...gradeTable].sort((a, b) => b.min - a.min) // best grade first
+  const grade  = computeGrade(avg, gradeTable)
+  const idx    = sorted.findIndex(g => g.grade === grade)
+  const third  = Math.ceil(sorted.length / 3)
+  if (idx < third)        return { label: 'Strong', cls: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' }
+  if (idx < third * 2)    return { label: 'Fair',   cls: 'bg-amber-500/15 text-amber-400 border-amber-500/30' }
+  return                         { label: 'Weak',   cls: 'bg-red-500/15 text-red-400 border-red-500/30' }
 }
 
-function subjectBarColor(avg) {
-  if (avg >= 70) return '#22c55e'
-  if (avg >= 50) return '#f59e0b'
+function subjectBarColor(avg, gradeTable) {
+  const sorted = [...gradeTable].sort((a, b) => b.min - a.min)
+  const grade  = computeGrade(avg, gradeTable)
+  const idx    = sorted.findIndex(g => g.grade === grade)
+  const third  = Math.ceil(sorted.length / 3)
+  if (idx < third)     return '#22c55e'
+  if (idx < third * 2) return '#f59e0b'
   return '#ef4444'
 }
 
@@ -118,7 +130,7 @@ const TH = 'text-left py-3 px-4 text-[10px] font-semibold text-gray-500 uppercas
 const TD = 'py-3 px-4 text-sm text-gray-300 font-montserrat'
 
 // ── Student Subject Breakdown Modal ──────────────────────────────────────────
-function StudentBreakdownModal({ student, rank, classTotal, onClose, gradeTable }) {
+function StudentBreakdownModal({ student, rank, classTotal, onClose, gradeTable, isALevel }) {
   const chartData = student.marks
     .sort((a, b) => a.subject.localeCompare(b.subject))
     .map(m => ({
@@ -127,7 +139,16 @@ function StudentBreakdownModal({ student, rank, classTotal, onClose, gradeTable 
       mark: m.mark,
     }))
 
-  const status = studentStatus(student.avg)
+  const status = studentStatus(student.grade)
+
+  const getPoints = (mark) => {
+    const n = Math.round(Number(mark))
+    const sorted = [...gradeTable].sort((a, b) => b.min - a.min)
+    return sorted.find(g => n >= g.min)?.points ?? 0
+  }
+
+  const sortedMarks = [...student.marks].sort((a, b) => b.mark - a.mark)
+  const totalPoints = isALevel ? sortedMarks.reduce((sum, { mark }) => sum + getPoints(mark), 0) : 0
 
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex items-start justify-center p-4 overflow-y-auto">
@@ -226,24 +247,31 @@ function StudentBreakdownModal({ student, rank, classTotal, onClose, gradeTable 
                     <th className="text-left py-2.5 px-4 text-[10px] font-semibold text-gray-500 uppercase tracking-widest font-montserrat">Subject</th>
                     <th className="text-center py-2.5 px-4 text-[10px] font-semibold text-gray-500 uppercase tracking-widest font-montserrat">Mark</th>
                     <th className="text-center py-2.5 px-4 text-[10px] font-semibold text-gray-500 uppercase tracking-widest font-montserrat">Grade</th>
+                    {isALevel && <th className="text-center py-2.5 px-4 text-[10px] font-semibold text-gray-500 uppercase tracking-widest font-montserrat">Points</th>}
                     <th className="text-left py-2.5 px-4 text-[10px] font-semibold text-gray-500 uppercase tracking-widest font-montserrat">Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {student.marks.length === 0 ? (
-                    <tr><td colSpan={4} className="py-6 text-center text-sm text-gray-500 font-montserrat">No marks recorded</td></tr>
+                    <tr><td colSpan={isALevel ? 5 : 4} className="py-6 text-center text-sm text-gray-500 font-montserrat">No marks recorded</td></tr>
                   ) : (
-                    [...student.marks].sort((a, b) => b.mark - a.mark).map(({ subject, mark }) => {
-                      const g = computeGrade(mark, gradeTable)
+                    sortedMarks.map(({ subject, mark }) => {
+                      const g      = computeGrade(mark, gradeTable)
+                      const pts    = isALevel ? getPoints(mark) : null
                       const isFail = mark < 50
                       return (
                         <tr key={subject} className={`border-b border-white/5 ${isFail ? 'bg-red-500/5' : ''}`}>
                           <td className="py-2.5 px-4 text-sm text-white font-montserrat">{subject}</td>
                           <td className={`py-2.5 px-4 text-sm text-center font-bold font-montserrat ${isFail ? 'text-red-400' : 'text-white'}`}>{mark}</td>
                           <td className={`py-2.5 px-4 text-sm text-center font-bold font-montserrat ${GRADE_COLORS[g]}`}>{g}</td>
+                          {isALevel && (
+                            <td className={`py-2.5 px-4 text-sm text-center font-bold font-montserrat ${pts > 0 ? 'text-[#C9A84C]' : 'text-gray-600'}`}>
+                              {pts}
+                            </td>
+                          )}
                           <td className="py-2.5 px-4">
-                            <span className={`text-[9px] font-semibold px-2 py-0.5 rounded-full border font-montserrat ${subjectStatus(mark).cls}`}>
-                              {subjectStatus(mark).label}
+                            <span className={`text-[9px] font-semibold px-2 py-0.5 rounded-full border font-montserrat ${subjectStatus(mark, gradeTable).cls}`}>
+                              {subjectStatus(mark, gradeTable).label}
                             </span>
                           </td>
                         </tr>
@@ -251,6 +279,20 @@ function StudentBreakdownModal({ student, rank, classTotal, onClose, gradeTable 
                     })
                   )}
                 </tbody>
+                {isALevel && student.marks.length > 0 && (
+                  <tfoot>
+                    <tr className="bg-[#C9A84C]/10 border-t border-[#C9A84C]/30">
+                      <td className="py-2.5 px-4 text-xs font-bold text-[#C9A84C] font-montserrat uppercase tracking-wider" colSpan={3}>
+                        Total Points
+                      </td>
+                      <td className="py-2.5 px-4 text-center">
+                        <span className="text-lg font-bold text-[#C9A84C] font-playfair">{totalPoints}</span>
+                        <span className="text-gray-500 text-[10px] font-montserrat ml-1">/ {sortedMarks.length * (gradeTable[0]?.points ?? 5)}</span>
+                      </td>
+                      <td />
+                    </tr>
+                  </tfoot>
+                )}
               </table>
             </div>
           </div>
@@ -276,6 +318,7 @@ export default function ClassPerformancePage() {
   const [search,       setSearch]       = useState('')
   const [selected,     setSelected]     = useState(null)
   const [gradeSettings, setGradeSettings] = useState(null)
+  const { termStartDate, termEndDate } = useTermDates()
 
   /* Fetch grade settings once */
   useEffect(() => {
@@ -591,7 +634,7 @@ export default function ClassPerformancePage() {
                   <p className="text-xs text-gray-500">Checheche, Zimbabwe</p>
                 </div>
               </div>
-              <p className="font-bold text-base mt-2">Class Performance Report — {selectedClass} · {selectedTerm}</p>
+              <p className="font-bold text-base mt-2">Class Performance Report — {selectedClass} · {selectedTerm}{termStartDate && termEndDate ? ` · ${fmtTermDate(termStartDate)} – ${fmtTermDate(termEndDate)}` : ''}</p>
               <hr className="my-2 border-gray-300" />
             </div>
 
@@ -656,7 +699,7 @@ export default function ClassPerformancePage() {
                       <tr><td colSpan={7} className="py-10 text-center text-sm text-gray-500 font-montserrat">No marks data found for this term.</td></tr>
                     ) : (
                       subjectStats.map(sub => {
-                        const st = subjectStatus(sub.avg)
+                        const st = subjectStatus(sub.avg, gradeTable)
                         return (
                           <tr key={sub.subject} className={`border-b border-white/5 ${sub.avg < 50 ? 'bg-red-500/5' : ''}`}>
                             <td className="py-3 px-4 text-sm text-white font-montserrat font-medium">{sub.subject}</td>
@@ -671,7 +714,7 @@ export default function ClassPerformancePage() {
                                 <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
                                   <div
                                     className="h-full rounded-full transition-all"
-                                    style={{ width: `${Math.min(sub.avg, 100)}%`, backgroundColor: subjectBarColor(sub.avg) }}
+                                    style={{ width: `${Math.min(sub.avg, 100)}%`, backgroundColor: subjectBarColor(sub.avg, gradeTable) }}
                                   />
                                 </div>
                                 <span className="text-[10px] text-gray-500 font-montserrat w-8 text-right">{r1(sub.avg)}</span>
@@ -761,7 +804,7 @@ export default function ClassPerformancePage() {
                       <tr><td colSpan={8} className="py-10 text-center text-sm text-gray-500 font-montserrat">No matching students found.</td></tr>
                     ) : (
                       filteredRankings.map(s => {
-                        const st     = studentStatus(s.avg)
+                        const st     = studentStatus(s.grade)
                         const isFail = s.avg !== null && s.avg < 50
                         const rowCls = RANK_ROW[s.rank] || (isFail ? 'bg-red-500/5 border-l-2 border-transparent' : 'border-l-2 border-transparent')
                         return (
@@ -827,6 +870,7 @@ export default function ClassPerformancePage() {
           classTotal={rankings.filter(s => s.avg !== null).length}
           onClose={() => setSelected(null)}
           gradeTable={gradeTable}
+          isALevel={isALevel}
         />
       )}
     </>

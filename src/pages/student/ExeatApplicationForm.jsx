@@ -5,7 +5,8 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { db, storage } from '../../firebase/config'
 import { useStudent } from '../../context/StudentContext'
 import toast from 'react-hot-toast'
-import { MdUploadFile, MdArrowBack, MdCheckCircle } from 'react-icons/md'
+import { MdUploadFile, MdArrowBack, MdCheckCircle, MdCalendarMonth } from 'react-icons/md'
+import { useTermDates, fmtTermDate } from '../../hooks/useTermDates'
 
 const REASONS = [
   'Weekend Visit',
@@ -34,6 +35,7 @@ const INPUT  = 'w-full bg-white/5 border border-white/10 focus:border-[#C9A84C]/
 export default function ExeatApplicationForm() {
   const navigate = useNavigate()
   const { studentData } = useStudent()
+  const { termStartDate, termEndDate } = useTermDates()
 
   const [form, setForm]           = useState(EMPTY)
   const [file, setFile]           = useState(null)
@@ -169,6 +171,20 @@ export default function ExeatApplicationForm() {
         </div>
       </div>
 
+      {/* Term dates info */}
+      {(termStartDate || termEndDate) && (
+        <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3">
+          <MdCalendarMonth className="text-[#C9A84C] text-lg shrink-0" />
+          <p className="font-montserrat text-xs text-gray-400">
+            <span className="text-white font-semibold">Current term:</span>{' '}
+            {termStartDate ? fmtTermDate(termStartDate) : '—'} → {termEndDate ? fmtTermDate(termEndDate) : '—'}
+            {termEndDate && (
+              <span className="text-gray-500 ml-2">· Departure and return dates must fall within this term</span>
+            )}
+          </p>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-5">
         <div className="bg-[#0D1C35] border border-white/10 rounded-2xl p-6 space-y-5">
 
@@ -185,11 +201,37 @@ export default function ExeatApplicationForm() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={LABEL}>Departure Date <span className="text-red-400">*</span></label>
-              <input type="date" name="departureDate" value={form.departureDate} onChange={handleChange} className={INPUT} />
+              <input
+                type="date"
+                name="departureDate"
+                value={form.departureDate}
+                onChange={handleChange}
+                min={termStartDate || undefined}
+                max={termEndDate   || undefined}
+                className={INPUT}
+              />
+              {termStartDate && termEndDate && (
+                <p className="text-[10px] text-gray-600 font-montserrat mt-1">
+                  {fmtTermDate(termStartDate)} – {fmtTermDate(termEndDate)}
+                </p>
+              )}
             </div>
             <div>
               <label className={LABEL}>Expected Return Date <span className="text-red-400">*</span></label>
-              <input type="date" name="returnDate" value={form.returnDate} onChange={handleChange} className={INPUT} />
+              <input
+                type="date"
+                name="returnDate"
+                value={form.returnDate}
+                onChange={handleChange}
+                min={form.departureDate || termStartDate || undefined}
+                max={termEndDate || undefined}
+                className={INPUT}
+              />
+              {termEndDate && (
+                <p className="text-[10px] text-gray-600 font-montserrat mt-1">
+                  Must return by {fmtTermDate(termEndDate)}
+                </p>
+              )}
             </div>
           </div>
 

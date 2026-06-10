@@ -72,6 +72,7 @@ import Subjects from './pages/Subjects'
 import AccessPassPage from './pages/AccessPassPage'
 import ExeatManagementPage from './pages/ExeatManagementPage'
 import ClassPerformancePage from './pages/admin/ClassPerformancePage'
+import PrizeGivingPage      from './pages/admin/PrizeGivingPage'
 import Classes from './pages/Classes'
 import GradeSettings from './pages/GradeSettings'
 import ExeatApplicationForm      from './pages/student/ExeatApplicationForm'
@@ -121,7 +122,8 @@ export default function App() {
                      location.pathname.startsWith('/clearance') ||
                      location.pathname.startsWith('/class-performance') ||
                      location.pathname.startsWith('/classes') ||
-                     location.pathname.startsWith('/grade-settings')
+                     location.pathname.startsWith('/grade-settings') ||
+                     location.pathname.startsWith('/prize-giving')
   const isLogin   = location.pathname === '/login' || location.pathname === '/staff-login'
   const isBursar  = location.pathname.startsWith('/bursar')
   const isStudent = location.pathname.startsWith('/student/')
@@ -250,6 +252,9 @@ export default function App() {
           }/>
           <Route path="/grade-settings" element={
             <ProtectedRoute><Layout><GradeSettings /></Layout></ProtectedRoute>
+          }/>
+          <Route path="/prize-giving" element={
+            <ProtectedRoute><Layout><PrizeGivingPage /></Layout></ProtectedRoute>
           }/>
         </Routes>
       </>

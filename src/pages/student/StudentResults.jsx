@@ -245,7 +245,11 @@ export default function StudentResults() {
     ? (gradeSettings?.aLevel?.length ? gradeSettings.aLevel : DEFAULT_A_GRADES)
     : (gradeSettings?.oLevel?.length ? gradeSettings.oLevel : DEFAULT_O_GRADES)
 
-  const gradeEntry = (mark) => gradeTable.find(g => Number(mark) >= g.min && Number(mark) <= g.max) || gradeTable[gradeTable.length - 1]
+  const gradeEntry = (mark) => {
+    const n = Math.round(Number(mark))
+    const sorted = [...gradeTable].sort((a, b) => b.min - a.min)
+    return sorted.find(g => n >= g.min) || gradeTable[gradeTable.length - 1]
+  }
   const gradeLetter = (mark) => gradeEntry(mark)?.grade || '—'
   const gradeColor  = (mark) => gradeColorByLetter(gradeLetter(mark))
 

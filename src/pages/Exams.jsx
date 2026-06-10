@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { getCurrentTerm } from '../utils/termHelpers'
+import { useTermDates, fmtTermDate, isTermEnded } from '../hooks/useTermDates'
 import { useDropzone } from 'react-dropzone'
 import Papa from 'papaparse'
 import { db } from '../firebase/config'
@@ -99,6 +100,7 @@ const CARD    = '#0D1C35'
 
 // ── Main component ────────────────────────────────────────────────────────
 export default function Exams() {
+  const { termEndDate } = useTermDates()
   const [classes,   setClasses]     = useState([])
   const [teacher, setTeacher]       = useState('')
   const [className, setClassName]   = useState('')
@@ -365,8 +367,21 @@ export default function Exams() {
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
+  const termEnded = isTermEnded(termEndDate)
+
   return (
     <div className="space-y-6 max-w-6xl">
+
+      {/* ── Post-term warning ─────────────────────────────────────────────── */}
+      {termEnded && termEndDate && (
+        <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 rounded-xl px-5 py-3.5">
+          <MdWarning className="text-amber-400 text-xl shrink-0" />
+          <p className="font-montserrat text-sm text-amber-300">
+            <span className="font-bold">Term ended {fmtTermDate(termEndDate)}.</span>{' '}
+            Uploads after the term end date will overwrite existing records for the previous term. Ensure you are uploading for the correct term.
+          </p>
+        </div>
+      )}
 
       {/* ── Upload form card ─────────────────────────────────────────────── */}
       <div className={`bg-[${CARD}] bg-[#0D1C35] border border-white/10 rounded-2xl p-8`}>

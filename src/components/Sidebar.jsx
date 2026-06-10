@@ -14,6 +14,7 @@ import {
   MdLeaderboard as IconLeaderboard,
   MdClass as IconClass,
   MdGrade as IconGrade,
+  MdEmojiEvents as IconPrize,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
@@ -39,6 +40,7 @@ const NAV = [
       { label: 'End of term exams',  icon: IconFileCertificate, path: '/exams' },
       { label: 'Academic reports',   icon: IconReportAnalytics, path: '/reports' },
       { label: 'Class Performance',  icon: IconLeaderboard,     path: '/class-performance' },
+      { label: 'Prize Giving',       icon: IconPrize,           path: '/prize-giving' },
       { label: 'Grade Settings',     icon: IconGrade,           path: '/grade-settings' },
     ],
   },
