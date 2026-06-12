@@ -206,6 +206,7 @@ export default function Enrol() {
       })
 
       await addDoc(collection(db, 'feeAccounts'), {
+        studentId:    reg_number,
         reg_number,
         studentName:  fullName,
         class:        formData.class,

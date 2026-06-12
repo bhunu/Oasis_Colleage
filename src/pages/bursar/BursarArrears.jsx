@@ -100,7 +100,7 @@ export default function BursarArrears() {
                 {filtered.map(a => (
                   <tr key={a.id} className="border-b border-white/5 hover:bg-white/2">
                     <td className={TD_W}>{a.studentName || '—'}</td>
-                    <td className={TD}>{a.studentId || '—'}</td>
+                    <td className={TD}>{a.reg_number || a.studentId || '—'}</td>
                     <td className={TD}>{a.class || a.form || '—'}</td>
                     <td className={TD}>{fmt(a.termFees || 0)}</td>
                     <td className={TD + ' text-emerald-400'}>{fmt(a.totalPaid || 0)}</td>
@@ -120,7 +120,7 @@ export default function BursarArrears() {
                     </td>
                     <td className={TD}>
                       <button
-                        onClick={() => navigate('/bursar/receive-payment')}
+                        onClick={() => navigate(`/bursar/receive-payment?reg=${encodeURIComponent(a.reg_number || a.studentId || '')}`)}
                         className="text-xs font-montserrat px-3 py-1.5 rounded-lg text-white transition"
                         style={{ backgroundColor: TEAL }}
                       >

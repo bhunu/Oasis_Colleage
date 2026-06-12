@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   collection, getDocs, query, where, doc,
   updateDoc, addDoc, serverTimestamp, orderBy, limit,
@@ -37,8 +37,9 @@ async function getNextReceiptNumber() {
 }
 
 export default function ReceivePayment() {
-  const navigate   = useNavigate()
-  const session    = getBursarSession()
+  const navigate      = useNavigate()
+  const [searchParams] = useSearchParams()
+  const session       = getBursarSession()
 
   const [search,      setSearch]     = useState('')
   const [students,    setStudents]   = useState([])
@@ -52,6 +53,26 @@ export default function ReceivePayment() {
   const [form, setForm] = useState({
     amount: '', date: today, method: 'cash', bankRef: '', mobileRef: '', notes: '',
   })
+
+  useEffect(() => {
+    const reg = searchParams.get('reg')
+    if (!reg) return
+    const autoSelect = async () => {
+      setSearching(true)
+      try {
+        const snap = await getDocs(query(collection(db, 'students'), where('reg_number', '==', reg), limit(1)))
+        if (!snap.empty) {
+          const student = { id: snap.docs[0].id, ...snap.docs[0].data() }
+          setSearch(student.fullName || reg)
+          const accSnap = await getDocs(query(collection(db, 'feeAccounts'), where('reg_number', '==', reg), limit(1)))
+          setSelected(student)
+          setAccount(accSnap.empty ? null : { id: accSnap.docs[0].id, ...accSnap.docs[0].data() })
+        }
+      } catch { /* silent */ }
+      setSearching(false)
+    }
+    autoSelect()
+  }, [])
 
   const handleSearch = async () => {
     const term = search.trim()

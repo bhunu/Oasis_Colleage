@@ -4,6 +4,7 @@ import { signOut } from 'firebase/auth'
 import { auth } from '../../firebase/config'
 import { doc, getDoc, setDoc, getDocs, collection, writeBatch, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../firebase/config'
+import { getStudentCategory } from '../../firebase/students'
 import { MdLock, MdSave } from 'react-icons/md'
 import { useNavigate } from 'react-router-dom'
 
@@ -56,13 +57,16 @@ export default function BursarSettings() {
         getDocs(collection(db, 'students')),
       ])
       const categoryMap = {}
-      stuSnap.docs.forEach(d => { categoryMap[d.id] = d.data().student_category || 'O Level' })
+      stuSnap.docs.forEach(d => {
+        const sd = d.data()
+        if (sd.reg_number) categoryMap[sd.reg_number] = sd.student_category || getStudentCategory(sd.class) || 'O Level'
+      })
 
       const batch = writeBatch(db)
       let count = 0
       accSnap.docs.forEach(d => {
         const data     = d.data()
-        const cat      = categoryMap[data.studentId] || 'O Level'
+        const cat      = categoryMap[data.studentId] || getStudentCategory(data.class) || 'O Level'
         const fees     = cat === 'A Level' ? (aFees || oFees || 0) : (oFees || aFees || 0)
         if (!fees) return
         const paid        = data.totalPaid || 0
@@ -132,8 +136,10 @@ export default function BursarSettings() {
     setGateSaving(false)
   }
 
-  const exampleFees     = parseFloat(oLevelFees) || 0
-  const thresholdAmount = Math.round((threshold / 100) * exampleFees)
+  const exampleFees      = parseFloat(oLevelFees) || 0
+  const thresholdAmount  = Math.round((threshold / 100) * exampleFees)
+  const aExampleFees     = parseFloat(aLevelFees) || 0
+  const aThresholdAmount = Math.round((threshold / 100) * aExampleFees)
 
   const handleSave = async () => {
     const oFees = parseFloat(oLevelFees)
@@ -323,10 +329,19 @@ export default function BursarSettings() {
             Live Preview
           </p>
           <p className="text-sm font-montserrat text-gray-400 leading-relaxed">
+            <span className="text-[10px] uppercase tracking-widest text-gray-600 font-semibold mr-2">O Level</span>
             A student with <span className="text-white font-semibold">${exampleFees}</span> in fees must pay at least{' '}
             <span className="font-bold" style={{ color: TEAL }}>${thresholdAmount}</span>{' '}
             (<span className="text-white">{threshold}%</span>) to unlock their results.
           </p>
+          {aExampleFees > 0 && (
+            <p className="text-sm font-montserrat text-gray-400 leading-relaxed mt-2">
+              <span className="text-[10px] uppercase tracking-widest text-gray-600 font-semibold mr-2">A Level</span>
+              A student with <span className="text-white font-semibold">${aExampleFees}</span> in fees must pay at least{' '}
+              <span className="font-bold" style={{ color: TEAL }}>${aThresholdAmount}</span>{' '}
+              (<span className="text-white">{threshold}%</span>) to unlock their results.
+            </p>
+          )}
         </div>
 
         <p className="text-[10px] text-gray-600 font-montserrat mt-4">

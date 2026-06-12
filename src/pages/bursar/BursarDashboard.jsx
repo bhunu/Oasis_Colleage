@@ -30,15 +30,7 @@ const PURP  = '#7F77DD'
 const PINK  = '#D4537E'
 const NAVY2 = '#378ADD'
 
-/* ── placeholder data ── */
-const collectionData = [
-  { month: 'Jan', collected: 12400, arrears: 3200 },
-  { month: 'Feb', collected: 14800, arrears: 2900 },
-  { month: 'Mar', collected: 11200, arrears: 4100 },
-  { month: 'Apr', collected: 16500, arrears: 2400 },
-  { month: 'May', collected: 18200, arrears: 1800 },
-  { month: 'Jun', collected: 9400,  arrears: 5200 },
-]
+/* ── placeholder data (charts not yet wired to live data) ── */
 const expenseData = [
   { name: 'Salaries',     value: 42, color: BLUE  },
   { name: 'Utilities',    value: 14, color: GOLD  },
@@ -50,13 +42,6 @@ const trendData = [
   { term: 'Term 1', income: 48000, expenses: 31000, surplus: 17000 },
   { term: 'Term 2', income: 55000, expenses: 34000, surplus: 21000 },
   { term: 'Term 3', income: 41000, expenses: 29000, surplus: 12000 },
-]
-const methodData = [
-  { month: 'Jan', cash: 5400, bank: 4200, mobile: 2800 },
-  { month: 'Feb', cash: 6200, bank: 5100, mobile: 3500 },
-  { month: 'Mar', cash: 4800, bank: 3900, mobile: 2500 },
-  { month: 'Apr', cash: 7100, bank: 5600, mobile: 3800 },
-  { month: 'May', cash: 8200, bank: 6100, mobile: 3900 },
 ]
 
 const CARD  = 'bg-[#0D1C35] border border-white/10 rounded-xl p-6'
@@ -84,36 +69,41 @@ function StatCard({ label, value, icon: Icon, color }) {
 export default function BursarDashboard() {
   const navigate = useNavigate()
   const { termStartDate, termEndDate } = useTermDates()
-  const [stats, setStats] = useState({ collected: 0, arrears: 0, expenses: 0, surplus: 0, feesPaidFull: 0 })
+  const [stats, setStats] = useState({ collected: 0, arrears: 0, expenses: 0, surplus: 0, feesPaidFull: 0, creditTotal: 0 })
+  const [expenseByCategory, setExpenseByCategory] = useState({})
   const [receipts, setReceipts] = useState([])
   const [topArrears, setTopArrears] = useState([])
+  const [methodData, setMethodData] = useState([])
+  const [collectionChartData, setCollectionChartData] = useState([])
   const [term, setTerm] = useState('Term 2 2025')
   const [loading, setLoading] = useState(true)
 
-  /* income statement mock totals */
-  const income = {
-    tuition: 47200, examFees: 3800, sportsLevy: 1200, other: 800,
-    total: 53000,
-  }
-  const expenses = {
-    salaries: 22400, utilities: 7200, maintenance: 9600, supplies: 6400, other: 7200,
-    total: 52800,
-  }
-  const netSurplus = income.total - expenses.total
+  /* income statement — live from Firestore */
+  const incomeTotal = stats.collected
+  const netSurplus  = incomeTotal - stats.expenses
+  const EXP_CATEGORIES = ['Salaries', 'Utilities', 'Maintenance', 'Supplies & Stationery', 'Transport', 'Events', 'Other']
 
-  /* balance sheet mock */
-  const assets = { cash: 18400, receivables: 12600, equipment: 34000, total: 65000 }
-  const liabilities = { payables: 8200, deferred: 3400, total: 11600 }
+  /* balance sheet — live from Firestore */
+  const assets = {
+    cash:        stats.collected,               // total fees received
+    receivables: stats.arrears,                 // outstanding student fees
+    total:       stats.collected + stats.arrears,
+  }
+  const liabilities = {
+    payables: stats.expenses,                   // recorded expenses
+    deferred: stats.creditTotal,                // student overpayments (owed back)
+    total:    stats.expenses + stats.creditTotal,
+  }
   const netPosition = assets.total - liabilities.total
 
   useEffect(() => {
     let pending = 3
     const done = () => { if (--pending === 0) setLoading(false) }
 
-    /* fee accounts — stats: collected, arrears, feesPaidFull + top arrears list */
+    /* fee accounts — stats + top arrears */
     getDocs(collection(db, 'feeAccounts'))
       .then(snap => {
-        let collected = 0, arrears = 0, feesPaidFull = 0
+        let collected = 0, arrears = 0, creditTotal = 0, feesPaidFull = 0
         const arrearsRows = []
         snap.forEach(d => {
           const data = d.data()
@@ -122,33 +112,59 @@ export default function BursarDashboard() {
             arrears += Number(data.balance || 0)
             arrearsRows.push({ id: d.id, ...data })
           }
+          if (data.balanceType === 'credit') creditTotal += Number(data.balance || 0)
           if (Number(data.termFees || 0) > 0 && Number(data.totalPaid || 0) >= Number(data.termFees || 0)) feesPaidFull++
         })
         arrearsRows.sort((a, b) => Number(b.balance || 0) - Number(a.balance || 0))
-        setStats(prev => ({ ...prev, collected, arrears, feesPaidFull, surplus: collected - prev.expenses }))
+        setStats(prev => ({ ...prev, collected, arrears, creditTotal, feesPaidFull, surplus: collected - prev.expenses }))
         setTopArrears(arrearsRows.slice(0, 5))
       })
       .catch(() => {})
       .finally(done)
 
-    /* expenses */
+    /* expenses — total + grouped by category */
     getDocs(collection(db, 'expenses'))
       .then(snap => {
         let expTotal = 0
-        snap.forEach(d => { expTotal += Number(d.data().amount || 0) })
+        const byCategory = {}
+        snap.forEach(d => {
+          const { category = 'Other', amount = 0 } = d.data()
+          expTotal += Number(amount)
+          byCategory[category] = (byCategory[category] || 0) + Number(amount)
+        })
+        setExpenseByCategory(byCategory)
         setStats(prev => ({ ...prev, expenses: expTotal, surplus: prev.collected - expTotal }))
       })
       .catch(() => {})
       .finally(done)
 
-    /* recent receipts — sort in JS to avoid index requirement */
+    /* receipts — build method chart + collection chart + recent table */
     getDocs(collection(db, 'receipts'))
       .then(snap => {
-        const sorted = snap.docs
+        const all = snap.docs
           .map(d => ({ id: d.id, ...d.data() }))
           .sort((a, b) => (b.issuedAt?.seconds ?? 0) - (a.issuedAt?.seconds ?? 0))
-          .slice(0, 5)
-        setReceipts(sorted)
+
+        setReceipts(all.slice(0, 5))
+
+        const MONTH_ORDER = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+        const monthMap = {}
+        all.forEach(r => {
+          const ts = r.issuedAt?.toDate ? r.issuedAt.toDate() : (r.issuedAt ? new Date(r.issuedAt) : null)
+          if (!ts) return
+          const month = ts.toLocaleString('default', { month: 'short' })
+          if (!monthMap[month]) monthMap[month] = { month, collected: 0, cash: 0, bank: 0, mobile: 0 }
+          const amt = Number(r.amount || 0)
+          monthMap[month].collected += amt
+          const m = r.paymentMethod || 'cash'
+          if (m === 'bank')        monthMap[month].bank   += amt
+          else if (m === 'mobile') monthMap[month].mobile += amt
+          else                     monthMap[month].cash   += amt
+        })
+        const sorted = Object.values(monthMap)
+          .sort((a, b) => MONTH_ORDER.indexOf(a.month) - MONTH_ORDER.indexOf(b.month))
+        setMethodData(sorted)
+        setCollectionChartData(sorted)  // arrears injected below after feeAccounts loads
       })
       .catch(() => {})
       .finally(done)
@@ -236,31 +252,29 @@ export default function BursarDashboard() {
       {/* ── Chart row 1: collections + expense breakdown ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-        {/* Chart 1 – Fee collections by month */}
+        {/* Chart 1 – Fee collections by month (live) */}
         <div className={CARD}>
-          <div className="flex justify-between items-center mb-4">
-            <h3 className={HEAD}>Fee Collections by Month</h3>
-            <select
-              value={term}
-              onChange={e => setTerm(e.target.value)}
-              className="text-xs bg-white/5 border border-white/10 text-gray-400 rounded-lg px-3 py-1.5 font-montserrat focus:outline-none"
-            >
-              <option>Term 2 2025</option>
-              <option>Term 1 2025</option>
-              <option>Term 3 2024</option>
-            </select>
-          </div>
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={collectionData}>
-              <CartesianGrid {...GRID} />
-              <XAxis dataKey="month" tick={TICK} axisLine={AXLINE} tickLine={false} />
-              <YAxis tick={TICK} axisLine={AXLINE} tickLine={false} />
-              <Tooltip {...TIP} />
-              <Legend wrapperStyle={{ color: '#9ca3af', fontSize: 11, fontFamily: 'Montserrat' }} />
-              <Bar dataKey="collected" name="Collected" fill={TEAL}  radius={[4,4,0,0]} />
-              <Bar dataKey="arrears"   name="Arrears"   fill={RED}   radius={[4,4,0,0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <h3 className={`${HEAD} mb-4`}>Fee Collections by Month</h3>
+          {collectionChartData.length === 0 ? (
+            <div className="flex items-center justify-center h-[260px]">
+              <p className="text-sm text-gray-500 font-montserrat">{loading ? 'Loading…' : 'No payment records yet.'}</p>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={collectionChartData.map((d, i) => ({
+                ...d,
+                arrears: i === collectionChartData.length - 1 ? stats.arrears : 0,
+              }))}>
+                <CartesianGrid {...GRID} />
+                <XAxis dataKey="month" tick={TICK} axisLine={AXLINE} tickLine={false} />
+                <YAxis tick={TICK} axisLine={AXLINE} tickLine={false} />
+                <Tooltip {...TIP} />
+                <Legend wrapperStyle={{ color: '#9ca3af', fontSize: 11, fontFamily: 'Montserrat' }} />
+                <Bar dataKey="collected" name="Collected" fill={TEAL} radius={[4,4,0,0]} />
+                <Bar dataKey="arrears"   name="Arrears"   fill={RED}  radius={[4,4,0,0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
 
         {/* Chart 2 – Expense breakdown */}
@@ -305,21 +319,27 @@ export default function BursarDashboard() {
           </ResponsiveContainer>
         </div>
 
-        {/* Chart 4 – Collections by payment method */}
+        {/* Chart 4 – Collections by payment method (live from receipts) */}
         <div className={CARD}>
           <h3 className={`${HEAD} mb-4`}>Collections by Payment Method</h3>
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={methodData}>
-              <CartesianGrid {...GRID} />
-              <XAxis dataKey="month" tick={TICK} axisLine={AXLINE} tickLine={false} />
-              <YAxis tick={TICK} axisLine={AXLINE} tickLine={false} />
-              <Tooltip {...TIP} />
-              <Legend wrapperStyle={{ color: '#9ca3af', fontSize: 11, fontFamily: 'Montserrat' }} />
-              <Bar dataKey="cash"   name="Cash"          fill={PURP}  stackId="a" />
-              <Bar dataKey="bank"   name="Bank transfer" fill={NAVY2} stackId="a" />
-              <Bar dataKey="mobile" name="Mobile money"  fill={TEAL}  stackId="a" radius={[4,4,0,0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          {methodData.length === 0 ? (
+            <div className="flex items-center justify-center h-[260px]">
+              <p className="text-sm text-gray-500 font-montserrat">{loading ? 'Loading…' : 'No payment records yet.'}</p>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={methodData}>
+                <CartesianGrid {...GRID} />
+                <XAxis dataKey="month" tick={TICK} axisLine={AXLINE} tickLine={false} />
+                <YAxis tick={TICK} axisLine={AXLINE} tickLine={false} />
+                <Tooltip {...TIP} />
+                <Legend wrapperStyle={{ color: '#9ca3af', fontSize: 11, fontFamily: 'Montserrat' }} />
+                <Bar dataKey="cash"   name="Cash"          fill={PURP}  stackId="a" />
+                <Bar dataKey="bank"   name="Bank transfer" fill={NAVY2} stackId="a" />
+                <Bar dataKey="mobile" name="Mobile money"  fill={TEAL}  stackId="a" radius={[4,4,0,0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
 
@@ -344,42 +364,38 @@ export default function BursarDashboard() {
 
           <div className="space-y-1 text-xs font-montserrat">
             <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest pt-1">Income</p>
-            {[
-              ['Tuition fees collected', income.tuition],
-              ['Exam fees',              income.examFees],
-              ['Sports levy',            income.sportsLevy],
-              ['Other income',           income.other],
-            ].map(([k, v]) => (
-              <div key={k} className="flex justify-between py-1 border-b border-white/5">
-                <span className="text-gray-400">{k}</span>
-                <span className="text-white">{fmt(v)}</span>
-              </div>
-            ))}
+            <div className="flex justify-between py-1 border-b border-white/5">
+              <span className="text-gray-400">Tuition fees collected</span>
+              <span className="text-white">{loading ? '…' : fmt(incomeTotal)}</span>
+            </div>
             <div className="flex justify-between py-1.5 font-semibold text-white border-b border-[#0F6E56]/40">
-              <span>Total Income</span><span style={{ color: TEAL }}>{fmt(income.total)}</span>
+              <span>Total Income</span>
+              <span style={{ color: TEAL }}>{loading ? '…' : fmt(incomeTotal)}</span>
             </div>
 
             <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest pt-3">Expenses</p>
-            {[
-              ['Salaries',    expenses.salaries],
-              ['Utilities',   expenses.utilities],
-              ['Maintenance', expenses.maintenance],
-              ['Supplies',    expenses.supplies],
-              ['Other',       expenses.other],
-            ].map(([k, v]) => (
-              <div key={k} className="flex justify-between py-1 border-b border-white/5">
-                <span className="text-gray-400">{k}</span>
-                <span className="text-white">{fmt(v)}</span>
-              </div>
-            ))}
+            {EXP_CATEGORIES.map(cat => {
+              const val = expenseByCategory[cat] || 0
+              if (!val) return null
+              return (
+                <div key={cat} className="flex justify-between py-1 border-b border-white/5">
+                  <span className="text-gray-400">{cat}</span>
+                  <span className="text-white">{fmt(val)}</span>
+                </div>
+              )
+            })}
+            {!loading && stats.expenses === 0 && (
+              <p className="text-gray-600 text-[10px] py-2 font-montserrat">No expenses recorded yet.</p>
+            )}
             <div className="flex justify-between py-1.5 font-semibold text-white border-b border-red-500/30">
-              <span>Total Expenses</span><span className="text-red-400">{fmt(expenses.total)}</span>
+              <span>Total Expenses</span>
+              <span className="text-red-400">{loading ? '…' : fmt(stats.expenses)}</span>
             </div>
 
             <div className="flex justify-between py-2.5 font-bold text-base rounded-lg px-2 mt-2"
               style={{ backgroundColor: netSurplus >= 0 ? `${TEAL}18` : '#e24b4a18' }}>
               <span className="text-white">Net Surplus</span>
-              <span style={{ color: netSurplus >= 0 ? TEAL : RED }}>{fmt(netSurplus)}</span>
+              <span style={{ color: netSurplus >= 0 ? TEAL : RED }}>{loading ? '…' : fmt(netSurplus)}</span>
             </div>
           </div>
         </div>
@@ -403,37 +419,36 @@ export default function BursarDashboard() {
           <div className="space-y-1 text-xs font-montserrat">
             <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest pt-1">Assets</p>
             {[
-              ['Cash at bank',         assets.cash],
-              ['Fees receivable',      assets.receivables],
-              ['Equipment & assets',   assets.equipment],
+              ['Fees collected (cash)',  assets.cash],
+              ['Fees receivable (owed)', assets.receivables],
             ].map(([k, v]) => (
               <div key={k} className="flex justify-between py-1 border-b border-white/5">
                 <span className="text-gray-400">{k}</span>
-                <span className="text-white">{fmt(v)}</span>
+                <span className="text-white">{loading ? '…' : fmt(v)}</span>
               </div>
             ))}
             <div className="flex justify-between py-1.5 font-semibold text-white border-b border-[#0F6E56]/40">
-              <span>Total Assets</span><span style={{ color: TEAL }}>{fmt(assets.total)}</span>
+              <span>Total Assets</span><span style={{ color: TEAL }}>{loading ? '…' : fmt(assets.total)}</span>
             </div>
 
             <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest pt-3">Liabilities</p>
             {[
-              ['Accounts payable',  liabilities.payables],
-              ['Deferred income',   liabilities.deferred],
+              ['Total expenses',    liabilities.payables],
+              ['Deferred (credit)', liabilities.deferred],
             ].map(([k, v]) => (
               <div key={k} className="flex justify-between py-1 border-b border-white/5">
                 <span className="text-gray-400">{k}</span>
-                <span className="text-white">{fmt(v)}</span>
+                <span className="text-white">{loading ? '…' : fmt(v)}</span>
               </div>
             ))}
             <div className="flex justify-between py-1.5 font-semibold text-white border-b border-red-500/30">
-              <span>Total Liabilities</span><span className="text-red-400">{fmt(liabilities.total)}</span>
+              <span>Total Liabilities</span><span className="text-red-400">{loading ? '…' : fmt(liabilities.total)}</span>
             </div>
 
             <div className="flex justify-between py-2.5 font-bold text-base rounded-lg px-2 mt-2"
-              style={{ backgroundColor: `${NAVY2}18` }}>
+              style={{ backgroundColor: netPosition >= 0 ? `${NAVY2}18` : '#e24b4a18' }}>
               <span className="text-white">Net Position</span>
-              <span style={{ color: NAVY2 }}>{fmt(netPosition)}</span>
+              <span style={{ color: netPosition >= 0 ? NAVY2 : RED }}>{loading ? '…' : fmt(netPosition)}</span>
             </div>
           </div>
         </div>

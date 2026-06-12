@@ -333,6 +333,22 @@ export default function StudentResults() {
                   )
                 })}
               </tbody>
+              {isALevel && (
+                <tfoot>
+                  <tr className="border-t border-white/20 bg-white/3">
+                    <td className="py-3 px-4 text-[10px] font-semibold uppercase tracking-widest text-gray-500 font-montserrat">Total Points</td>
+                    <td />
+                    <td />
+                    <td className="py-3 px-4">
+                      <span className="text-base font-bold font-playfair text-[#C9A84C]">
+                        {termResults.reduce((sum, r) => sum + (gradeEntry(r.mark)?.points ?? 0), 0)}
+                      </span>
+                      <span className="text-gray-500 text-[10px] font-montserrat ml-1">pts</span>
+                    </td>
+                    <td />
+                  </tr>
+                </tfoot>
+              )}
             </table>
           </div>
         ))

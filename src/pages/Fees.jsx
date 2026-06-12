@@ -117,9 +117,15 @@ export default function Fees() {
           setTerm(`${d.currentTerm || 'Term'} · ${d.currentYear || new Date().getFullYear()}`)
         }
 
-        const accSnap = await getDocs(
+        const regNum = stuSnap.data().reg_number
+        let accSnap = await getDocs(
           query(collection(db, 'feeAccounts'), where('studentId', '==', studentId), limit(1))
         )
+        if (accSnap.empty && regNum) {
+          accSnap = await getDocs(
+            query(collection(db, 'feeAccounts'), where('reg_number', '==', regNum), limit(1))
+          )
+        }
         setAccount(accSnap.empty ? null : { id: accSnap.docs[0].id, ...accSnap.docs[0].data() })
       } catch {
         setNotFound(true)

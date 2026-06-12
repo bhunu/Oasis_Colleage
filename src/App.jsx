@@ -169,6 +169,7 @@ export default function App() {
           <Route path="/bursar/collection-report"  element={<BursarProtectedRoute><BursarLayout><CollectionReport /></BursarLayout></BursarProtectedRoute>} />
           <Route path="/bursar/print-reports"      element={<BursarProtectedRoute><BursarLayout><PrintReports /></BursarLayout></BursarProtectedRoute>} />
           <Route path="/bursar/settings"           element={<BursarProtectedRoute><BursarLayout><BursarSettings /></BursarLayout></BursarProtectedRoute>} />
+          <Route path="/bursar/end-of-term"         element={<BursarProtectedRoute><BursarLayout><EndOfTerm /></BursarLayout></BursarProtectedRoute>} />
         </Routes>
       </>
     )
