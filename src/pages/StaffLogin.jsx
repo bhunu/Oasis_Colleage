@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { useState, useEffect } from 'react'
 import {
   FaGraduationCap, FaLaptopCode, FaClipboardList, FaMoneyCheckAlt,
+  FaChalkboardTeacher,
   FaEye, FaEyeSlash, FaLock, FaEnvelope, FaArrowLeft, FaShieldAlt,
 } from 'react-icons/fa'
 import SignUpModal from '../components/SignUpModal'
@@ -58,9 +59,24 @@ const PORTALS = {
     sessionKey: 'bursarSession',
     dashboard: '/bursar/dashboard',
   },
+  'teacher': {
+    label: 'Teacher Portal',
+    icon: FaChalkboardTeacher,
+    description: 'Attendance, timetable & class management',
+    gradient: 'from-[#1a0d33] via-[#1f1040] to-[#0A1628]',
+    accentBg: 'bg-violet-500/15',
+    accentBorder: 'border-violet-400/30',
+    accentText: 'text-violet-300',
+    badgeClass: 'bg-violet-500/20 text-violet-200 border-violet-500/30',
+    orb1: 'bg-violet-500',
+    orb2: 'bg-purple-600',
+    allowedRoles: ['teacher'],
+    sessionKey: 'teacherSession',
+    dashboard: '/teacher/dashboard',
+  },
 }
 
-const ALL_PORTALS = ['web-admin', 'students-records', 'bursar'].map(k => ({ key: k, ...PORTALS[k] }))
+const ALL_PORTALS = ['web-admin', 'students-records', 'bursar', 'teacher'].map(k => ({ key: k, ...PORTALS[k] }))
 
 const fadeLeft  = { initial: { opacity: 0, x: -40 }, animate: { opacity: 1, x: 0 } }
 const fadeRight = { initial: { opacity: 0, x:  40 }, animate: { opacity: 1, x: 0 } }

@@ -4,6 +4,14 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Toaster } from 'react-hot-toast'
 import Preloader from './components/Preloader'
 import Navbar from './components/Navbar'
+// Teacher portal imports
+import TeacherProtectedRoute from './components/auth/TeacherProtectedRoute'
+import TeacherLayout         from './pages/teacher/TeacherLayout'
+import TeacherDashboard      from './pages/teacher/TeacherDashboard'
+import TeacherTimetable      from './pages/teacher/TeacherTimetable'
+import TeacherAttendance     from './pages/teacher/TeacherAttendance'
+import TeacherAnnouncements  from './pages/teacher/TeacherAnnouncements'
+import TeacherPerformance    from './pages/teacher/TeacherPerformance'
 // Bursar imports
 import BursarProtectedRoute from './components/auth/BursarProtectedRoute'
 import BursarLayout         from './components/bursar/BursarLayout'
@@ -20,6 +28,7 @@ import BalanceSheet         from './pages/bursar/BalanceSheet'
 import CollectionReport     from './pages/bursar/CollectionReport'
 import PrintReports         from './pages/bursar/PrintReports'
 import BursarSettings       from './pages/bursar/BursarSettings'
+import ReviewPOP            from './pages/bursar/ReviewPOP'
 // Student portal imports
 import { StudentProvider }  from './context/StudentContext'
 import StudentProtectedRoute, { StudentAuthRoute, BoarderRoute } from './components/auth/StudentProtectedRoute'
@@ -29,6 +38,7 @@ import StudentResults       from './pages/student/StudentResults'
 import StudentFees          from './pages/student/StudentFees'
 import StudentProfile       from './pages/student/StudentProfile'
 import StudentUploadPOP     from './pages/student/StudentUploadPOP'
+import StudentNotifications from './pages/student/StudentNotifications'
 import SetupPassword        from './pages/student/SetupPassword'
 // Web-admin pages
 import StudentOTPManager    from './pages/webadmin/StudentOTPManager'
@@ -59,7 +69,6 @@ import Dashboard from './pages/Dashboard'
 import Enrol from './pages/Enrol'
 import Students from './pages/Students'
 import Registration from './pages/Registration'
-import Coursework from './pages/Coursework'
 import Exams from './pages/Exams'
 import Reports from './pages/Reports'
 import Fees from './pages/Fees'
@@ -80,6 +89,7 @@ import MyExeatApplications       from './pages/student/MyExeatApplications'
 import TransferRequestForm        from './pages/student/TransferRequestForm'
 import ClearanceApplicationForm   from './pages/student/ClearanceApplicationForm'
 import MyClearanceStatus          from './pages/student/MyClearanceStatus'
+import StudentTimetable           from './pages/student/StudentTimetable'
 import ClearanceManagementPage    from './pages/ClearanceManagementPage'
 import VerifyClearancePage        from './pages/VerifyClearancePage'
 import VerifyBalancePage          from './pages/VerifyBalancePage'
@@ -106,7 +116,6 @@ export default function App() {
                      location.pathname.startsWith('/enrol') ||
                      location.pathname.startsWith('/students') ||
                      location.pathname.startsWith('/registration') ||
-                     location.pathname.startsWith('/coursework') ||
                      location.pathname.startsWith('/exams') ||
                      location.pathname.startsWith('/reports') ||
                      location.pathname.startsWith('/fees') ||
@@ -126,6 +135,7 @@ export default function App() {
                      location.pathname.startsWith('/prize-giving')
   const isLogin   = location.pathname === '/login' || location.pathname === '/staff-login'
   const isBursar  = location.pathname.startsWith('/bursar')
+  const isTeacher = location.pathname.startsWith('/teacher')
   const isStudent = location.pathname.startsWith('/student/')
 
   if (loading) return <Preloader onDone={() => setLoading(false)} />
@@ -146,8 +156,30 @@ export default function App() {
           <Route path="/student/transfer"              element={<StudentProtectedRoute><StudentLayout><TransferRequestForm /></StudentLayout></StudentProtectedRoute>} />
           <Route path="/student/clearance/apply"       element={<StudentProtectedRoute><StudentLayout><ClearanceApplicationForm /></StudentLayout></StudentProtectedRoute>} />
           <Route path="/student/clearance/status"      element={<StudentProtectedRoute><StudentLayout><MyClearanceStatus /></StudentLayout></StudentProtectedRoute>} />
+          <Route path="/student/notifications"         element={<StudentProtectedRoute><StudentLayout><StudentNotifications /></StudentLayout></StudentProtectedRoute>} />
+          <Route path="/student/timetable"             element={<StudentProtectedRoute><StudentLayout><StudentTimetable /></StudentLayout></StudentProtectedRoute>} />
         </Routes>
       </StudentProvider>
+    )
+  }
+
+  if (isTeacher) {
+    return (
+      <>
+        <Toaster position="top-right" />
+        <TeacherProtectedRoute>
+          <Routes location={location} key={location.pathname}>
+            <Route path="/teacher" element={<TeacherLayout />}>
+              <Route index                   element={<TeacherDashboard />} />
+              <Route path="dashboard"        element={<TeacherDashboard />} />
+              <Route path="timetable"        element={<TeacherTimetable />} />
+              <Route path="attendance"       element={<TeacherAttendance />} />
+              <Route path="announcements"    element={<TeacherAnnouncements />} />
+              <Route path="performance"      element={<TeacherPerformance />} />
+            </Route>
+          </Routes>
+        </TeacherProtectedRoute>
+      </>
     )
   }
 
@@ -169,6 +201,7 @@ export default function App() {
           <Route path="/bursar/collection-report"  element={<BursarProtectedRoute><BursarLayout><CollectionReport /></BursarLayout></BursarProtectedRoute>} />
           <Route path="/bursar/print-reports"      element={<BursarProtectedRoute><BursarLayout><PrintReports /></BursarLayout></BursarProtectedRoute>} />
           <Route path="/bursar/settings"           element={<BursarProtectedRoute><BursarLayout><BursarSettings /></BursarLayout></BursarProtectedRoute>} />
+          <Route path="/bursar/review-pop"         element={<BursarProtectedRoute><BursarLayout><ReviewPOP /></BursarLayout></BursarProtectedRoute>} />
           <Route path="/bursar/end-of-term"         element={<BursarProtectedRoute><BursarLayout><EndOfTerm /></BursarLayout></BursarProtectedRoute>} />
         </Routes>
       </>
@@ -202,9 +235,6 @@ export default function App() {
           }/>
           <Route path="/registration" element={
             <ProtectedRoute><Layout><Registration /></Layout></ProtectedRoute>
-          }/>
-          <Route path="/coursework" element={
-            <ProtectedRoute><Layout><Coursework /></Layout></ProtectedRoute>
           }/>
           <Route path="/exams" element={
             <ProtectedRoute><Layout><Exams /></Layout></ProtectedRoute>

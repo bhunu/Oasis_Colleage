@@ -1,12 +1,14 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
+import { collection, query, where, onSnapshot } from 'firebase/firestore'
+import { db } from '../../firebase/config'
 import { useStudent } from '../../context/StudentContext'
 import useStudentSessionTimeout from '../../hooks/useStudentSessionTimeout'
 import useStudentSessionGuard, { endStudentSession } from '../../hooks/useStudentSessionGuard'
 import {
   MdDashboard, MdBarChart, MdReceipt, MdCloudUpload,
   MdPerson, MdLogout, MdMenu, MdClose, MdNotifications,
-  MdSchool, MdExitToApp, MdSwapHoriz, MdVerifiedUser,
+  MdSchool, MdExitToApp, MdSwapHoriz, MdVerifiedUser, MdCalendarToday,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
@@ -15,12 +17,14 @@ const GOLD = '#C9A84C'
 const GATED_EXIT_TYPES = ['OLevelCompletion', 'ALevelCompletion', 'Transfer']
 
 const BASE_NAV = [
-  { to: '/student/dashboard',             icon: MdDashboard,   label: 'Dashboard'      },
-  { to: '/student/results',               icon: MdBarChart,    label: 'My Results'     },
-  { to: '/student/fees',                  icon: MdReceipt,     label: 'My Fees'        },
-  { to: '/student/upload-pop',            icon: MdCloudUpload, label: 'Upload Payment' },
-  { to: '/student/exeat/my-applications', icon: MdExitToApp,   label: 'Exit Pass',     boarderOnly: true },
-  { to: '/student/profile',               icon: MdPerson,      label: 'My Profile'     },
+  { to: '/student/dashboard',             icon: MdDashboard,      label: 'Dashboard'       },
+  { to: '/student/results',               icon: MdBarChart,       label: 'My Results'      },
+  { to: '/student/fees',                  icon: MdReceipt,        label: 'My Fees'         },
+  { to: '/student/timetable',             icon: MdCalendarToday,  label: 'Timetable'       },
+  { to: '/student/upload-pop',            icon: MdCloudUpload,    label: 'Upload Payment'  },
+  { to: '/student/notifications',         icon: MdNotifications,  label: 'Notifications', notifBadge: true },
+  { to: '/student/exeat/my-applications', icon: MdExitToApp,      label: 'Exit Pass',      boarderOnly: true },
+  { to: '/student/profile',               icon: MdPerson,         label: 'My Profile'      },
 ]
 
 export default function StudentLayout({ children }) {
@@ -28,6 +32,17 @@ export default function StudentLayout({ children }) {
   const navigate  = useNavigate()
   const { studentData, logout, isBoarder, firestoreStudent } = useStudent()
   const [open, setOpen] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  useEffect(() => {
+    if (!studentData?.regNumber) return
+    const unsub = onSnapshot(
+      query(collection(db, 'notifications'), where('forStudent', '==', studentData.regNumber), where('read', '==', false)),
+      snap => setUnreadCount(snap.size),
+      () => {}
+    )
+    return unsub
+  }, [studentData?.regNumber])
 
   const exitType    = firestoreStudent?.exitType
   const status      = firestoreStudent?.status
@@ -93,7 +108,7 @@ export default function StudentLayout({ children }) {
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4">
-          {NAV.filter(item => !item.boarderOnly || isBoarder).map(({ to, icon: Icon, label }) => (
+          {NAV.filter(item => !item.boarderOnly || isBoarder).map(({ to, icon: Icon, label, notifBadge }) => (
             <NavLink
               key={to}
               to={to}
@@ -109,7 +124,14 @@ export default function StudentLayout({ children }) {
             >
               {({ isActive }) => (
                 <>
-                  <Icon className={`text-lg shrink-0 ${isActive ? 'text-[#C9A84C]' : 'text-gray-500'}`} />
+                  <div className="relative shrink-0">
+                    <Icon className={`text-lg ${isActive ? 'text-[#C9A84C]' : 'text-gray-500'}`} />
+                    {notifBadge && unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-[#C9A84C] text-[#0A1628] text-[8px] font-bold rounded-full flex items-center justify-center leading-none">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
+                  </div>
                   <span className="text-xs">{label}</span>
                 </>
               )}
@@ -145,8 +167,13 @@ export default function StudentLayout({ children }) {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <button className="relative p-2 hover:bg-white/10 rounded-lg transition">
+            <button onClick={() => navigate('/student/notifications')} className="relative p-2 hover:bg-white/10 rounded-lg transition">
               <MdNotifications size={20} className="text-gray-400" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 w-4 h-4 bg-[#C9A84C] text-[#0A1628] text-[9px] font-bold rounded-full flex items-center justify-center leading-none">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
             </button>
             <div className="w-9 h-9 bg-[#C9A84C] rounded-full flex items-center justify-center shrink-0">
               <span className="text-[#0A1628] font-bold text-sm font-montserrat">{initials}</span>

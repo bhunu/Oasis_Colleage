@@ -11,16 +11,22 @@ import AdminUsers         from '../../pages/admin/Users'
 import StudentOTPManager  from '../../pages/webadmin/StudentOTPManager'
 import PortalSettings     from '../../pages/webadmin/PortalSettings'
 import SecurityLogs       from '../../pages/webadmin/SecurityLogs'
+import FinancialLogs      from '../../pages/webadmin/FinancialLogs'
+import TeacherAccounts    from '../../pages/admin/TeacherAccounts'
+import AdminTimetable     from '../../pages/admin/Timetable'
 const TITLES = {
-  '/admin':                  'Dashboard',
-  '/admin/news':             'News & Announcements',
-  '/admin/events':           'Events Calendar',
-  '/admin/staff':            'Staff Directory',
-  '/admin/gallery':          'Photo Gallery',
-  '/admin/users':            'User Management',
-  '/admin/student-otp':      'Student OTP Manager',
-  '/admin/portal-settings':  'Portal Settings',
-  '/admin/security-logs':    'Security Logs',
+  '/admin':                    'Dashboard',
+  '/admin/news':               'News & Announcements',
+  '/admin/events':             'Events Calendar',
+  '/admin/staff':              'Staff Directory',
+  '/admin/gallery':            'Photo Gallery',
+  '/admin/users':              'User Management',
+  '/admin/student-otp':        'Student OTP Manager',
+  '/admin/portal-settings':    'Portal Settings',
+  '/admin/security-logs':      'Security Logs',
+  '/admin/financial-logs':     'Financial Audit Logs',
+  '/admin/teacher-accounts':   'Teacher Accounts',
+  '/admin/timetable':          'Class Timetables',
 }
 
 export default function AdminLayout() {
@@ -45,7 +51,10 @@ export default function AdminLayout() {
             <Route path="/admin/users"            element={<AdminUsers />} />
             <Route path="/admin/student-otp"      element={<StudentOTPManager />} />
             <Route path="/admin/portal-settings"  element={<PortalSettings />} />
-            <Route path="/admin/security-logs"       element={<SecurityLogs />} />
+            <Route path="/admin/security-logs"    element={<SecurityLogs />} />
+            <Route path="/admin/financial-logs"   element={<FinancialLogs />} />
+            <Route path="/admin/teacher-accounts" element={<TeacherAccounts />} />
+            <Route path="/admin/timetable"        element={<AdminTimetable />} />
             <Route path="*"                        element={<Navigate to="/admin" replace />} />
           </Routes>
         </main>

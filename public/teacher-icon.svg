@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="256" fill="#1a0d33"/>
+  <!-- Shield / badge shape -->
+  <path d="M256 80 L400 160 L400 320 Q400 432 256 464 Q112 432 112 320 L112 160 Z" fill="none" stroke="#7C3AED" stroke-width="20"/>
+  <!-- Inner accent line -->
+  <path d="M256 110 L372 178 L372 316 Q372 412 256 440 Q140 412 140 316 L140 178 Z" fill="none" stroke="#a78bfa" stroke-width="6" opacity="0.4"/>
+  <!-- Chalkboard teacher icon (simplified) -->
+  <!-- Graduation cap -->
+  <polygon points="256,170 320,205 256,240 192,205" fill="#7C3AED"/>
+  <rect x="300" y="208" width="10" height="40" fill="#7C3AED" rx="3"/>
+  <circle cx="305" cy="252" r="8" fill="#a78bfa"/>
+  <!-- Person body -->
+  <circle cx="256" cy="285" r="22" fill="#7C3AED"/>
+  <path d="M210 370 Q210 330 256 330 Q302 330 302 370" fill="#7C3AED"/>
+  <!-- OC text -->
+  <text x="256" y="420" font-family="Georgia,serif" font-size="28" font-weight="bold" fill="#C9A84C" text-anchor="middle" letter-spacing="2">TEACHER</text>
+</svg>

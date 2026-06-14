@@ -1,9 +1,10 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   MdDashboard, MdArticle, MdEvent, MdPeople, MdPhotoLibrary,
-  MdLogout, MdManageAccounts, MdKey, MdTune, MdSecurity,
+  MdLogout, MdManageAccounts, MdKey, MdTune, MdSecurity, MdReceiptLong,
+  MdCalendarToday,
 } from 'react-icons/md'
-import { FaGraduationCap } from 'react-icons/fa'
+import { FaGraduationCap, FaChalkboardTeacher } from 'react-icons/fa'
 import { useEffect, useState } from 'react'
 import { collection, getDocs, query, where } from 'firebase/firestore'
 import { db } from '../../firebase/config'
@@ -118,6 +119,20 @@ export default function AdminSidebar({ open, onClose }) {
             />
           ))}
 
+          <SectionLabel>Teaching</SectionLabel>
+          <SidebarLink
+            to="/admin/teacher-accounts"
+            icon={FaChalkboardTeacher}
+            label="Teacher Accounts"
+            onClose={onClose}
+          />
+          <SidebarLink
+            to="/admin/timetable"
+            icon={MdCalendarToday}
+            label="Timetables"
+            onClose={onClose}
+          />
+
           <SectionLabel>Student Access</SectionLabel>
           <SidebarLink
             to="/admin/student-otp"
@@ -140,6 +155,12 @@ export default function AdminSidebar({ open, onClose }) {
             to="/admin/security-logs"
             icon={MdSecurity}
             label="Security Logs"
+            onClose={onClose}
+          />
+          <SidebarLink
+            to="/admin/financial-logs"
+            icon={MdReceiptLong}
+            label="Financial Logs"
             onClose={onClose}
           />
         </nav>
