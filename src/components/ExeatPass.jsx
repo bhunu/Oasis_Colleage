@@ -31,9 +31,9 @@ function fmtDateTime(d) {
 }
 
 function buildPassage(data) {
-  const { studentName, regNo, class: cls, reason, returnDate } = data
+  const { studentName, reg_number, class: cls, reason, returnDate } = data
   const ret = fmtDate(returnDate)
-  const id  = `${studentName}, Reg No ${regNo}, of ${cls}`
+  const id  = `${studentName}, Reg No ${reg_number}, of ${cls}`
   switch (reason) {
     case 'Weekend Visit':
       return `This is to certify that ${id}, has been granted permission to proceed home for a weekend visit. The student is expected to return by ${ret}. This pass has been issued by the school administration and is valid for the dates stated herein.`
@@ -51,7 +51,7 @@ function buildPassage(data) {
 export default function ExeatPass({ passData, allowPrint = false, onPrint }) {
   const color   = REASON_COLORS[passData?.reason] || '#a855f7'
   const passage = buildPassage(passData)
-  const qrValue = `${passData.passSerial}|${passData.regNo}|${passData.departureDate}|${passData.returnDate}|${passData.reason}`
+  const qrValue = `${passData.passSerial}|${passData.reg_number}|${passData.departureDate}|${passData.returnDate}|${passData.reason}`
 
   return (
     <div className="space-y-4">
@@ -143,7 +143,7 @@ export default function ExeatPass({ passData, allowPrint = false, onPrint }) {
               </div>
               <div>
                 <p className="text-[7px] uppercase tracking-widest text-gray-400 mb-0.5">Registration Number</p>
-                <p className="text-[11px] font-bold text-gray-900 font-mono">{passData.regNo}</p>
+                <p className="text-[11px] font-bold text-gray-900 font-mono">{passData.reg_number}</p>
               </div>
               <div>
                 <p className="text-[7px] uppercase tracking-widest text-gray-400 mb-0.5">Class / Grade</p>

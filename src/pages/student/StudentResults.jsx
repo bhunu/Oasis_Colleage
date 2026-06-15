@@ -4,10 +4,9 @@ import { collection, doc, getDoc, getDocs, query, where, limit } from 'firebase/
 import { db } from '../../firebase/config'
 import { useStudent } from '../../context/StudentContext'
 import { getCurrentTerm } from '../../utils/termHelpers'
+import { SCHOOL_ID } from '../../utils/schoolConfig'
 import { MdLock, MdCloudUpload } from 'react-icons/md'
 import ClearanceRequiredBlock from '../../components/ClearanceRequiredBlock'
-
-const SCHOOL_ID = 'oasis'
 
 function toTermId(term)  { return term.toLowerCase().replace(/\s+/g, '-') }
 function toClassId(cls)  { return (cls || '').toLowerCase().replace(/\s+/g, '-') }
@@ -141,7 +140,7 @@ export default function StudentResults() {
 
   const termFees   = feeAccount?.termFees  || 0
   const totalPaid  = feeAccount?.totalPaid || 0
-  const paidPct    = termFees > 0 ? (totalPaid / termFees) * 100 : 0
+  const paidPct    = termFees > 0 ? Math.round((totalPaid / termFees) * 100) : 0
   const resultUnlocked = paidPct >= threshold
   const amountNeeded   = termFees > 0 ? Math.max(0, (threshold / 100) * termFees - totalPaid) : 0
   const fmt = v => `$${Number(v || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
@@ -240,7 +239,7 @@ export default function StudentResults() {
     return acc
   }, {})
 
-  const isALevel = /^(Lower|Upper)\s*6/i.test(studentData?.class || '')
+  const isALevel = /^(Lower|Upper)\s*6/i.test(firestoreStudent?.class || studentData?.class || '')
   const gradeTable = isALevel
     ? (gradeSettings?.aLevel?.length ? gradeSettings.aLevel : DEFAULT_A_GRADES)
     : (gradeSettings?.oLevel?.length ? gradeSettings.oLevel : DEFAULT_O_GRADES)

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
-  collection, getDocs, query, where, doc,
+  collection, getDocs, getDoc, query, where, doc,
   updateDoc, addDoc, serverTimestamp, orderBy, limit,
 } from 'firebase/firestore'
 import { db } from '../../firebase/config'
@@ -48,6 +48,16 @@ export default function ReceivePayment() {
   const [searching,   setSearching]  = useState(false)
   const [submitting,  setSubmitting] = useState(false)
   const [receiptData, setReceiptData] = useState(null)   // set on success
+  const [currentTerm, setCurrentTerm] = useState('Term 1')
+
+  useEffect(() => {
+    getDoc(doc(db, 'portalSettings', 'main')).then(snap => {
+      if (snap.exists()) {
+        const d = snap.data()
+        if (d.currentTerm) setCurrentTerm(`Term ${d.currentTerm}`)
+      }
+    })
+  }, [])
 
   const today = new Date().toLocaleDateString('en-CA')
   const [form, setForm] = useState({
@@ -123,11 +133,25 @@ export default function ReceivePayment() {
     }
   }
 
+  // Upper-limit guard: only active when termFees is set (> 0) on the account.
+  // $1 tolerance absorbs rounding; anything above that is considered an overpayment.
+  const OVER_TOLERANCE = 1
+  const amountNum   = Number(form.amount) || 0
+  const termFees    = account?.termFees   || 0
+  const outstanding = termFees > 0
+    ? Math.max(0, termFees - (account?.totalPaid || 0))
+    : null   // null → no fee set yet, skip upper-bound check
+  const isOverpay = outstanding !== null && amountNum > outstanding + OVER_TOLERANCE
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!selected) return toast.error('Please select a student')
-    if (!form.amount || isNaN(Number(form.amount)) || Number(form.amount) <= 0)
+    if (!form.amount || isNaN(amountNum) || amountNum <= 0)
       return toast.error('Enter a valid amount')
+    if (isOverpay)
+      return toast.error(
+        `Amount exceeds outstanding balance of ${fmt(outstanding)}. Reduce the amount or verify the account.`
+      )
 
     setSubmitting(true)
     try {
@@ -143,43 +167,67 @@ export default function ReceivePayment() {
         recordedAt:    new Date().toISOString(),
       }
 
+      let totalPaid  = amount
+      let balance    = 0
+      let balanceType = 'nil'
+
       if (account) {
-        const acctRef    = doc(db, 'feeAccounts', account.id)
-        const payments   = [...(account.payments || []), paymentObj]
-        const totalPaid  = payments.reduce((s, p) => s + Number(p.amount), 0)
-        const balance    = Math.abs((account.termFees || 0) - totalPaid)
-        const balanceType = totalPaid >= (account.termFees || 0)
+        const acctRef = doc(db, 'feeAccounts', account.id)
+        const payments = [...(account.payments || []), paymentObj]
+        totalPaid  = payments.reduce((s, p) => s + Number(p.amount), 0)
+        balance    = Math.abs((account.termFees || 0) - totalPaid)
+        balanceType = totalPaid >= (account.termFees || 0)
           ? (totalPaid > (account.termFees || 0) ? 'credit' : 'nil')
           : 'debit'
-        await updateDoc(acctRef, { payments, totalPaid, balance, balanceType })
+        await updateDoc(acctRef, { payments, totalPaid, balance, balanceType, updatedBy: session.name || 'Bursar', updatedAt: serverTimestamp() })
       }
 
       await addDoc(collection(db, 'receipts'), {
         receiptNumber: receiptNum,
         studentId:     selected.id,
         studentName:   selected.fullName || '',
-        regNumber:     selected.reg_number || '',
+        reg_number:    selected.reg_number || '',
         class:         selected.class || '',
         amount,
         paymentMethod: form.method,
         reference,
         notes:         form.notes,
-        term:          'Term 2',
+        term:          currentTerm,
         issuedAt:      serverTimestamp(),
         issuedBy:      session.name || 'Bursar',
+      })
+
+      await addDoc(collection(db, 'financialLogs'), {
+        type:           'PAYMENT_RECEIVED',
+        timestamp:      serverTimestamp(),
+        performedBy:    session.name || 'Bursar',
+        amount,
+        studentId:      selected.id,
+        studentName:    selected.fullName || '',
+        reg_number:     selected.reg_number || '',
+        class:          selected.class || '',
+        paymentMethod:  form.method,
+        reference,
+        receiptNumber:  receiptNum,
+        paymentDate:    form.date,
+        term:           'Term 2',
+        notes:          form.notes,
+        totalPaidAfter: totalPaid,
+        balanceAfter:   balance,
+        balanceType,
       })
 
       // Build receipt data for immediate display
       setReceiptData({
         receiptNumber: receiptNum,
         studentName:   selected.fullName || '',
-        regNumber:     selected.reg_number || '',
+        reg_number:    selected.reg_number || '',
         class:         selected.class || '',
         amount,
         paymentMethod: form.method,
         reference,
         notes:         form.notes,
-        term:          'Term 2',
+        term:          currentTerm,
         issuedAt:      new Date(),
         issuedBy:      session.name || 'Bursar',
       })
@@ -262,7 +310,7 @@ export default function ReceivePayment() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Reg Number</span>
-                  <span className="text-white">{receiptData.regNumber}</span>
+                  <span className="text-white">{receiptData.reg_number}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Class</span>
@@ -309,7 +357,7 @@ export default function ReceivePayment() {
               {/* QR code */}
               <div className="border-t border-white/10 mt-5 pt-5 flex flex-col items-center gap-2">
                 <QRCodeSVG
-                  value={`${window.location.origin}/verify-balance/${receiptData.regNumber}`}
+                  value={`${window.location.origin}/verify-balance/${receiptData.reg_number}`}
                   size={96}
                   bgColor="transparent"
                   fgColor="#000000"
@@ -434,8 +482,13 @@ export default function ReceivePayment() {
               value={form.amount}
               onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
               placeholder="0.00"
-              className={INPUT}
+              className={`${INPUT} ${isOverpay ? 'border-amber-500/60' : ''}`}
             />
+            {isOverpay && (
+              <p className="font-montserrat text-[11px] text-amber-400 mt-1.5">
+                Exceeds outstanding balance of {fmt(outstanding)} — reduce amount or verify account.
+              </p>
+            )}
           </div>
 
           <div>
@@ -507,11 +560,14 @@ export default function ReceivePayment() {
           </button>
           <button
             type="submit"
-            disabled={submitting || !selected}
+            disabled={submitting || !selected || isOverpay}
             className="flex-1 py-3 rounded-xl text-sm font-semibold font-montserrat text-white transition cursor-not-allowed"
-            style={{ backgroundColor: selected ? TEAL : '#374151' }}
+            style={{ backgroundColor: selected && !isOverpay ? TEAL : '#374151' }}
           >
-            {submitting ? 'Saving...' : !selected ? 'Select a student first' : 'Confirm & Issue Receipt'}
+            {submitting     ? 'Saving...'
+             : !selected    ? 'Select a student first'
+             : isOverpay    ? 'Amount exceeds balance'
+             :                'Confirm & Issue Receipt'}
           </button>
         </div>
       </form>

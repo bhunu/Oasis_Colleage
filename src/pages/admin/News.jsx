@@ -28,6 +28,7 @@ export default function AdminNews() {
   const [form, setForm]         = useState(BLANK)
   const [imageFile, setImageFile] = useState(null)
   const [imagePreview, setImagePreview] = useState('')
+  const [confirmingDelete, setConfirmingDelete] = useState(null)
   const fileRef = useRef(null)
 
   const load = () => getNews().then(setItems).finally(() => setLoading(false))
@@ -87,7 +88,8 @@ export default function AdminNews() {
   }
 
   const handleDelete = async (id, imagePath) => {
-    if (!confirm('Delete this article?')) return
+    if (confirmingDelete !== id) { setConfirmingDelete(id); return }
+    setConfirmingDelete(null)
     try { await deleteNews(id, imagePath); toast.success('Article deleted'); setItems(p => p.filter(i => i.id !== id)) }
     catch { toast.error('Failed to delete') }
   }
@@ -138,7 +140,14 @@ export default function AdminNews() {
               {/* Actions */}
               <div className="flex items-center gap-1 shrink-0">
                 <button onClick={() => openEdit(item)} className="p-2 rounded-lg text-gray-500 hover:bg-white/5 hover:text-[#C9A84C] transition"><MdEdit /></button>
-                <button onClick={() => handleDelete(item.id, item.imagePath)} className="p-2 rounded-lg text-gray-500 hover:bg-red-900/30 hover:text-red-400 transition"><MdDelete /></button>
+                {confirmingDelete === item.id ? (
+                  <>
+                    <button onClick={() => handleDelete(item.id, item.imagePath)} className="p-2 rounded-lg text-red-400 hover:bg-red-900/30 transition text-xs font-montserrat font-semibold">Delete?</button>
+                    <button onClick={() => setConfirmingDelete(null)} className="p-2 rounded-lg text-gray-500 hover:bg-white/5 transition text-xs font-montserrat">Cancel</button>
+                  </>
+                ) : (
+                  <button onClick={() => handleDelete(item.id, item.imagePath)} className="p-2 rounded-lg text-gray-500 hover:bg-red-900/30 hover:text-red-400 transition"><MdDelete /></button>
+                )}
               </div>
             </div>
           ))}

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { FaLock, FaEye, FaEyeSlash, FaGraduationCap, FaShieldAlt } from 'react-icons/fa'
-import { updateDoc, getDocs, collection, query, where, limit, serverTimestamp } from 'firebase/firestore'
+import { updateDoc, getDoc, getDocs, collection, query, where, limit, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import { hashPassword } from '../../utils/hash'
 import { useNavigate } from 'react-router-dom'
@@ -28,7 +28,17 @@ export default function SetPasswordModal({ regNum, otpDoc, onClose }) {
 
     setSaving(true)
     try {
-      const hashed = hashPassword(password)
+      // Re-read the OTP doc on submit — the modal may have been open for a while
+      const fresh = await getDoc(otpDoc.ref)
+      if (!fresh.exists()) throw new Error('OTP session not found. Please log in again.')
+      const otpData = fresh.data()
+      if (otpData.otpUsed) throw new Error('This OTP has already been used. Please request a new one from your admin.')
+      const expires = otpData.otpExpiresAt?.toDate
+        ? otpData.otpExpiresAt.toDate()
+        : otpData.otpExpiresAt ? new Date(otpData.otpExpiresAt) : null
+      if (!expires || new Date() > expires) throw new Error('Your OTP has expired. Please ask your admin to generate a new one.')
+
+      const hashed = await hashPassword(password)
 
       // Fetch student profile to enrich the user record
       const studentSnap = await getDocs(

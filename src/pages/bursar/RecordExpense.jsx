@@ -44,10 +44,11 @@ export default function RecordExpense() {
         await uploadBytes(storageRef, file)
         receiptImageUrl = await getDownloadURL(storageRef)
       }
+      const expenseAmount = Number(form.amount)
       await addDoc(collection(db, 'expenses'), {
         description:   form.description,
         category:      form.category,
-        amount:        Number(form.amount),
+        amount:        expenseAmount,
         date:          form.date,
         paymentMethod: form.paymentMethod,
         reference:     form.reference,
@@ -57,6 +58,22 @@ export default function RecordExpense() {
         recordedAt:    serverTimestamp(),
         recordedBy:    session.name || 'Bursar',
       })
+
+      await addDoc(collection(db, 'financialLogs'), {
+        type:          'EXPENSE_RECORDED',
+        timestamp:     serverTimestamp(),
+        performedBy:   session.name || 'Bursar',
+        amount:        expenseAmount,
+        description:   form.description,
+        category:      form.category,
+        paymentMethod: form.paymentMethod,
+        reference:     form.reference,
+        date:          form.date,
+        term:          'Term 2',
+        notes:         form.notes,
+        hasReceipt:    !!file,
+      })
+
       toast.success('Expense recorded')
       navigate('/bursar/budget')
     } catch (err) {

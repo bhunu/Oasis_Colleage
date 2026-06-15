@@ -38,7 +38,7 @@ export default function IssueReceipt() {
       const [byNum, byName, byReg] = await Promise.all([
         getDocs(query(collection(db, 'receipts'), where('receiptNumber', '==', term.toUpperCase()), limit(5))),
         getDocs(query(collection(db, 'receipts'), where('studentName', '>=', term), where('studentName', '<=', term + ''), limit(10))),
-        getDocs(query(collection(db, 'receipts'), where('regNumber', '==', regTerm), limit(10))),
+        getDocs(query(collection(db, 'receipts'), where('reg_number', '==', regTerm), limit(10))),
       ])
       const merged = new Map()
       ;[...byNum.docs, ...byName.docs, ...byReg.docs].forEach(d => merged.set(d.id, { id: d.id, ...d.data() }))
@@ -142,7 +142,7 @@ export default function IssueReceipt() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Reg Number</span>
-                  <span className="text-white">{receipt.regNumber || receipt.studentId}</span>
+                  <span className="text-white">{receipt.reg_number || receipt.studentId}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Class</span>

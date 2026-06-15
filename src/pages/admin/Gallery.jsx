@@ -14,6 +14,7 @@ export default function AdminGallery() {
   const [category, setCategory] = useState('general')
   const [caption, setCaption]   = useState('')
   const [filter, setFilter]     = useState('All')
+  const [confirmingDelete, setConfirmingDelete] = useState(null)
 
   const load = () => getGallery().then(setItems).finally(() => setLoading(false))
   useEffect(() => { load() }, [])
@@ -41,7 +42,8 @@ export default function AdminGallery() {
   })
 
   const handleDelete = async (item) => {
-    if (!confirm('Delete this photo?')) return
+    if (confirmingDelete !== item.id) { setConfirmingDelete(item.id); return }
+    setConfirmingDelete(null)
     try { await deletePhoto(item.id, item.path); toast.success('Photo deleted'); setItems(p => p.filter(i => i.id !== item.id)) }
     catch { toast.error('Failed to delete') }
   }
@@ -129,9 +131,26 @@ export default function AdminGallery() {
               <img src={item.url} alt={item.name} className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-[#0A1628]/70 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
                 <p className="text-[#C9A84C] text-[10px] font-medium font-montserrat px-2 text-center leading-tight">{CAT_LABEL[item.category] ?? item.category}</p>
-                <button onClick={() => handleDelete(item)} className="p-2 bg-red-900/80 hover:bg-red-700 rounded-full transition">
-                  <MdDelete className="text-white text-sm" />
-                </button>
+                {confirmingDelete === item.id ? (
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => handleDelete(item)}
+                      className="px-2 py-1 bg-red-600 hover:bg-red-500 rounded-lg text-white text-[10px] font-montserrat font-semibold transition"
+                    >
+                      Delete
+                    </button>
+                    <button
+                      onClick={() => setConfirmingDelete(null)}
+                      className="px-2 py-1 bg-white/10 hover:bg-white/20 rounded-lg text-white text-[10px] font-montserrat transition"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button onClick={() => handleDelete(item)} className="p-2 bg-red-900/80 hover:bg-red-700 rounded-full transition">
+                    <MdDelete className="text-white text-sm" />
+                  </button>
+                )}
               </div>
             </div>
           ))}

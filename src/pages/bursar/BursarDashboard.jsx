@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
@@ -30,19 +30,8 @@ const PURP  = '#7F77DD'
 const PINK  = '#D4537E'
 const NAVY2 = '#378ADD'
 
-/* ── placeholder data (charts not yet wired to live data) ── */
-const expenseData = [
-  { name: 'Salaries',     value: 42, color: BLUE  },
-  { name: 'Utilities',    value: 14, color: GOLD  },
-  { name: 'Maintenance',  value: 18, color: TEAL  },
-  { name: 'Supplies',     value: 12, color: PURP  },
-  { name: 'Other',        value: 14, color: PINK  },
-]
-const trendData = [
-  { term: 'Term 1', income: 48000, expenses: 31000, surplus: 17000 },
-  { term: 'Term 2', income: 55000, expenses: 34000, surplus: 21000 },
-  { term: 'Term 3', income: 41000, expenses: 29000, surplus: 12000 },
-]
+const EXP_PIE_CATS = ['Salaries', 'Utilities', 'Maintenance', 'Supplies & Stationery', 'Transport', 'Events', 'Other']
+const PIE_COLORS   = [BLUE, GOLD, TEAL, PURP, PINK, RED, '#9ca3af']
 
 const CARD  = 'bg-[#0D1C35] border border-white/10 rounded-xl p-6'
 const HEAD  = 'font-semibold text-white font-playfair'
@@ -71,11 +60,12 @@ export default function BursarDashboard() {
   const { termStartDate, termEndDate } = useTermDates()
   const [stats, setStats] = useState({ collected: 0, arrears: 0, expenses: 0, surplus: 0, feesPaidFull: 0, creditTotal: 0 })
   const [expenseByCategory, setExpenseByCategory] = useState({})
+  const [expByTerm, setExpByTerm] = useState({})
+  const [incByTerm, setIncByTerm] = useState({})
   const [receipts, setReceipts] = useState([])
   const [topArrears, setTopArrears] = useState([])
   const [methodData, setMethodData] = useState([])
   const [collectionChartData, setCollectionChartData] = useState([])
-  const [term, setTerm] = useState('Term 2 2025')
   const [loading, setLoading] = useState(true)
 
   /* income statement — live from Firestore */
@@ -122,17 +112,20 @@ export default function BursarDashboard() {
       .catch(() => {})
       .finally(done)
 
-    /* expenses — total + grouped by category */
+    /* expenses — total + grouped by category + grouped by term */
     getDocs(collection(db, 'expenses'))
       .then(snap => {
         let expTotal = 0
         const byCategory = {}
+        const byTerm = {}
         snap.forEach(d => {
-          const { category = 'Other', amount = 0 } = d.data()
+          const { category = 'Other', amount = 0, term: expTerm = '' } = d.data()
           expTotal += Number(amount)
           byCategory[category] = (byCategory[category] || 0) + Number(amount)
+          if (expTerm) byTerm[expTerm] = (byTerm[expTerm] || 0) + Number(amount)
         })
         setExpenseByCategory(byCategory)
+        setExpByTerm(byTerm)
         setStats(prev => ({ ...prev, expenses: expTotal, surplus: prev.collected - expTotal }))
       })
       .catch(() => {})
@@ -164,13 +157,37 @@ export default function BursarDashboard() {
         const sorted = Object.values(monthMap)
           .sort((a, b) => MONTH_ORDER.indexOf(a.month) - MONTH_ORDER.indexOf(b.month))
         setMethodData(sorted)
-        setCollectionChartData(sorted)  // arrears injected below after feeAccounts loads
+        setCollectionChartData(sorted)
+
+        const termMap = {}
+        all.forEach(r => {
+          const t = r.term || ''
+          if (t) termMap[t] = (termMap[t] || 0) + Number(r.amount || 0)
+        })
+        setIncByTerm(termMap)
       })
       .catch(() => {})
       .finally(done)
   }, [])
 
   const fmt = v => `$${Number(v).toLocaleString()}`
+
+  const expensePieData = useMemo(() =>
+    EXP_PIE_CATS
+      .map((name, i) => ({ name, value: expenseByCategory[name] || 0, color: PIE_COLORS[i] }))
+      .filter(d => d.value > 0),
+    [expenseByCategory]
+  )
+
+  const liveTrendData = useMemo(() => {
+    const terms = new Set([...Object.keys(incByTerm), ...Object.keys(expByTerm)])
+    return [...terms].filter(Boolean).sort().map(t => ({
+      term:     t,
+      income:   incByTerm[t]  || 0,
+      expenses: expByTerm[t]  || 0,
+      surplus:  (incByTerm[t] || 0) - (expByTerm[t] || 0),
+    }))
+  }, [incByTerm, expByTerm])
 
   const QUICK = [
     { label: 'Receive payment',  sub: 'Record incoming fees',  path: '/bursar/receive-payment' },
@@ -277,46 +294,60 @@ export default function BursarDashboard() {
           )}
         </div>
 
-        {/* Chart 2 – Expense breakdown */}
+        {/* Chart 2 – Expense breakdown (live from Firestore) */}
         <div className={CARD}>
           <h3 className={`${HEAD} mb-4`}>Expense Breakdown</h3>
-          <ResponsiveContainer width="100%" height={200}>
-            <PieChart>
-              <Pie data={expenseData} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={2} dataKey="value">
-                {expenseData.map((e, i) => <Cell key={i} fill={e.color} />)}
-              </Pie>
-              <Tooltip {...TIP} formatter={(v) => `${v}%`} />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="mt-2 grid grid-cols-2 gap-1.5">
-            {expenseData.map((item, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: item.color }} />
-                <span className="text-xs text-gray-400 font-montserrat">{item.name}: <span className="text-white">{item.value}%</span></span>
+          {expensePieData.length === 0 ? (
+            <div className="flex items-center justify-center h-[260px]">
+              <p className="text-sm text-gray-500 font-montserrat">{loading ? 'Loading…' : 'No expenses recorded yet.'}</p>
+            </div>
+          ) : (
+            <>
+              <ResponsiveContainer width="100%" height={200}>
+                <PieChart>
+                  <Pie data={expensePieData} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={2} dataKey="value">
+                    {expensePieData.map((e, i) => <Cell key={i} fill={e.color} />)}
+                  </Pie>
+                  <Tooltip {...TIP} formatter={v => fmt(v)} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="mt-2 grid grid-cols-2 gap-1.5">
+                {expensePieData.map((item, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: item.color }} />
+                    <span className="text-xs text-gray-400 font-montserrat">{item.name}: <span className="text-white">{fmt(item.value)}</span></span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </>
+          )}
         </div>
       </div>
 
       {/* ── Chart row 2: income vs expense trend + payment methods ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-        {/* Chart 3 – Income vs expenses trend */}
+        {/* Chart 3 – Income vs expenses trend (live from Firestore) */}
         <div className={CARD}>
           <h3 className={`${HEAD} mb-4`}>Income vs Expenses Trend</h3>
-          <ResponsiveContainer width="100%" height={260}>
-            <LineChart data={trendData}>
-              <CartesianGrid {...GRID} />
-              <XAxis dataKey="term" tick={TICK} axisLine={AXLINE} tickLine={false} />
-              <YAxis tick={TICK} axisLine={AXLINE} tickLine={false} />
-              <Tooltip {...TIP} />
-              <Legend wrapperStyle={{ color: '#9ca3af', fontSize: 11, fontFamily: 'Montserrat' }} />
-              <Line type="monotone" dataKey="income"   name="Income"   stroke={TEAL} strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="expenses" name="Expenses" stroke={RED}  strokeWidth={2} strokeDasharray="5 5" dot={false} />
-              <Line type="monotone" dataKey="surplus"  name="Surplus"  stroke={NAVY2} strokeWidth={2} strokeDasharray="3 3" dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
+          {liveTrendData.length === 0 ? (
+            <div className="flex items-center justify-center h-[260px]">
+              <p className="text-sm text-gray-500 font-montserrat">{loading ? 'Loading…' : 'No multi-term data yet.'}</p>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={260}>
+              <LineChart data={liveTrendData}>
+                <CartesianGrid {...GRID} />
+                <XAxis dataKey="term" tick={TICK} axisLine={AXLINE} tickLine={false} />
+                <YAxis tick={TICK} axisLine={AXLINE} tickLine={false} />
+                <Tooltip {...TIP} formatter={v => fmt(v)} />
+                <Legend wrapperStyle={{ color: '#9ca3af', fontSize: 11, fontFamily: 'Montserrat' }} />
+                <Line type="monotone" dataKey="income"   name="Income"   stroke={TEAL}  strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="expenses" name="Expenses" stroke={RED}   strokeWidth={2} strokeDasharray="5 5" dot={false} />
+                <Line type="monotone" dataKey="surplus"  name="Surplus"  stroke={NAVY2} strokeWidth={2} strokeDasharray="3 3" dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
         </div>
 
         {/* Chart 4 – Collections by payment method (live from receipts) */}
@@ -419,7 +450,7 @@ export default function BursarDashboard() {
           <div className="space-y-1 text-xs font-montserrat">
             <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest pt-1">Assets</p>
             {[
-              ['Fees collected (cash)',  assets.cash],
+              ['Cash in hand',           assets.cash],
               ['Fees receivable (owed)', assets.receivables],
             ].map(([k, v]) => (
               <div key={k} className="flex justify-between py-1 border-b border-white/5">

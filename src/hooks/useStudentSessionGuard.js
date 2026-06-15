@@ -1,8 +1,7 @@
 import { useEffect, useRef } from 'react'
 import {
-  doc, setDoc, deleteDoc, onSnapshot,
-  collection, getDocs, query, orderBy,
-  serverTimestamp,
+  doc, updateDoc, onSnapshot,
+  serverTimestamp, runTransaction, deleteField,
 } from 'firebase/firestore'
 import { useNavigate } from 'react-router-dom'
 import { db } from '../firebase/config'
@@ -12,45 +11,74 @@ import { useStudent } from '../context/StudentContext'
 const MAX_SESSIONS = 2
 const PING_INTERVAL_MS = 60_000
 
-/** Called once at student login to register a new session and enforce the limit. */
+// Single document that holds all active sessions as a map field.
+// Using a named doc avoids collection queries inside transactions.
+function registryRef(uid) {
+  return doc(db, 'users', uid, 'activeSessions', '__sessions__')
+}
+
+/**
+ * Called once at student login.
+ * Atomically enforces MAX_SESSIONS: if the limit is reached the oldest
+ * session is evicted inside the same transaction, so two concurrent logins
+ * can never both sneak past the check.
+ */
 export async function initStudentSession(uid) {
   const sessionId = crypto.randomUUID()
   sessionStorage.setItem('studentSessionId', sessionId)
 
-  const sessRef = collection(db, 'users', uid, 'activeSessions')
+  const ref = registryRef(uid)
+  let evictedId = null
 
-  try {
-    const snap = await getDocs(query(sessRef, orderBy('loginAt', 'asc')))
-    if (snap.size >= MAX_SESSIONS) {
-      await deleteDoc(snap.docs[0].ref)
-      await logSecurityEvent({ uid, action: 'CONCURRENT_SESSION_KILLED' })
+  await runTransaction(db, async (txn) => {
+    const snap     = await txn.get(ref)
+    const sessions = snap.exists() ? snap.data() : {}
+
+    // Sort existing sessions oldest-first to find the one to evict
+    const sorted = Object.entries(sessions)
+      .map(([id, data]) => ({ id, loginAt: data.loginAt?.toMillis?.() ?? 0 }))
+      .sort((a, b) => a.loginAt - b.loginAt)
+
+    const next = { ...sessions }
+
+    if (sorted.length >= MAX_SESSIONS) {
+      evictedId = sorted[0].id
+      delete next[evictedId]
     }
-  } catch {}
 
-  await setDoc(doc(sessRef, sessionId), {
-    sessionId,
-    loginAt:      serverTimestamp(),
-    lastActiveAt: serverTimestamp(),
-    userAgent:    navigator.userAgent,
+    next[sessionId] = {
+      loginAt:      serverTimestamp(),
+      lastActiveAt: serverTimestamp(),
+      userAgent:    navigator.userAgent,
+    }
+
+    txn.set(ref, next)
   })
+
+  if (evictedId) {
+    logSecurityEvent({ uid, action: 'CONCURRENT_SESSION_KILLED' }).catch(() => {})
+  }
 
   return sessionId
 }
 
-/** Called on student logout to clean up the session record. */
+/**
+ * Removes this session from the registry on voluntary logout.
+ * Uses deleteField() so the other sessions in the map are untouched.
+ */
 export async function endStudentSession(uid) {
   const sessionId = sessionStorage.getItem('studentSessionId')
   if (!sessionId || !uid) return
   try {
-    await deleteDoc(doc(db, 'users', uid, 'activeSessions', sessionId))
+    await updateDoc(registryRef(uid), { [sessionId]: deleteField() })
   } catch {}
   sessionStorage.removeItem('studentSessionId')
 }
 
 /**
  * Hook used inside StudentLayout.
- * Watches the active session document and signs the student out if another
- * device deletes it (concurrent session kill).
+ * Watches the sessions registry doc and signs the student out when
+ * their session entry is removed (concurrent session kill).
  */
 export default function useStudentSessionGuard(uid) {
   const navigate = useNavigate()
@@ -63,10 +91,10 @@ export default function useStudentSessionGuard(uid) {
     const sessionId = sessionStorage.getItem('studentSessionId')
     if (!sessionId) return
 
-    const sessionRef = doc(db, 'users', uid, 'activeSessions', sessionId)
+    const ref = registryRef(uid)
 
-    const unsubscribe = onSnapshot(sessionRef, (snap) => {
-      if (!snap.exists()) {
+    const unsubscribe = onSnapshot(ref, (snap) => {
+      if (!snap.exists() || !(sessionId in (snap.data() ?? {}))) {
         logSecurityEvent({ uid, action: 'CONCURRENT_SESSION_KILLED' })
         logout()
         navigate('/login?portal=student-portal', {
@@ -77,7 +105,7 @@ export default function useStudentSessionGuard(uid) {
     }, () => {})
 
     pingRef.current = setInterval(() => {
-      setDoc(sessionRef, { lastActiveAt: serverTimestamp() }, { merge: true }).catch(() => {})
+      updateDoc(ref, { [`${sessionId}.lastActiveAt`]: serverTimestamp() }).catch(() => {})
     }, PING_INTERVAL_MS)
 
     return () => {

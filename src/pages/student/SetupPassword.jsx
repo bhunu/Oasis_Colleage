@@ -39,16 +39,29 @@ export default function SetupPassword() {
       )
       if (snap.empty) throw new Error('Student record not found.')
 
+      const otpData = snap.docs[0].data()
+
+      // Verify OTP has not expired
+      const expires = otpData.otpExpiresAt?.toDate
+        ? otpData.otpExpiresAt.toDate()
+        : otpData.otpExpiresAt ? new Date(otpData.otpExpiresAt) : null
+      if (!expires || new Date() > expires) {
+        setError('Your OTP has expired. Ask your admin to generate a new one.')
+        setSaving(false)
+        return
+      }
+
       await updateDoc(snap.docs[0].ref, {
-        password:         hashPassword(password),
+        password:         await hashPassword(password),
         hasSetupPassword: true,
+        otpUsed:          true,   // invalidate OTP so it cannot be reused
         updatedAt:        serverTimestamp(),
       })
 
       toast.success('Password set! Welcome to the student portal.')
       navigate('/student/dashboard')
-    } catch {
-      setError('Failed to set password. Please try again.')
+    } catch (err) {
+      setError(err.message || 'Failed to set password. Please try again.')
     }
     setSaving(false)
   }

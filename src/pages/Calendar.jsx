@@ -4,10 +4,8 @@ import PageHero from '../components/PageHero'
 import CalendarGrid from '../components/CalendarGrid'
 import EventCard from '../components/EventCard'
 import { CATEGORY_STYLES } from '../constants/categories'
-import AdminPIN from '../components/AdminPIN'
 import Toast from '../components/Toast'
 import { useCalendar } from '../hooks/useCalendar'
-import { usePIN } from '../hooks/usePIN'
 import { FaChevronLeft, FaChevronRight, FaPlus, FaEdit, FaTrash, FaTimes, FaCalendarAlt } from 'react-icons/fa'
 
 const ALL_CATEGORIES = ['academic', 'sports', 'sports-events', 'cultural', 'admin', 'holiday']
@@ -30,7 +28,7 @@ export default function Calendar() {
   const [showAdmin, setShowAdmin] = useState(false)
 
   const { events, addEvent, updateEvent, deleteEvent, getEventsForDate, getUpcomingEvents } = useCalendar()
-  const { unlocked } = usePIN()
+  const unlocked = !!sessionStorage.getItem('adminSession')
 
   const prevMonth = () => { if (month === 0) { setMonth(11); setYear(y => y-1) } else setMonth(m => m-1) }
   const nextMonth = () => { if (month === 11) { setMonth(0); setYear(y => y+1) } else setMonth(m => m+1) }
@@ -121,7 +119,6 @@ export default function Calendar() {
                 )
               })}
             </div>
-            <AdminPIN onUnlocked={() => setShowAdmin(true)} />
           </div>
 
           {/* Admin panel */}

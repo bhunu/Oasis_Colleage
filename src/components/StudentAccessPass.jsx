@@ -10,8 +10,10 @@ const { number: TERM_NUM, year: TERM_YEAR } = getCurrentTerm()
 const TERM_LABEL = `Term ${TERM_NUM}`
 
 function randomStr(n = 4) {
-  const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-  return Array.from({ length: n }, () => c[Math.floor(Math.random() * c.length)]).join('')
+  const c     = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  const bytes = new Uint8Array(n)
+  crypto.getRandomValues(bytes)
+  return Array.from(bytes, b => c[b % c.length]).join('')
 }
 
 function buildSerial(regNo) {

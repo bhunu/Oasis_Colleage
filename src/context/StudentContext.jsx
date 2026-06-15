@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import { doc, onSnapshot, query, collection, where, limit } from 'firebase/firestore'
-import { db } from '../firebase/config'
+import { doc, updateDoc, deleteField, onSnapshot, query, collection, where, limit } from 'firebase/firestore'
+import { signOut } from 'firebase/auth'
+import { db, auth } from '../firebase/config'
 
 const StudentContext = createContext(null)
 export const useStudent = () => useContext(StudentContext)
@@ -11,6 +12,20 @@ const DEFAULT_SETTINGS = {
   resultsAccessThreshold: 75,
   currentTerm: 'Term 2',
   currentYear: '2025',
+}
+
+// Clamp numeric fields to safe ranges so a typo in Firestore cannot break
+// session management (timeout ≤ 0 → instant logout) or lock all students out
+// of results (threshold > 100 → impossible to reach).
+function sanitiseSettings(raw) {
+  const n = (v, fallback) => { const x = Number(v); return isNaN(x) ? fallback : x }
+  return {
+    ...DEFAULT_SETTINGS,
+    ...raw,
+    sessionTimeoutMinutes:  Math.max(1,   Math.min(120, n(raw.sessionTimeoutMinutes,  DEFAULT_SETTINGS.sessionTimeoutMinutes))),
+    otpExpiryHours:         Math.max(1,   Math.min(168, n(raw.otpExpiryHours,         DEFAULT_SETTINGS.otpExpiryHours))),
+    resultsAccessThreshold: Math.max(0,   Math.min(100, n(raw.resultsAccessThreshold, DEFAULT_SETTINGS.resultsAccessThreshold))),
+  }
 }
 
 export function StudentProvider({ children }) {
@@ -24,7 +39,7 @@ export function StudentProvider({ children }) {
   useEffect(() => {
     const unsub = onSnapshot(
       doc(db, 'portalSettings', 'main'),
-      snap => { if (snap.exists()) setPortalSettings({ ...DEFAULT_SETTINGS, ...snap.data() }) },
+      snap => { if (snap.exists()) setPortalSettings(sanitiseSettings(snap.data())) },
       () => {}
     )
     return unsub
@@ -57,7 +72,19 @@ export function StudentProvider({ children }) {
     return unsub
   }, [studentData?.regNumber])
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    try {
+      const sessionId = sessionStorage.getItem('studentSessionId')
+      const raw = sessionStorage.getItem('studentSession')
+      const uid = raw ? JSON.parse(raw)?.uid : null
+      if (uid && sessionId) {
+        await updateDoc(
+          doc(db, 'users', uid, 'activeSessions', '__sessions__'),
+          { [sessionId]: deleteField() }
+        )
+      }
+    } catch {}
+    await signOut(auth).catch(() => {})
     sessionStorage.removeItem('studentSession')
     sessionStorage.removeItem('studentSessionId')
     setStudentData(null)

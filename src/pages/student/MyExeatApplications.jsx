@@ -31,7 +31,7 @@ export default function MyExeatApplications() {
 
   useEffect(() => {
     if (!studentData?.regNumber) return
-    getDocs(query(collection(db, 'exeatApplications'), where('regNo', '==', studentData.regNumber)))
+    getDocs(query(collection(db, 'exeatApplications'), where('reg_number', '==', studentData.regNumber)))
       .then(snap => {
         const sorted = snap.docs
           .map(d => ({ id: d.id, ...d.data() }))

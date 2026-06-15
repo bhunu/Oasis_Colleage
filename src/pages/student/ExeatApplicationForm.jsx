@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
+import { collection, addDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { db, storage } from '../../firebase/config'
 import { useStudent } from '../../context/StudentContext'
@@ -37,10 +37,22 @@ export default function ExeatApplicationForm() {
   const { studentData } = useStudent()
   const { termStartDate, termEndDate } = useTermDates()
 
-  const [form, setForm]           = useState(EMPTY)
-  const [file, setFile]           = useState(null)
+  const [form, setForm]             = useState(EMPTY)
+  const [file, setFile]             = useState(null)
   const [submitting, setSubmitting] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
+  const [submitted, setSubmitted]   = useState(false)
+  const [activeExeat, setActiveExeat] = useState(null)
+
+  useEffect(() => {
+    if (!studentData?.regNumber) return
+    getDocs(query(
+      collection(db, 'exeatApplications'),
+      where('reg_number', '==', studentData.regNumber),
+      where('status', 'in', ['Pending', 'Approved']),
+    ))
+      .then(snap => { if (!snap.empty) setActiveExeat(snap.docs[0].data()) })
+      .catch(() => {})
+  }, [studentData?.regNumber])
 
   const docRequired = DOC_REQUIRED.includes(form.reason)
 
@@ -91,7 +103,7 @@ export default function ExeatApplicationForm() {
       }
 
       await addDoc(collection(db, 'exeatApplications'), {
-        regNo:           studentData.regNumber,
+        reg_number:      studentData.regNumber,
         studentName:     studentData.name,
         class:           studentData.class,
         studentId:       studentData.studentId,
@@ -121,6 +133,30 @@ export default function ExeatApplicationForm() {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  /* ── Blocked: active exeat already exists ── */
+  if (activeExeat) {
+    return (
+      <div className="max-w-md mx-auto text-center space-y-5 py-16">
+        <div className="w-16 h-16 bg-amber-500/15 rounded-full flex items-center justify-center mx-auto">
+          <MdCalendarMonth className="text-amber-400 text-3xl" />
+        </div>
+        <div>
+          <h2 className="font-playfair text-xl font-bold text-white">Active Exeat Already Exists</h2>
+          <p className="font-montserrat text-sm text-gray-400 leading-relaxed mt-2">
+            You already have a <span className="text-amber-300 font-semibold">{activeExeat.status}</span> exeat application
+            ({activeExeat.reason}). You cannot submit a new one until it is resolved.
+          </p>
+        </div>
+        <button
+          onClick={() => navigate('/student/exeat/my-applications')}
+          className="font-montserrat text-xs bg-[#C9A84C] text-[#0A1628] font-bold px-5 py-2.5 rounded-xl"
+        >
+          View My Applications
+        </button>
+      </div>
+    )
   }
 
   /* ── Success screen ── */

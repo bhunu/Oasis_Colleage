@@ -23,19 +23,28 @@ const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov
 
 export default function CollectionReport() {
   const [receipts, setReceipts] = useState([])
+  const [terms,    setTerms]    = useState([])
   const [loading,  setLoading]  = useState(true)
-  const [term,     setTerm]     = useState('Term 2 2025')
+  const [term,     setTerm]     = useState('')
 
   useEffect(() => {
     getDocs(collection(db, 'receipts'))
-      .then(snap => setReceipts(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
+      .then(snap => {
+        const all = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        setReceipts(all)
+        const availTerms = [...new Set(all.map(r => r.term).filter(Boolean))].sort()
+        setTerms(availTerms)
+        if (availTerms.length > 0) setTerm(availTerms[availTerms.length - 1])
+      })
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
 
+  const filtered = term ? receipts.filter(r => r.term === term) : receipts
+
   /* Group by month */
   const byMonth = MONTHS.map(m => {
-    const monthReceipts = receipts.filter(r => {
+    const monthReceipts = filtered.filter(r => {
       if (!r.issuedAt?.toDate) return false
       return r.issuedAt.toDate().toLocaleString('en-US', { month: 'short' }) === m
     })
@@ -46,11 +55,11 @@ export default function CollectionReport() {
     }
   }).filter(m => m.collected > 0)
 
-  const totalCollected = receipts.reduce((s, r) => s + Number(r.amount || 0), 0)
+  const totalCollected = filtered.reduce((s, r) => s + Number(r.amount || 0), 0)
 
   const handleCSV = () => {
     const header = ['Receipt No.', 'Student', 'Class', 'Amount', 'Method', 'Term', 'Date']
-    const rows   = receipts.map(r => [
+    const rows   = filtered.map(r => [
       r.receiptNumber || r.id,
       r.studentName || '',
       r.class || '',
@@ -73,9 +82,8 @@ export default function CollectionReport() {
       <div className="flex gap-3">
         <select value={term} onChange={e => setTerm(e.target.value)}
           className="bg-white/5 border border-white/10 text-gray-300 rounded-xl px-4 py-2.5 text-sm font-montserrat focus:outline-none flex-1">
-          <option>Term 2 2025</option>
-          <option>Term 1 2025</option>
-          <option>Term 3 2024</option>
+          <option value="">All terms</option>
+          {terms.map(t => <option key={t} value={t}>{t}</option>)}
         </select>
         <button onClick={handleCSV}
           className="px-4 py-2.5 rounded-xl text-sm font-semibold font-montserrat text-white transition"
@@ -87,9 +95,9 @@ export default function CollectionReport() {
       {/* Summary */}
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: 'Total Collected', value: fmt(totalCollected), color: TEAL },
-          { label: 'No. Receipts',    value: receipts.length,     color: '#378ADD' },
-          { label: 'Average Payment', value: receipts.length ? fmt(totalCollected / receipts.length) : '$0.00', color: '#EF9F27' },
+          { label: 'Total Collected', value: fmt(totalCollected),    color: TEAL },
+          { label: 'No. Receipts',    value: filtered.length,        color: '#378ADD' },
+          { label: 'Average Payment', value: filtered.length ? fmt(totalCollected / filtered.length) : '$0.00', color: '#EF9F27' },
         ].map(({ label, value, color }) => (
           <div key={label} className="bg-[#0D1C35] border border-white/10 rounded-xl p-5">
             <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest font-montserrat mb-1">{label}</p>
@@ -134,7 +142,7 @@ export default function CollectionReport() {
                 </tr>
               </thead>
               <tbody>
-                {receipts.map(r => (
+                {filtered.map(r => (
                   <tr key={r.id} className="border-b border-white/5">
                     <td className="py-3 px-4 text-sm text-white font-montserrat font-semibold">{r.receiptNumber || r.id.slice(0,8).toUpperCase()}</td>
                     <td className="py-3 px-4 text-sm text-white font-montserrat">{r.studentName || '—'}</td>
@@ -150,7 +158,7 @@ export default function CollectionReport() {
                     <td className={TD}>{r.issuedAt?.toDate ? r.issuedAt.toDate().toLocaleDateString() : '—'}</td>
                   </tr>
                 ))}
-                {receipts.length === 0 && (
+                {filtered.length === 0 && (
                   <tr><td colSpan={6} className="py-8 text-center text-sm text-gray-500 font-montserrat">No receipts found</td></tr>
                 )}
               </tbody>

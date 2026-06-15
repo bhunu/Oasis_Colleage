@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react'
 import { collection, getDocs, doc, getDoc } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import { getCurrentTerm } from '../../utils/termHelpers'
+import { SCHOOL_ID } from '../../utils/schoolConfig'
 import { MdEmojiEvents, MdDownload, MdPrint } from 'react-icons/md'
 import { FaTrophy } from 'react-icons/fa'
 import toast from 'react-hot-toast'
 import { useTermDates, fmtTermDate } from '../../hooks/useTermDates'
 
-const SCHOOL_ID = 'oasis'
 
 const DEFAULT_O_GRADES = [
   { grade: 'A', min: 75, max: 100 },

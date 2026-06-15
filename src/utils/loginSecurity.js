@@ -5,9 +5,9 @@ import { logSecurityEvent } from './logSecurityEvent'
 const MAX_ATTEMPTS    = 3
 const LOCKOUT_MS      = 3 * 60 * 1000    // 3 minutes
 
-/** Deterministic doc ID from identifier + portal */
+/** Deterministic doc ID from identifier + portal — always uppercase so reg numbers like R262681 are canonical */
 function attemptDocId(identifier, portal) {
-  return `${portal}__${identifier.toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 80)}`
+  return `${portal}__${identifier.toUpperCase().replace(/[^A-Z0-9]/g, '_').slice(0, 80)}`
 }
 
 /**

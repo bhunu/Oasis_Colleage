@@ -13,7 +13,7 @@ export async function logSecurityEvent(data) {
       action:     data.action,
       role:       data.role       ?? data.attemptedRole ?? null,
       actualRole: data.actualRole ?? null,
-      url:        window.location.href,
+      url:        window.location.pathname,
       userAgent:  navigator.userAgent,
       timestamp:  serverTimestamp(),
       ...data,

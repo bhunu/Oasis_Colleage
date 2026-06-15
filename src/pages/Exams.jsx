@@ -11,9 +11,9 @@ import {
   MdWarning, MdClose, MdVisibility, MdDownload, MdDelete, MdRefresh,
 } from 'react-icons/md'
 import { FaGraduationCap } from 'react-icons/fa'
+import { SCHOOL_ID } from '../utils/schoolConfig'
 
 // ── Constants ─────────────────────────────────────────────────────────────
-const SCHOOL_ID = 'oasis'
 
 
 const { number, year } = getCurrentTerm()

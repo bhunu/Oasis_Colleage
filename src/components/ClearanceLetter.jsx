@@ -31,7 +31,7 @@ function certBody(data, student) {
   const clearDate = data.issuedAt?.toDate?.()?.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }) || '—'
   const enrolDate = student?.enrolmentDate || student?.enrollmentDate || '—'
   const name    = data.studentName
-  const regNo   = data.regNo
+  const regNo   = data.reg_number
   if (data.exitType === 'OLevelCompletion') {
     return `This is to certify that ${name}, Registration Number ${regNo}, was a registered student at Oasis Private College from ${enrolDate} to ${clearDate}, having successfully completed the Ordinary Level (O Level) programme. This letter serves as confirmation that the above-named student has met all financial obligations to the school, including settlement of all current and arrear fees, and has been duly cleared by the school administration. The school wishes ${p.obj} well in future academic and personal endeavours.`
   }
@@ -122,7 +122,7 @@ function buildPrintHTML({ data, schoolInfo, student, qrSvg, feeAccount }) {
 
     <div class="recipient">To Whom It May Concern,</div>
 
-    <div class="subject">RE: Student Clearance Letter — ${data.studentName} (${data.regNo})</div>
+    <div class="subject">RE: Student Clearance Letter — ${data.studentName} (${data.reg_number})</div>
 
     <!-- Student details -->
     <div class="details-grid">
@@ -134,7 +134,7 @@ function buildPrintHTML({ data, schoolInfo, student, qrSvg, feeAccount }) {
             <div class="detail-value">${data.studentName}</div>
           </div>
         </div>
-        <div style="margin-bottom:8px;"><div class="detail-label">Registration Number</div><div class="detail-value" style="font-family:monospace;">${data.regNo}</div></div>
+        <div style="margin-bottom:8px;"><div class="detail-label">Registration Number</div><div class="detail-value" style="font-family:monospace;">${data.reg_number}</div></div>
         <div style="margin-bottom:8px;"><div class="detail-label">Class / Form</div><div class="detail-value">${data.class || '—'}</div></div>
         <div style="margin-bottom:8px;"><div class="detail-label">Date of Enrolment</div><div class="detail-value">${student?.enrolmentDate || '—'}</div></div>
       </div>
@@ -213,20 +213,20 @@ export default function ClearanceLetter({ clearanceData, mode = 'student' }) {
       try {
         const [infoSnap, stuSnap] = await Promise.all([
           getDoc(doc(db, 'settings', 'schoolInfo')),
-          getDocs(query(collection(db, 'students'), where('reg_number', '==', clearanceData.regNo), limit(1))),
+          getDocs(query(collection(db, 'students'), where('reg_number', '==', clearanceData.reg_number), limit(1))),
         ])
         if (infoSnap.exists()) setSchoolInfo(infoSnap.data())
         if (!stuSnap.empty)    setStudent(stuSnap.docs[0].data())
 
         const feeSnap = await getDocs(
-          query(collection(db, 'feeAccounts'), where('studentId', '==', clearanceData.regNo), limit(1))
+          query(collection(db, 'feeAccounts'), where('reg_number', '==', clearanceData.reg_number), limit(1))
         )
         if (!feeSnap.empty) setFeeAccount(feeSnap.docs[0].data())
       } catch {}
       finally { setLoadingMeta(false) }
     }
     load()
-  }, [clearanceData.regNo])
+  }, [clearanceData.reg_number])
 
   if (loadingMeta) {
     return (
@@ -293,7 +293,7 @@ export default function ClearanceLetter({ clearanceData, mode = 'student' }) {
       const url   = URL.createObjectURL(blob)
       const a     = document.createElement('a')
       a.href      = url
-      a.download  = `Clearance_${clearanceData.regNo}_${clearanceData.clearanceSerial}.html`
+      a.download  = `Clearance_${clearanceData.reg_number}_${clearanceData.clearanceSerial}.html`
       a.click()
       URL.revokeObjectURL(url)
       toast.success('Letter downloaded. Open in a browser and print to PDF.')
@@ -382,7 +382,7 @@ export default function ClearanceLetter({ clearanceData, mode = 'student' }) {
           <p className="mb-4 text-sm">To Whom It May Concern,</p>
 
           <p className="text-center font-bold text-sm underline uppercase mb-5 tracking-wide">
-            RE: Student Clearance Letter — {clearanceData.studentName} ({clearanceData.regNo})
+            RE: Student Clearance Letter — {clearanceData.studentName} ({clearanceData.reg_number})
           </p>
 
           {/* Student details */}
@@ -397,7 +397,7 @@ export default function ClearanceLetter({ clearanceData, mode = 'student' }) {
                   <p className="font-semibold text-sm">{clearanceData.studentName}</p>
                 </div>
               </div>
-              <DRow label="Registration Number" value={<span className="font-mono font-bold">{clearanceData.regNo}</span>} />
+              <DRow label="Registration Number" value={<span className="font-mono font-bold">{clearanceData.reg_number}</span>} />
               <DRow label="Class / Form"        value={clearanceData.class} />
               <DRow label="Date of Enrolment"   value={student?.enrolmentDate || '—'} />
             </div>

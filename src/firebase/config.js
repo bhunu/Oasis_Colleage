@@ -2,6 +2,7 @@ import { initializeApp } from 'firebase/app'
 import { getFirestore } from 'firebase/firestore'
 import { getAuth, browserSessionPersistence, setPersistence } from 'firebase/auth'
 import { getStorage } from 'firebase/storage'
+import { getFunctions } from 'firebase/functions'
 
 // Replace these values with your Firebase project config
 // from: https://console.firebase.google.com → Project Settings → Your apps
@@ -16,9 +17,10 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig)
 
-export const db      = getFirestore(app)
-export const auth    = getAuth(app)
-export const storage = getStorage(app)
+export const db        = getFirestore(app)
+export const auth      = getAuth(app)
+export const storage   = getStorage(app)
+export const functions = getFunctions(app)
 
 // Close-browser = signed-out for all Firebase Auth portals (Bursar + Student)
 setPersistence(auth, browserSessionPersistence).catch(() => {})

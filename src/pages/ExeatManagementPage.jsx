@@ -45,12 +45,11 @@ function fmt(v) {
   return `$${Number(v || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
 }
 
-/* Lookup fee account using the student's Firestore doc ID */
-async function lookupFeeAccount(studentDocId) {
-  if (!studentDocId) return null
+async function lookupFeeAccount(reg_number) {
+  if (!reg_number) return null
   try {
     const snap = await getDocs(
-      query(collection(db, 'feeAccounts'), where('studentId', '==', studentDocId), limit(1))
+      query(collection(db, 'feeAccounts'), where('reg_number', '==', reg_number), limit(1))
     )
     return snap.empty ? null : { id: snap.docs[0].id, ...snap.docs[0].data() }
   } catch { return null }
@@ -91,7 +90,7 @@ function CreatePassModal({ onClose, onCreated }) {
   useEffect(() => {
     if (reason === 'Sent Home (Fees)' && student?.id) {
       setFeeAccount(null)
-      lookupFeeAccount(student.id).then(setFeeAccount)
+      lookupFeeAccount(student.reg_number).then(setFeeAccount)
     } else {
       setFeeAccount(null)
     }
@@ -139,7 +138,7 @@ function CreatePassModal({ onClose, onCreated }) {
 
       const appData = {
         studentName,
-        regNo:        student.reg_number,
+        reg_number:   student.reg_number,
         class:        cls,
         studentId:    student.id,
         reason,
@@ -163,7 +162,7 @@ function CreatePassModal({ onClose, onCreated }) {
 
       const pass = {
         passSerial:    serial,
-        regNo:         student.reg_number,
+        reg_number:    student.reg_number,
         studentName,
         class:         cls,
         reason,

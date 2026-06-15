@@ -15,30 +15,34 @@ export default function StudentDashboard() {
   const [results,     setResults]     = useState([])
   const [notifications, setNotifs]   = useState([])
   const [receipts,    setReceipts]    = useState([])
+  const [loading,     setLoading]     = useState(true)
 
   const threshold = portalSettings?.resultsAccessThreshold ?? 75
 
   useEffect(() => {
-    if (!studentData?.regNumber) return
+    if (!studentData?.regNumber) { setLoading(false); return }
+
+    let pending = 2
+
+    const done = () => { if (--pending === 0) setLoading(false) }
 
     /* fee account */
     getDocs(query(collection(db, 'feeAccounts'), where('reg_number', '==', studentData.regNumber), limit(1)))
       .then(snap => { if (!snap.empty) setFeeAccount({ id: snap.docs[0].id, ...snap.docs[0].data() }) })
-      .catch(() => {})
+      .catch(() => {}).finally(done)
 
-    /* recent results */
+    /* recent receipts */
+    getDocs(query(collection(db, 'receipts'), where('reg_number', '==', studentData.regNumber), orderBy('issuedAt', 'desc'), limit(3)))
+      .then(snap => setReceipts(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
+      .catch(() => {}).finally(done)
+
+    /* non-blocking — don't gate loading on these */
     getDocs(query(collection(db, 'academicResults'), where('studentId', '==', studentData.studentId), orderBy('uploadedAt', 'desc'), limit(4)))
       .then(snap => setResults(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
       .catch(() => {})
 
-    /* notifications */
-    getDocs(query(collection(db, 'notifications'), where('studentId', '==', studentData.studentId), orderBy('createdAt', 'desc'), limit(5)))
+    getDocs(query(collection(db, 'notifications'), where('forStudent', '==', studentData.regNumber), orderBy('createdAt', 'desc'), limit(5)))
       .then(snap => setNotifs(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
-      .catch(() => {})
-
-    /* recent receipts */
-    getDocs(query(collection(db, 'receipts'), where('regNumber', '==', studentData.regNumber), orderBy('issuedAt', 'desc'), limit(3)))
-      .then(snap => setReceipts(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
       .catch(() => {})
   }, [studentData?.regNumber])
 
@@ -51,6 +55,24 @@ export default function StudentDashboard() {
 
   const fmt = v => `$${Number(v || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
   const CARD = 'bg-[#0D1C35] border border-white/10 rounded-xl p-5'
+  const SKL  = 'animate-pulse bg-white/5 rounded-lg'
+
+  if (loading) {
+    return (
+      <div className="space-y-5 max-w-4xl">
+        <div className={`${SKL} h-24 rounded-xl`} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className={`${SKL} h-36 rounded-xl`} />
+          <div className={`${SKL} h-36 rounded-xl`} />
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          <div className={`${SKL} h-20 rounded-xl`} />
+          <div className={`${SKL} h-20 rounded-xl`} />
+          <div className={`${SKL} h-20 rounded-xl`} />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-5 max-w-4xl">

@@ -6,7 +6,7 @@ import { MdPrint as IconPrint } from 'react-icons/md'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
 import { useTermDates, fmtTermDate } from '../hooks/useTermDates'
 
-const SCHOOL_ID = 'oasis'
+import { SCHOOL_ID } from '../utils/schoolConfig'
 const { number: CURR_NUM, year: CURR_YEAR } = getCurrentTerm()
 
 function toTermId(t)  { return t.toLowerCase().replace(/\s+/g, '-') }

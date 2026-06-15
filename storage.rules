@@ -2,20 +2,33 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    // Gallery, staff, news images — public read for website
-    match /gallery/{allPaths=**}   { allow read: if true; allow write: if request.auth != null; }
-    match /staff/{allPaths=**}     { allow read: if true; allow write: if request.auth != null; }
-    match /news/{allPaths=**}      { allow read: if true; allow write: if request.auth != null; }
+    // Public site assets — images only for authenticated writes
+    match /gallery/{allPaths=**} { allow read: if true; allow write: if request.auth != null && request.resource.contentType.matches('image/.*'); }
+    match /staff/{allPaths=**}   { allow read: if true; allow write: if request.auth != null && request.resource.contentType.matches('image/.*'); }
+    match /news/{allPaths=**}    { allow read: if true; allow write: if request.auth != null && request.resource.contentType.matches('image/.*'); }
 
-    // Expense receipts — authenticated bursar writes
-    match /expenses/{allPaths=**}  { allow read: if request.auth != null; allow write: if request.auth != null; }
-
-    // Student proof of payment uploads — student can write their own folder
-    match /proofOfPayments/{studentId}/{allPaths=**} {
+    // Expense receipts — authenticated bursar writes; images and PDF only
+    match /expenses/{allPaths=**} {
       allow read:  if request.auth != null;
       allow write: if request.auth != null
-        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.studentId == studentId
-        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'student';
+        && (request.resource.contentType.matches('image/.*') || request.resource.contentType == 'application/pdf');
+    }
+
+    // Student proof of payment — must be an authenticated student uploading to their own reg_number folder.
+    // Uses students/{auth.uid} directly because Firebase Auth uid == Firestore student doc ID (set by Cloud Function).
+    match /proofOfPayments/{studentFolder}/{allPaths=**} {
+      allow read:  if request.auth != null;
+      allow write: if request.auth != null
+        && firestore.get(/databases/(default)/documents/students/$(request.auth.uid)).data.reg_number == studentFolder
+        && (request.resource.contentType.matches('image/.*') || request.resource.contentType == 'application/pdf');
+    }
+
+    // Exeat supporting documents — same ownership model as proofOfPayments
+    match /exeat-docs/{studentFolder}/{allPaths=**} {
+      allow read:  if request.auth != null;
+      allow write: if request.auth != null
+        && firestore.get(/databases/(default)/documents/students/$(request.auth.uid)).data.reg_number == studentFolder
+        && (request.resource.contentType.matches('image/.*') || request.resource.contentType == 'application/pdf');
     }
 
     // Fallback deny

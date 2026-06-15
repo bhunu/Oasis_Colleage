@@ -25,11 +25,18 @@ export default function Settings() {
   useEffect(() => {
     async function load() {
       try {
-        const snap = await getDoc(doc(db, 'config', 'schoolSettings'))
-        if (snap.exists()) {
-          const data = snap.data()
-          setSchoolConfig(prev => ({ ...prev, ...data }))
+        const [schoolSnap, portalSnap] = await Promise.all([
+          getDoc(doc(db, 'config', 'schoolSettings')),
+          getDoc(doc(db, 'portalSettings', 'main')),
+        ])
+        const merged = {}
+        if (schoolSnap.exists()) Object.assign(merged, schoolSnap.data())
+        if (portalSnap.exists()) {
+          const { currentTerm, currentYear } = portalSnap.data()
+          if (currentTerm) merged.currentTerm = currentTerm
+          if (currentYear) merged.currentYear = currentYear
         }
+        setSchoolConfig(prev => ({ ...prev, ...merged }))
       } catch {
         // defaults ok
       } finally {
@@ -43,11 +50,22 @@ export default function Settings() {
   const handleSaveSchool = async () => {
     setSaving(true)
     try {
-      await setDoc(doc(db, 'config', 'schoolSettings'), {
-        ...schoolConfig,
-        updatedAt: serverTimestamp(),
-        updatedBy: user?.email,
-      })
+      await Promise.all([
+        setDoc(doc(db, 'config', 'schoolSettings'), {
+          schoolName:    schoolConfig.schoolName,
+          schoolAddress: schoolConfig.schoolAddress,
+          termStartDate: schoolConfig.termStartDate,
+          termEndDate:   schoolConfig.termEndDate,
+          updatedAt:  serverTimestamp(),
+          updatedBy:  user?.email,
+        }),
+        setDoc(doc(db, 'portalSettings', 'main'), {
+          currentTerm: schoolConfig.currentTerm,
+          currentYear: schoolConfig.currentYear,
+          updatedAt:  serverTimestamp(),
+          updatedBy:  user?.email,
+        }, { merge: true }),
+      ])
       toast.success('School settings saved')
     } catch {
       toast.error('Failed to save settings')

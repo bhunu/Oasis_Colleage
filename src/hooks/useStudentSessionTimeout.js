@@ -24,11 +24,21 @@ export default function useStudentSessionTimeout() {
 
     const EVENTS = ['mousemove', 'keydown', 'touchstart', 'click']
     EVENTS.forEach(ev => window.addEventListener(ev, reset, { passive: true }))
+
+    // Pause timer when tab loses focus; resume (with a fresh countdown) when it returns.
+    // This prevents activity in other tabs from keeping this session alive.
+    const handleVisibility = () => {
+      if (document.hidden) clearTimeout(timerRef.current)
+      else reset()
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+
     reset()
 
     return () => {
       clearTimeout(timerRef.current)
       EVENTS.forEach(ev => window.removeEventListener(ev, reset))
+      document.removeEventListener('visibilitychange', handleVisibility)
     }
   }, [portalSettings?.sessionTimeoutMinutes, logout])
 }

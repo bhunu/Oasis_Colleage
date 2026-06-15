@@ -3,7 +3,7 @@ import { collection, getDocs, orderBy, query } from 'firebase/firestore'
 import { db } from '../firebase/config'
 import { useNavigate } from 'react-router-dom'
 import * as XLSX from 'xlsx'
-import { backfillStudentCategories } from '../firebase/students'
+import { backfillStudentCategories, backfillFeeAccountStudentIds, backfillRegNumberFields } from '../firebase/students'
 import toast from 'react-hot-toast'
 import {
   MdSearch as IconSearch,
@@ -22,18 +22,33 @@ export default function Students() {
   const [search, setSearch]         = useState('')
   const [classFilter, setClassFilter] = useState('All classes')
   const [selected, setSelected]     = useState(null)
-  const [backfilling, setBackfilling] = useState(false)
+  const [backfillingFee,    setBackfillingFee]    = useState(false)
+  const [backfillingRegNums, setBackfillingRegNums] = useState(false)
 
-  const handleBackfill = async () => {
-    setBackfilling(true)
+  const handleBackfillFeeIds = async () => {
+    setBackfillingFee(true)
     try {
-      const count = await backfillStudentCategories()
-      if (count === 0) toast('All students already have a category assigned.', { icon: 'ℹ️' })
-      else toast.success(`student_category added to ${count} student${count !== 1 ? 's' : ''}.`)
+      const count = await backfillFeeAccountStudentIds()
+      if (count === 0) toast('All fee accounts already have studentId set.', { icon: 'ℹ️' })
+      else toast.success(`studentId backfilled on ${count} fee account${count !== 1 ? 's' : ''}.`)
     } catch {
-      toast.error('Backfill failed. Check your connection.')
+      toast.error('Fee account backfill failed. Check your connection.')
     } finally {
-      setBackfilling(false)
+      setBackfillingFee(false)
+    }
+  }
+
+  const handleBackfillRegNumbers = async () => {
+    setBackfillingRegNums(true)
+    try {
+      const totals = await backfillRegNumberFields()
+      const total  = Object.values(totals).reduce((a, b) => a + b, 0)
+      if (total === 0) toast('All documents already have reg_number set.', { icon: 'ℹ️' })
+      else toast.success(`reg_number backfilled on ${total} document${total !== 1 ? 's' : ''} across ${Object.keys(totals).length} collections.`)
+    } catch {
+      toast.error('reg_number backfill failed. Check your connection.')
+    } finally {
+      setBackfillingRegNums(false)
     }
   }
 
@@ -49,6 +64,9 @@ export default function Students() {
       }
     }
     load()
+    // Silently backfill student_category on any students enrolled before the field existed.
+    // Returns 0 immediately once all records are up-to-date, so this is a permanent no-op after first run.
+    backfillStudentCategories().catch(() => {})
   }, [])
 
   // Unique classes from loaded data, sorted
@@ -277,13 +295,23 @@ export default function Students() {
         </button>
 
         <button
-          onClick={handleBackfill}
-          disabled={backfilling}
-          title="Add student_category to all existing students who are missing it"
+          onClick={handleBackfillFeeIds}
+          disabled={backfillingFee}
+          title="Backfill studentId on fee accounts that are missing it (one-time migration)"
           className="flex items-center gap-2 bg-white/5 border border-white/10 hover:bg-white/10 disabled:opacity-40 text-gray-300 font-montserrat text-xs font-semibold uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all"
         >
           <MdAutoFixHigh size={16} />
-          {backfilling ? 'Fixing…' : 'Fix Categories'}
+          {backfillingFee ? 'Fixing…' : 'Fix Fee IDs'}
+        </button>
+
+        <button
+          onClick={handleBackfillRegNumbers}
+          disabled={backfillingRegNums}
+          title="Migrate regNo/regNumber → reg_number across all collections (one-time migration)"
+          className="flex items-center gap-2 bg-white/5 border border-white/10 hover:bg-white/10 disabled:opacity-40 text-gray-300 font-montserrat text-xs font-semibold uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all"
+        >
+          <MdAutoFixHigh size={16} />
+          {backfillingRegNums ? 'Migrating…' : 'Fix Reg Numbers'}
         </button>
 
         <button

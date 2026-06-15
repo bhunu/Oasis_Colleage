@@ -4,38 +4,49 @@ service cloud.firestore {
 
     // ── students ─────────────────────────────────────────────────────────
     match /students/{studentId} {
-      // Allow reads: authenticated students see their own record;
-      // unauthenticated reads are needed at login time to build the session.
+      // Students don't use Firebase Auth, so unauthenticated reads are required
+      // for login-time queries and throughout the student portal session.
+      // Full restriction requires migrating students to Firebase Auth (C-03 note).
       allow read: if true;
-      allow update: if request.resource.data.diff(resource.data)
-                         .affectedKeys().hasOnly(['email', 'phone', 'hasEmail', 'updatedAt']);
-      allow create, delete: if false;
+
+      // Authenticated staff can update any field (status, class, clearance, etc.)
+      allow update: if request.auth != null;
+
+      // Unauthenticated students can only update their own contact fields
+      allow update: if request.auth == null
+        && request.resource.data.diff(resource.data)
+             .affectedKeys().hasOnly(['email', 'phone', 'hasEmail', 'updatedAt']);
+
+      // Only authenticated staff can enrol new students
+      allow create: if request.auth != null;
+
+      allow delete: if false;
     }
 
     // ── users ────────────────────────────────────────────────────────────
     match /users/{uid} {
-      // Unauthenticated: read pending OTP records for first-time login
-      allow read: if resource.data.role == 'student'
-                  && resource.data.otpUsed == false
-                  && request.auth == null;
+      // Unauthenticated: read pending OTP record for first-time login
+      allow read: if request.auth == null
+        && resource.data.role == 'student'
+        && resource.data.otpUsed == false;
 
-      // Unauthenticated: read active student accounts for password-based login
-      allow read: if resource.data.role == 'student'
-                  && resource.data.hasSetupPassword == true
-                  && request.auth == null;
+      // Authenticated users: read their own doc or any doc for admin purposes
+      allow read: if request.auth != null;
 
-      // Authenticated users read their own document
-      allow read: if request.auth != null && request.auth.uid == uid;
-
-      // Students create their own doc on first OTP login (Firebase Auth path, legacy)
-      allow create: if request.auth != null && request.auth.uid == uid;
+      // Staff create their own doc on signup; also create student user docs (OTP)
+      allow create: if request.auth != null;
 
       // Unauthenticated: set password on a pending OTP record (first-time setup)
       allow update: if request.auth == null
         && resource.data.role == 'student'
         && resource.data.otpUsed == false
         && request.resource.data.diff(resource.data)
-             .affectedKeys().hasOnly(['password', 'hasSetupPassword', 'otpUsed', 'updatedAt']);
+             .affectedKeys()
+             .hasOnly(['password', 'hasSetupPassword', 'otpUsed',
+                       'studentId', 'regNumber', 'name', 'class', 'updatedAt']);
+
+      // Authenticated staff can update user records
+      allow update: if request.auth != null;
 
       allow delete: if false;
     }
@@ -44,67 +55,102 @@ service cloud.firestore {
     match /portalSettings/{docId} {
       allow read: if true;
       allow write: if request.auth != null
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'web_admin';
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+             in ['web_admin', 'admin', 'staff'];
     }
 
     // ── proofOfPayments ──────────────────────────────────────────────────
     match /proofOfPayments/{docId} {
-      allow read: if request.auth == null
-        && resource.data.studentId != null;
-      allow create: if request.auth == null
-        && request.resource.data.studentId != null;
+      // Authenticated staff (bursar) OR unauthenticated student portal
+      allow read: if request.auth != null
+        || (request.auth == null && resource.data.studentId != null);
+
+      // Students create their own POPs (unauthenticated); staff can create too
+      allow create: if request.auth != null
+        || (request.auth == null && request.resource.data.studentId != null);
+
       allow update, delete: if false;
     }
 
     // ── academicResults ──────────────────────────────────────────────────
     match /academicResults/{docId} {
-      allow read: if request.auth == null
-        && resource.data.studentId != null;
-      allow write: if false;
+      // Authenticated staff (Student Admin) OR unauthenticated student portal
+      allow read: if request.auth != null
+        || (request.auth == null && resource.data.studentId != null);
+
+      // Only authenticated staff can write academic results
+      allow write: if request.auth != null;
     }
 
     // ── feeAccounts ──────────────────────────────────────────────────────
     match /feeAccounts/{docId} {
-      allow read: if request.auth == null
-        && resource.data.studentId != null;
-      allow write: if false;
+      // Authenticated staff (bursar) OR unauthenticated student portal
+      allow read: if request.auth != null
+        || (request.auth == null && resource.data.studentId != null);
+
+      // Only authenticated staff (bursar) can write fee accounts
+      allow write: if request.auth != null;
     }
 
     // ── receipts ─────────────────────────────────────────────────────────
     match /receipts/{docId} {
-      allow read: if request.auth == null
-        && resource.data.studentId != null;
-      allow write: if false;
+      // Authenticated staff (bursar) OR unauthenticated student portal
+      allow read: if request.auth != null
+        || (request.auth == null && resource.data.studentId != null);
+
+      // Only authenticated bursar can create/update receipts
+      allow write: if request.auth != null;
     }
 
-    // ── notifications ────────────────────────────────────────────────────
+    // ── notifications ─────────────────────────────────────────────────────
     match /notifications/{docId} {
-      allow read: if request.auth == null
-        && resource.data.studentId != null;
-      allow update: if request.auth == null
-        && resource.data.studentId != null
-        && request.resource.data.diff(resource.data)
-             .affectedKeys().hasOnly(['read']);
-      allow create, delete: if false;
+      allow read: if request.auth != null
+        || (request.auth == null && resource.data.studentId != null);
+
+      // Students mark their own notifications as read (unauthenticated)
+      allow update: if request.auth != null
+        || (request.auth == null
+          && resource.data.studentId != null
+          && request.resource.data.diff(resource.data)
+               .affectedKeys().hasOnly(['read']));
+
+      // Only authenticated staff create notifications
+      allow create: if request.auth != null;
+      allow delete: if false;
     }
 
-    // ── otpLogs (web-admin only) ─────────────────────────────────────────
+    // ── otpLogs (web-admin only) ──────────────────────────────────────────
     match /otpLogs/{docId} {
       allow read, write: if request.auth != null
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'web_admin';
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+             in ['web_admin', 'admin', 'staff'];
     }
 
-    // ── securityLogs ─────────────────────────────────────────────────────
+    // ── securityLogs ──────────────────────────────────────────────────────
     match /securityLogs/{docId} {
       allow read: if request.auth != null
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'web_admin';
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+             in ['web_admin', 'admin', 'staff'];
       allow create: if true;
       allow update, delete: if false;
     }
 
-    // ── activeSessions (student concurrent session guard) ─────────────────
+    // ── financialLogs ─────────────────────────────────────────────────────
+    // Immutable audit trail. Bursar portal writes (unauthenticated session)
+    // are allowed to create; reads restricted to authenticated admin roles.
+    match /financialLogs/{docId} {
+      allow read: if request.auth != null
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+             in ['web_admin', 'admin', 'staff'];
+      allow create: if true;
+      allow update, delete: if false;
+    }
+
+    // ── activeSessions ────────────────────────────────────────────────────
+    // C-07 FIXED: students now use signInWithCustomToken (verifyStudentPassword
+    // Cloud Function) so request.auth.uid == uid is always satisfied.
     match /users/{uid}/activeSessions/{sessionId} {
-      allow read, write: if true;
+      allow read, write, delete: if request.auth != null && request.auth.uid == uid;
     }
 
     // ── loginAttempts ─────────────────────────────────────────────────────
@@ -112,5 +158,6 @@ service cloud.firestore {
       allow read, create, update: if true;
       allow delete: if false;
     }
+
   }
 }

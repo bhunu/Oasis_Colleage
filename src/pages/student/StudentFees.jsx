@@ -21,7 +21,7 @@ export default function StudentFees() {
     if (!studentData?.regNumber) return
     Promise.all([
       getDocs(query(collection(db, 'feeAccounts'), where('reg_number', '==', studentData.regNumber), limit(1))),
-      getDocs(query(collection(db, 'receipts'), where('regNumber', '==', studentData.regNumber))),
+      getDocs(query(collection(db, 'receipts'), where('reg_number', '==', studentData.regNumber))),
     ]).then(([feeSnap, rcptSnap]) => {
       if (!feeSnap.empty) setAccount({ id: feeSnap.docs[0].id, ...feeSnap.docs[0].data() })
       const sorted = rcptSnap.docs

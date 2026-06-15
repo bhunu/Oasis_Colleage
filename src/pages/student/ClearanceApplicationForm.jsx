@@ -37,7 +37,7 @@ export default function ClearanceApplicationForm() {
   // Block resubmission if a Pending or Approved application already exists
   useEffect(() => {
     if (!regNo) return
-    getDocs(query(collection(db, 'clearanceApplications'), where('regNo', '==', regNo), limit(1)))
+    getDocs(query(collection(db, 'clearanceApplications'), where('reg_number', '==', regNo), limit(1)))
       .then(snap => { if (!snap.empty) setDone(true) })
       .catch(() => {})
   }, [regNo])
@@ -81,7 +81,7 @@ export default function ClearanceApplicationForm() {
     try {
       /* Fee check on submit */
       const feeSnap = await getDocs(
-        query(collection(db, 'feeAccounts'), where('studentId', '==', studentData.studentId), limit(1))
+        query(collection(db, 'feeAccounts'), where('reg_number', '==', studentData.regNumber), limit(1))
       )
       let totalOwed = 0
       if (!feeSnap.empty) {
@@ -103,7 +103,7 @@ export default function ClearanceApplicationForm() {
       let transferReason    = null
       if (exitType === 'Transfer') {
         const prevApp = await getDocs(
-          query(collection(db, 'clearanceApplications'), where('regNo', '==', regNo), where('exitType', '==', 'Transfer'), limit(1))
+          query(collection(db, 'clearanceApplications'), where('reg_number', '==', regNo), where('exitType', '==', 'Transfer'), limit(1))
         )
         if (!prevApp.empty) {
           destinationSchool = prevApp.docs[0].data().destinationSchool || null
@@ -112,7 +112,7 @@ export default function ClearanceApplicationForm() {
       }
 
       await addDoc(collection(db, 'clearanceApplications'), {
-        regNo,
+        reg_number:        regNo,
         studentName:       fullName,
         class:             studentClass,
         exitType,

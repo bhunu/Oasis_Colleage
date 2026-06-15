@@ -6,9 +6,10 @@ import {
   FaEye, FaEyeSlash, FaLock, FaEnvelope, FaArrowLeft, FaShieldAlt,
 } from 'react-icons/fa'
 import SetPasswordModal from '../components/auth/SetPasswordModal'
-import { hashPassword } from '../utils/hash'
-import { getDocs, getDoc, collection, query, where, limit, doc } from 'firebase/firestore'
-import { db } from '../firebase/config'
+import { getDocs, collection, query, where, limit } from 'firebase/firestore'
+import { signInWithCustomToken } from 'firebase/auth'
+import { httpsCallable } from 'firebase/functions'
+import { db, auth, functions } from '../firebase/config'
 import { checkLockStatus, recordFailedAttempt, resetAttempts } from '../utils/loginSecurity'
 import { initStudentSession } from '../hooks/useStudentSessionGuard'
 
@@ -26,6 +27,11 @@ function formatCountdown(ms) {
 function attemptsMessage(remaining) {
   if (remaining <= 0) return 'Account locked for 30 minutes due to multiple failed login attempts.'
   return `Incorrect credentials. ${remaining} attempt${remaining !== 1 ? 's' : ''} remaining.`
+}
+
+function normalizeRegNum(raw) {
+  const clean = raw.trim().replace(/\s+/g, '').toUpperCase()
+  return /^\d+$/.test(clean) ? `R${clean}` : clean
 }
 
 export default function Login() {
@@ -69,7 +75,7 @@ export default function Login() {
 
   // ── First-time OTP login ────────────────────────────────────────────────
   const handleStudentOTP = async () => {
-    const regNum = form.credential.trim().toUpperCase()
+    const regNum = normalizeRegNum(form.credential)
     const otp    = form.password.trim().toUpperCase()
     if (!regNum || !otp) return setAuthError('Enter your student ID and OTP code.')
 
@@ -115,67 +121,29 @@ export default function Login() {
 
   // ── Returning student password login ───────────────────────────────────
   const handleStudentPassword = async () => {
-    const regNum = form.credential.trim().toUpperCase()
+    const regNum = normalizeRegNum(form.credential)
     const pass   = form.password
     if (!regNum || !pass) return setAuthError('Enter your student ID and password.')
     try {
-      // Resolve reg_number → Firestore student doc ID
-      const studentSnap = await getDocs(
-        query(collection(db, 'students'), where('reg_number', '==', regNum), limit(1))
-      )
-      const studentDocId = studentSnap.empty ? null : studentSnap.docs[0].id
+      const verifyStudent = httpsCallable(functions, 'verifyStudentPassword')
+      const result = await verifyStudent({ regNumber: regNum, password: pass })
+      const { customToken, sessionData } = result.data
 
-      const snap = await getDocs(
-        query(collection(db, 'users'),
-          where('studentId',        '==', studentDocId ?? regNum),
-          where('role',             '==', 'student'),
-          where('hasSetupPassword', '==', true),
-          limit(1)
-        )
-      )
-      if (snap.empty) {
-        await handleFail(regNum, 'No account found. Use "First time (OTP)" if this is your first login.')
-        return
-      }
-      const userDoc  = snap.docs[0]
-      const userData = userDoc.data()
-      const hashed   = hashPassword(pass)
-      if (hashed !== userData.password) {
-        await handleFail(regNum, null)
-        return
-      }
-      const uid = userDoc.id
+      await signInWithCustomToken(auth, customToken)
 
-      // Fetch student profile by reg_number field (students use auto-generated doc IDs)
-      const profileQuery = await getDocs(
-        query(collection(db, 'students'), where('reg_number', '==', regNum), limit(1))
-      ).catch(() => null)
-      const profileDoc = profileQuery?.empty === false ? profileQuery.docs[0] : null
-      const profile    = profileDoc?.data() ?? {}
-
-      sessionStorage.setItem('studentSession', JSON.stringify({
-        uid,
-        studentId:        regNum,
-        studentDocId:     profileDoc?.id ?? null,
-        hasSetupPassword: true,
-        name:             profile.fullName || userData.name || '',
-        class:            profile.class || '',
-        dateOfBirth:      profile.dateOfBirth || '',
-        guardianName:     profile.guardianName || profile.parentName || '',
-        guardianPhone:    profile.guardianPhone || profile.parentPhone || '',
-        guardianEmail:    profile.guardianEmail || profile.parentEmail || '',
-        email:            profile.email || profile.studentEmail || '',
-        phone:            profile.phone || '',
-        hasEmail:         profile.hasEmail ?? (!!profile.email || !!profile.studentEmail),
-        regNumber:        profile.reg_number || regNum,
-      }))
-
-      await initStudentSession(uid).catch(() => {})
+      sessionStorage.setItem('studentSession', JSON.stringify(sessionData))
+      await initStudentSession(sessionData.uid).catch(() => {})
       await resetAttempts(regNum, 'student-portal').catch(() => {})
       clearForm()
       navigate('/student/dashboard')
-    } catch {
-      await handleFail(regNum, 'Something went wrong. Please try again.')
+    } catch (err) {
+      if (err.code === 'functions/not-found') {
+        await handleFail(regNum, 'No account found. Use "First time (OTP)" if this is your first login.')
+      } else if (err.code === 'functions/unauthenticated') {
+        await handleFail(regNum, null)
+      } else {
+        await handleFail(regNum, 'Something went wrong. Please try again.')
+      }
     }
   }
 
@@ -186,7 +154,7 @@ export default function Login() {
     setLoading(true)
 
     try {
-      const lockCheck = await checkLockStatus(form.credential.trim(), 'student-portal')
+      const lockCheck = await checkLockStatus(normalizeRegNum(form.credential), 'student-portal')
       if (lockCheck.locked) {
         setLockInfo({ lockedUntil: lockCheck.lockedUntil })
         setAuthError('Account is temporarily locked. Try again after the countdown.')

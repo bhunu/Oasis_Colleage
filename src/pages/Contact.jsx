@@ -4,6 +4,8 @@ import PageHero from '../components/PageHero'
 import SectionTitle from '../components/SectionTitle'
 import Toast from '../components/Toast'
 import { FaMapMarkerAlt, FaPhone, FaEnvelope, FaClock, FaFacebookF, FaTwitter, FaInstagram } from 'react-icons/fa'
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
+import { db } from '../firebase/config'
 
 const QUICK_CONTACTS = [
   { icon: FaEnvelope, label: 'General Enquiries', email: 'info@oasiscollege.ac.zw',         phone: '+263 712 345 678', desc: 'For general information about the school, programmes, and events.' },
@@ -19,10 +21,23 @@ export default function Contact() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setSubmitting(true)
-    await new Promise(r => setTimeout(r, 1200))
-    setSubmitting(false)
-    setForm({ name: '', email: '', phone: '', subject: '', message: '' })
-    setToast({ msg: 'Thank you! Your message has been received. We will respond within 1–2 business days.', type: 'success' })
+    try {
+      await addDoc(collection(db, 'contactEnquiries'), {
+        name:      form.name.trim(),
+        email:     form.email.trim().toLowerCase(),
+        phone:     form.phone.trim(),
+        subject:   form.subject.trim(),
+        message:   form.message.trim(),
+        read:      false,
+        createdAt: serverTimestamp(),
+      })
+      setForm({ name: '', email: '', phone: '', subject: '', message: '' })
+      setToast({ msg: 'Thank you! Your message has been received. We will respond within 1–2 business days.', type: 'success' })
+    } catch {
+      setToast({ msg: 'Something went wrong. Please try again or contact us directly.', type: 'error' })
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (

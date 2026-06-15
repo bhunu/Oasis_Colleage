@@ -1,24 +1,30 @@
 import { useState, useEffect } from 'react'
-import { collection, getDocs, query, where, orderBy } from 'firebase/firestore'
+import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore'
 import { db } from '../firebase/config'
 import { MdSearch as IconSearch, MdDownload as IconDownload, MdWarning as IconWarn } from 'react-icons/md'
 
-const CLASSES = ['All classes', 'Form 1A', 'Form 1B', 'Form 2A', 'Form 2B', 'Form 3A', 'Form 3B', 'Form 4A', 'Form 4B']
-const CURRENT_TERM = '2-2025'
-
 export default function Arrears() {
-  const [accounts, setAccounts] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
+  const [accounts,    setAccounts]    = useState([])
+  const [loading,     setLoading]     = useState(true)
+  const [search,      setSearch]      = useState('')
   const [classFilter, setClassFilter] = useState('All classes')
+  const [currentTerm, setCurrentTerm] = useState('')
 
   useEffect(() => {
     async function load() {
       try {
+        const settingsSnap = await getDoc(doc(db, 'portalSettings', 'main'))
+        const term = settingsSnap.exists()
+          ? `${settingsSnap.data().currentTerm}-${settingsSnap.data().currentYear}`
+          : ''
+        setCurrentTerm(term)
+
+        if (!term) { setLoading(false); return }
+
         const snap = await getDocs(
           query(
             collection(db, 'feeAccounts'),
-            where('term', '==', CURRENT_TERM),
+            where('term', '==', term),
             where('balanceType', '==', 'debit')
           )
         )
@@ -35,10 +41,12 @@ export default function Arrears() {
     load()
   }, [])
 
+  const classes = ['All classes', ...new Set(accounts.map(a => a.class).filter(Boolean)).values()].sort()
+
   const filtered = accounts.filter(a => {
     const matchSearch =
       a.studentName?.toLowerCase().includes(search.toLowerCase()) ||
-      a.studentId?.toLowerCase().includes(search.toLowerCase())
+      a.reg_number?.toLowerCase().includes(search.toLowerCase())
     const matchClass = classFilter === 'All classes' || a.class === classFilter
     return matchSearch && matchClass
   })
@@ -47,22 +55,22 @@ export default function Arrears() {
 
   const handleExport = () => {
     const rows = [
-      ['Student ID', 'Name', 'Class', 'Charged', 'Paid', 'Balance Owed'],
+      ['Reg Number', 'Name', 'Class', 'Charged', 'Paid', 'Balance Owed'],
       ...filtered.map(a => [
-        a.studentId,
-        a.studentName,
-        a.class,
-        a.totalCharged?.toFixed(2) || '0.00',
-        a.totalPaid?.toFixed(2) || '0.00',
+        a.reg_number || '',
+        a.studentName || '',
+        a.class || '',
+        (a.totalCharged || 0).toFixed(2),
+        (a.totalPaid || 0).toFixed(2),
         (a.balance || 0).toFixed(2),
       ]),
     ]
-    const csv = rows.map(r => r.join(',')).join('\n')
+    const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `arrears_term_${CURRENT_TERM}.csv`
+    a.download = `arrears_term_${currentTerm}.csv`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -104,7 +112,7 @@ export default function Arrears() {
           onChange={e => setClassFilter(e.target.value)}
           className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
         >
-          {CLASSES.map(c => <option key={c}>{c}</option>)}
+          {classes.map(c => <option key={c}>{c}</option>)}
         </select>
         <button
           onClick={handleExport}
@@ -121,7 +129,7 @@ export default function Arrears() {
         <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
           <div className="flex items-center gap-2">
             <IconWarn size={18} className="text-amber-500" />
-            <h3 className="font-semibold text-gray-900">Fees Arrears — Term {CURRENT_TERM.replace('-', ' · ')}</h3>
+            <h3 className="font-semibold text-gray-900">Fees Arrears — Term {currentTerm.replace('-', ' · ')}</h3>
           </div>
           <span className="text-sm text-gray-500">{filtered.length} accounts</span>
         </div>
@@ -142,7 +150,7 @@ export default function Arrears() {
                 <tr>
                   <th className="text-left py-3 px-6 font-semibold text-gray-700">Rank</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">Student Name</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">ID</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Reg No</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">Class</th>
                   <th className="text-right py-3 px-4 font-semibold text-gray-700">Charged</th>
                   <th className="text-right py-3 px-4 font-semibold text-gray-700">Paid</th>
@@ -154,7 +162,7 @@ export default function Arrears() {
                   <tr key={a.firestoreId} className="border-b border-gray-100 hover:bg-red-50/30 transition">
                     <td className="py-3 px-6 text-gray-500">{i + 1}</td>
                     <td className="py-3 px-4 font-medium text-gray-900">{a.studentName}</td>
-                    <td className="py-3 px-4 text-gray-500 font-mono text-xs">{a.studentId}</td>
+                    <td className="py-3 px-4 text-gray-500 font-mono text-xs">{a.reg_number}</td>
                     <td className="py-3 px-4">
                       <span className="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded">{a.class}</span>
                     </td>

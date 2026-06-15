@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
+import { useState, useEffect } from 'react'
+import { addDoc, collection, doc, getDoc, getDocs, serverTimestamp, updateDoc } from 'firebase/firestore'
 import { db } from '../firebase/config'
 import { addStudent } from '../firebase/students'
 import { generateRegNumber } from '../utils/generateRegNumber'
@@ -14,14 +14,6 @@ function generateOTP(len = 8) {
   return Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
 }
 
-const CLASSES = [
-  'Form 1A', 'Form 1B', 'Form 1C',
-  'Form 2A', 'Form 2B', 'Form 2C',
-  'Form 3A', 'Form 3B', 'Form 3C',
-  'Form 4A', 'Form 4B', 'Form 4C',
-  'Lower 6 Commercials', 'Lower 6 Arts', 'Lower 6 Sciences',
-  'Upper 6 Commercials', 'Upper 6 Arts', 'Upper 6 Sciences',
-]
 
 const EMPTY_FORM = {
   fullName: '',
@@ -116,6 +108,24 @@ export default function Enrol() {
   const [loading, setLoading]   = useState(false)
   const [enrolled, setEnrolled] = useState(null)
   const [copied, setCopied]     = useState(false)
+  const [portalTerm, setPortalTerm] = useState('')
+  const [classes, setClasses]   = useState([])
+
+  useEffect(() => {
+    getDoc(doc(db, 'portalSettings', 'main')).then(snap => {
+      if (snap.exists()) {
+        const d = snap.data()
+        const term = d.currentTerm || '1'
+        const year = d.currentYear || String(new Date().getFullYear())
+        setPortalTerm(`${term}-${year}`)
+      }
+    })
+
+    getDocs(collection(db, 'classes')).then(snap => {
+      const names = snap.docs.map(d => d.data().name).filter(Boolean).sort()
+      if (names.length > 0) setClasses(names)
+    })
+  }, [])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -210,23 +220,25 @@ export default function Enrol() {
         reg_number,
         studentName:  fullName,
         class:        formData.class,
-        term:         '2-2025',
+        term:         portalTerm,
         status:       'open',
         totalCharged: 0,
         totalPaid:    0,
         balance:      0,
         balanceType:  'nil',
         createdAt:    serverTimestamp(),
+        updatedAt:    serverTimestamp(),
       })
 
       let otpSentToEmail = false
+      let otpFallback    = null
 
       if (studentEmail) {
         const otp        = generateOTP(8)
         const expiryHrs  = 24
         const expiresAt  = new Date(Date.now() + expiryHrs * 3600 * 1000)
 
-        await addDoc(collection(db, 'users'), {
+        const userDocRef = await addDoc(collection(db, 'users'), {
           studentId:        reg_number,
           name:             fullName,
           email:            studentEmail,
@@ -247,11 +259,13 @@ export default function Enrol() {
           toast.success(`OTP sent to ${studentEmail}`)
         } catch (emailErr) {
           console.error('OTP email failed:', emailErr)
-          toast.error('Student enrolled but OTP email could not be sent. Check EmailJS config.')
+          toast.error('Student enrolled but OTP email could not be sent. Share the code below with the student.')
+          otpFallback = otp
+          updateDoc(userDocRef, { otpEmailFailed: true }).catch(() => {})
         }
       }
 
-      setEnrolled({ regNumber: reg_number, name: fullName, class: formData.class, studentEmail: studentEmail || null, otpSentToEmail })
+      setEnrolled({ regNumber: reg_number, name: fullName, class: formData.class, studentEmail: studentEmail || null, otpSentToEmail, otpFallback })
       setFormData(EMPTY_FORM)
       setErrors({})
       toast.success(`${fullName} enrolled successfully!`)
@@ -285,6 +299,21 @@ export default function Enrol() {
                   Login credentials were sent to <span className="text-white">{enrolled.studentEmail}</span>
                 </p>
               </div>
+            </div>
+          )}
+
+          {enrolled.studentEmail && !enrolled.otpSentToEmail && enrolled.otpFallback && (
+            <div className="bg-amber-500/10 border border-amber-500/40 rounded-xl px-4 py-4 mb-6 text-left">
+              <p className="font-montserrat text-amber-300 text-xs font-semibold mb-1">Email Not Sent — Share Login Code Manually</p>
+              <p className="font-montserrat text-gray-400 text-xs mb-3">
+                The OTP could not be emailed to <span className="text-white">{enrolled.studentEmail}</span>. Share this one-time code with the student directly.
+              </p>
+              <p className="font-playfair text-2xl font-bold text-amber-300 tracking-widest text-center py-2 bg-amber-500/10 rounded-lg">
+                {enrolled.otpFallback}
+              </p>
+              <p className="font-montserrat text-[10px] text-gray-600 text-center mt-2">
+                This code is saved in Firestore and will not be shown again after you leave this screen.
+              </p>
             </div>
           )}
 
@@ -397,7 +426,7 @@ export default function Enrol() {
                   <label className={lCls}>Class *</label>
                   <select name="class" value={formData.class} onChange={handleChange} className={iCls(errors.class)}>
                     <option value="">Select class</option>
-                    {CLASSES.map((c) => <option key={c} value={c}>{c}</option>)}
+                    {classes.map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
                   {errors.class && <p className={eCls}>{errors.class}</p>}
                 </div>

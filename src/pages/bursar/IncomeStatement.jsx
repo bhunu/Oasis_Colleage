@@ -18,46 +18,59 @@ function Row({ label, value, bold, color, indent }) {
 }
 
 export default function IncomeStatement() {
-  const [term,     setTerm]     = useState('Term 2 2025')
-  const [expenses, setExpenses] = useState([])
-  const [fees,     setFees]     = useState([])
-  const [loading,  setLoading]  = useState(true)
+  const [term,        setTerm]        = useState('')
+  const [termOptions, setTermOptions] = useState([])
+  const [expenses,    setExpenses]    = useState([])
+  const [fees,        setFees]        = useState([])
+  const [loading,     setLoading]     = useState(true)
 
   useEffect(() => {
     Promise.all([
       getDocs(collection(db, 'expenses')),
       getDocs(collection(db, 'feeAccounts')),
     ]).then(([expSnap, feeSnap]) => {
+      const feeData = feeSnap.docs.map(d => ({ id: d.id, ...d.data() }))
       setExpenses(expSnap.docs.map(d => ({ id: d.id, ...d.data() })))
-      setFees(feeSnap.docs.map(d => ({ id: d.id, ...d.data() })))
+      setFees(feeData)
+      const opts = [...new Set(feeData.map(f => f.term).filter(Boolean))]
+        .sort().reverse()
+        .map(t => { const [n, y] = t.split('-'); return n && y ? `Term ${n} ${y}` : t })
+      setTermOptions(opts)
+      if (opts.length > 0) setTerm(opts[0])
     }).catch(() => {}).finally(() => setLoading(false))
   }, [])
 
-  const tuition  = fees.reduce((s, f) => s + Number(f.totalPaid || 0), 0) || 47200
-  const examFees = 3800
-  const sports   = 1200
-  const otherInc = 800
-  const totalInc = tuition + examFees + sports + otherInc
+  /* Parse selected term to get matching formats for each collection */
+  const [, termNum, termYear] = (term.match(/Term (\d+) (\d+)/) || [])
+  const feeAccountTerm = termNum && termYear ? `${termNum}-${termYear}` : null
+  const expenseTerm    = termNum ? `Term ${termNum}` : null
 
-  const catTotal = (cat) => expenses.filter(e => e.category === cat).reduce((s, e) => s + Number(e.amount || 0), 0)
-  const salaries    = catTotal('Salaries')    || 22400
-  const utilities   = catTotal('Utilities')   || 7200
-  const maintenance = catTotal('Maintenance') || 9600
-  const supplies    = catTotal('Supplies & Stationery') || 6400
-  const otherExp    = expenses.filter(e => !['Salaries','Utilities','Maintenance','Supplies & Stationery'].includes(e.category))
-                               .reduce((s, e) => s + Number(e.amount || 0), 0) || 7200
-  const totalExp  = salaries + utilities + maintenance + supplies + otherExp
+  const tuition  = fees
+    .filter(f => !feeAccountTerm || f.term === feeAccountTerm)
+    .reduce((s, f) => s + Number(f.totalPaid || 0), 0)
+  const totalInc = tuition
+
+  const catTotal = (cat) => expenses
+    .filter(e => e.category === cat && (!expenseTerm || e.term === expenseTerm))
+    .reduce((s, e) => s + Number(e.amount || 0), 0)
+
+  const salaries    = catTotal('Salaries')
+  const utilities   = catTotal('Utilities')
+  const maintenance = catTotal('Maintenance')
+  const supplies    = catTotal('Supplies & Stationery')
+  const otherExp    = expenses
+    .filter(e => !['Salaries','Utilities','Maintenance','Supplies & Stationery'].includes(e.category)
+      && (!expenseTerm || e.term === expenseTerm))
+    .reduce((s, e) => s + Number(e.amount || 0), 0)
+  const totalExp   = salaries + utilities + maintenance + supplies + otherExp
   const netSurplus = totalInc - totalExp
 
   const handleCSV = () => {
     const rows = [
-      ['Income Statement', term],
+      ['Income Statement', term || 'All terms'],
       [],
       ['INCOME'],
       ['Tuition fees collected', tuition],
-      ['Exam fees', examFees],
-      ['Sports levy', sports],
-      ['Other income', otherInc],
       ['Total Income', totalInc],
       [],
       ['EXPENSES'],
@@ -73,7 +86,7 @@ export default function IncomeStatement() {
     const csv = rows.map(r => r.join(',')).join('\n')
     const a = document.createElement('a')
     a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
-    a.download = `income-statement-${term.replace(' ', '-')}.csv`
+    a.download = `income-statement-${(term || 'all').replace(/ /g, '-')}.csv`
     a.click()
     toast.success('CSV exported')
   }
@@ -88,9 +101,10 @@ export default function IncomeStatement() {
         <div className="flex gap-3">
           <select value={term} onChange={e => setTerm(e.target.value)}
             className="bg-white/5 border border-white/10 text-gray-300 rounded-xl px-4 py-2.5 text-sm font-montserrat focus:outline-none flex-1">
-            <option>Term 2 2025</option>
-            <option>Term 1 2025</option>
-            <option>Term 3 2024</option>
+            {termOptions.length === 0
+              ? <option value="">No terms found</option>
+              : termOptions.map(t => <option key={t} value={t}>{t}</option>)
+            }
           </select>
           <button onClick={() => window.print()}
             className="px-4 py-2.5 rounded-xl text-sm font-semibold font-montserrat text-white border border-white/20 hover:bg-white/5 transition">
@@ -108,7 +122,7 @@ export default function IncomeStatement() {
           <div className="text-center mb-6 pb-4 border-b border-white/10">
             <h2 className="font-playfair text-xl font-bold text-white">OASIS PRIVATE COLLEGE</h2>
             <p className="text-sm font-montserrat text-gray-400 mt-0.5">Income Statement</p>
-            <p className="text-xs font-montserrat text-gray-500 mt-0.5">{term}</p>
+            <p className="text-xs font-montserrat text-gray-500 mt-0.5">{term || 'All terms'}</p>
           </div>
 
           {loading ? (
@@ -117,18 +131,18 @@ export default function IncomeStatement() {
             <>
               <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest font-montserrat mb-2">Income</p>
               <Row label="Tuition fees collected" value={tuition} indent />
-              <Row label="Exam fees"              value={examFees} indent />
-              <Row label="Sports levy"            value={sports} indent />
-              <Row label="Other income"           value={otherInc} indent />
               <Row label="Total Income"           value={totalInc} bold color={TEAL} />
 
               <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest font-montserrat mb-2 mt-5">Expenses</p>
-              <Row label="Salaries"              value={salaries} indent />
-              <Row label="Utilities"             value={utilities} indent />
-              <Row label="Maintenance"           value={maintenance} indent />
-              <Row label="Supplies & Stationery" value={supplies} indent />
-              <Row label="Other expenses"        value={otherExp} indent />
-              <Row label="Total Expenses"        value={totalExp} bold color="#E24B4A" />
+              {salaries    > 0 && <Row label="Salaries"              value={salaries}    indent />}
+              {utilities   > 0 && <Row label="Utilities"             value={utilities}   indent />}
+              {maintenance > 0 && <Row label="Maintenance"           value={maintenance} indent />}
+              {supplies    > 0 && <Row label="Supplies & Stationery" value={supplies}    indent />}
+              {otherExp    > 0 && <Row label="Other expenses"        value={otherExp}    indent />}
+              {totalExp === 0 && (
+                <p className="pl-4 py-2 text-xs text-gray-600 font-montserrat">No expenses recorded for this term.</p>
+              )}
+              <Row label="Total Expenses" value={totalExp} bold color="#E24B4A" />
 
               <div className="mt-4 p-4 rounded-xl flex justify-between items-center"
                 style={{ backgroundColor: netSurplus >= 0 ? `${TEAL}18` : '#e24b4a18' }}>

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { db } from '../firebase/config'
 import toast from 'react-hot-toast'
-import { MdSave, MdSchool } from 'react-icons/md'
+import { MdSave, MdSchool, MdWarning } from 'react-icons/md'
 
 const DEFAULT_O = [
   { grade: 'A', min: 75, max: 100 },
@@ -44,11 +44,12 @@ function NumCell({ value, onChange }) {
 }
 
 export default function GradeSettings() {
-  const [tab,     setTab]     = useState('o')
-  const [oGrades, setOGrades] = useState(DEFAULT_O)
-  const [aGrades, setAGrades] = useState(DEFAULT_A)
-  const [loading, setLoading] = useState(true)
-  const [saving,  setSaving]  = useState(false)
+  const [tab,          setTab]          = useState('o')
+  const [oGrades,      setOGrades]      = useState(DEFAULT_O)
+  const [aGrades,      setAGrades]      = useState(DEFAULT_A)
+  const [loading,      setLoading]      = useState(true)
+  const [saving,       setSaving]       = useState(false)
+  const [isConfigured, setIsConfigured] = useState(true)
 
   useEffect(() => {
     getDoc(doc(db, 'config', 'gradeSettings'))
@@ -57,6 +58,8 @@ export default function GradeSettings() {
           const d = snap.data()
           if (d.oLevel?.length) setOGrades(d.oLevel)
           if (d.aLevel?.length) setAGrades(d.aLevel)
+        } else {
+          setIsConfigured(false)
         }
       })
       .catch(() => {})
@@ -70,6 +73,7 @@ export default function GradeSettings() {
     setSaving(true)
     try {
       await setDoc(doc(db, 'config', 'gradeSettings'), { oLevel: oGrades, aLevel: aGrades })
+      setIsConfigured(true)
       toast.success('Grade settings saved')
     } catch (err) {
       console.error(err)
@@ -89,6 +93,19 @@ export default function GradeSettings() {
 
   return (
     <div className="max-w-2xl space-y-6">
+      {/* Unconfigured warning */}
+      {!isConfigured && (
+        <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3">
+          <MdWarning className="text-amber-400 text-xl shrink-0 mt-0.5" />
+          <div>
+            <p className="text-amber-300 font-montserrat text-sm font-semibold">Grade settings not yet saved</p>
+            <p className="text-amber-400/70 font-montserrat text-xs mt-0.5">
+              The student results portal is currently using default grade ranges. Save your settings to apply them to results and rankings.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div>
         <h1 className="font-playfair text-2xl font-bold text-white">Grade Settings</h1>

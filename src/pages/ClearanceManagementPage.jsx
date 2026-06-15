@@ -31,7 +31,9 @@ function getAdminName() {
 
 function generateSerial(year, regNo) {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-  const rand  = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+  const bytes = new Uint8Array(6)
+  crypto.getRandomValues(bytes)
+  const rand  = Array.from(bytes, b => chars[b % chars.length]).join('')
   return `OPC-CL-${year}-${regNo}-${rand}`
 }
 
@@ -67,8 +69,8 @@ export default function ClearanceManagementPage() {
       // Keep only the latest application per student (by regNo)
       const seen = new Set()
       const apps = sorted.filter(app => {
-        if (seen.has(app.regNo)) return false
-        seen.add(app.regNo)
+        if (seen.has(app.reg_number)) return false
+        seen.add(app.reg_number)
         return true
       })
       setApplications(apps)
@@ -95,8 +97,8 @@ export default function ClearanceManagementPage() {
 
     try {
       const [feeSnap, stuSnap] = await Promise.all([
-        getDocs(query(collection(db, 'feeAccounts'), where('reg_number', '==', app.regNo), limit(1))),
-        getDocs(query(collection(db, 'students'), where('reg_number', '==', app.regNo), limit(1))),
+        getDocs(query(collection(db, 'feeAccounts'), where('reg_number', '==', app.reg_number), limit(1))),
+        getDocs(query(collection(db, 'students'), where('reg_number', '==', app.reg_number), limit(1))),
       ])
       setSelectedFee(!feeSnap.empty ? feeSnap.docs[0].data() : null)
       setSelectedStudent(!stuSnap.empty ? { id: stuSnap.docs[0].id, ...stuSnap.docs[0].data() } : null)
@@ -107,9 +109,18 @@ export default function ClearanceManagementPage() {
     if (!selected || working) return
     setWorking(true)
     try {
-      const year   = new Date().getFullYear()
-      const serial = generateSerial(year, selected.regNo)
-      const now    = serverTimestamp()
+      const year = new Date().getFullYear()
+
+      // Verify the generated serial is unique before writing — prevents silent overwrite on collision
+      let serial = null
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const candidate = generateSerial(year, selected.reg_number)
+        const existing  = await getDoc(doc(db, 'clearancePasses', candidate))
+        if (!existing.exists()) { serial = candidate; break }
+      }
+      if (!serial) throw new Error('Could not generate a unique clearance serial. Please try again.')
+
+      const now = serverTimestamp()
 
       const portalSnap = await getDoc(doc(db, 'settings', 'portalConfig'))
       const term = portalSnap.exists() ? portalSnap.data().currentTerm  || 'Term 1' : 'Term 1'
@@ -127,7 +138,7 @@ export default function ClearanceManagementPage() {
       /* Save clearance pass */
       await setDoc(doc(db, 'clearancePasses', serial), {
         clearanceSerial:   serial,
-        regNo:             selected.regNo,
+        reg_number:        selected.reg_number,
         studentName:       selected.studentName,
         class:             selected.class || '',
         exitType:          selected.exitType,
@@ -156,10 +167,10 @@ export default function ClearanceManagementPage() {
       /* Notify student */
       await addDoc(collection(db, 'notifications'), {
         type:        'ClearanceReady',
-        regNo:       selected.regNo,
+        reg_number:  selected.reg_number,
         studentName: selected.studentName,
         message:     'Your clearance letter is ready. You may now view and print it from your portal.',
-        forStudent:  selected.regNo,
+        forStudent:  selected.reg_number,
         read:        false,
         createdAt:   now,
       })
@@ -193,6 +204,16 @@ export default function ClearanceManagementPage() {
         reviewedAt:      serverTimestamp(),
         rejectionReason: rejectReason.trim(),
       })
+
+      await addDoc(collection(db, 'notifications'), {
+        type:        'ClearanceRejected',
+        forStudent:  selected.reg_number,
+        studentName: selected.studentName,
+        message:     `Your clearance application was not approved. Reason: ${rejectReason.trim()}`,
+        read:        false,
+        createdAt:   serverTimestamp(),
+      })
+
       toast.success('Application rejected.')
       setSelected(null)
       loadData()
@@ -324,7 +345,7 @@ export default function ClearanceManagementPage() {
                 {applications.map(app => (
                   <tr key={app.id} className="border-b border-white/5 hover:bg-white/[0.02]">
                     <td className="py-3.5 px-6 font-montserrat font-semibold text-white text-sm">{app.studentName}</td>
-                    <td className="py-3.5 px-4 font-mono text-[#C9A84C] text-xs font-semibold">{app.regNo}</td>
+                    <td className="py-3.5 px-4 font-mono text-[#C9A84C] text-xs font-semibold">{app.reg_number}</td>
                     <td className="py-3.5 px-4 font-montserrat text-gray-400 text-sm">{app.class || '—'}</td>
                     <td className="py-3.5 px-4">
                       <span className={`inline-flex items-center border rounded-full text-[10px] font-montserrat font-semibold px-2.5 py-1 ${EXIT_COLORS[app.exitType] || 'bg-white/5 text-gray-400 border-white/10'}`}>
@@ -379,7 +400,7 @@ export default function ClearanceManagementPage() {
                 </div>
                 <div>
                   <h4 className="font-playfair text-lg font-bold text-white">{selected.studentName}</h4>
-                  <p className="font-mono text-[#C9A84C] text-sm">{selected.regNo}</p>
+                  <p className="font-mono text-[#C9A84C] text-sm">{selected.reg_number}</p>
                   <span className={`inline-flex items-center border rounded-full text-[10px] font-montserrat font-semibold px-2.5 py-0.5 mt-1 ${EXIT_COLORS[selected.exitType] || ''}`}>
                     {EXIT_LABELS[selected.exitType] || selected.exitType}
                   </span>

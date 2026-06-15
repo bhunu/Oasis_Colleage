@@ -19,6 +19,7 @@ import {
   MdAccountBalance,
   MdLocalAtm,
   MdCalendarMonth,
+  MdCloudUpload,
 } from 'react-icons/md'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../../firebase/config'
@@ -40,10 +41,11 @@ const NAV = [
   {
     section: 'FEE COLLECTIONS',
     items: [
-      { label: 'Receive payment',   icon: MdPointOfSale, path: '/bursar/receive-payment' },
-      { label: 'Issue receipt',     icon: MdReceipt,     path: '/bursar/issue-receipt' },
-      { label: 'Student accounts',  icon: MdPeople,      path: '/bursar/student-accounts' },
-      { label: 'Arrears',           icon: MdWarning,     path: '/bursar/arrears', badge: true },
+      { label: 'Receive payment',   icon: MdPointOfSale,  path: '/bursar/receive-payment' },
+      { label: 'Issue receipt',     icon: MdReceipt,      path: '/bursar/issue-receipt' },
+      { label: 'Review POP',        icon: MdCloudUpload,  path: '/bursar/review-pop', popBadge: true },
+      { label: 'Student accounts',  icon: MdPeople,       path: '/bursar/student-accounts' },
+      { label: 'Arrears',           icon: MdWarning,      path: '/bursar/arrears', badge: true },
     ],
   },
   {
@@ -83,10 +85,15 @@ const NAV = [
 export default function BursarSidebar({ open, onClose }) {
   const navigate = useNavigate()
   const [arrearsCount, setArrearsCount] = useState(0)
+  const [popCount,     setPopCount]     = useState(0)
 
   useEffect(() => {
     getDocs(query(collection(db, 'feeAccounts'), where('balanceType', '==', 'debit')))
       .then(snap => setArrearsCount(snap.size))
+      .catch(() => {})
+
+    getDocs(query(collection(db, 'proofOfPayments'), where('status', '==', 'pending')))
+      .then(snap => setPopCount(snap.size))
       .catch(() => {})
   }, [])
 
@@ -154,6 +161,11 @@ export default function BursarSidebar({ open, onClose }) {
                           {item.badge && arrearsCount > 0 && (
                             <span className="ml-auto bg-red-500/80 text-white text-[9px] font-bold font-montserrat px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-tight">
                               {arrearsCount}
+                            </span>
+                          )}
+                          {item.popBadge && popCount > 0 && (
+                            <span className="ml-auto bg-amber-500/80 text-white text-[9px] font-bold font-montserrat px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-tight">
+                              {popCount}
                             </span>
                           )}
                           {item.termBadge && (

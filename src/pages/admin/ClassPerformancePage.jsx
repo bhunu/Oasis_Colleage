@@ -3,6 +3,7 @@ import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firesto
 import { db } from '../../firebase/config'
 import { getCurrentTerm } from '../../utils/termHelpers'
 import { useTermDates, fmtTermDate } from '../../hooks/useTermDates'
+import { SCHOOL_ID } from '../../utils/schoolConfig'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine,
@@ -15,7 +16,6 @@ import {
 import { FaGraduationCap } from 'react-icons/fa'
 
 // ── Constants & helpers ───────────────────────────────────────────────────────
-const SCHOOL_ID   = 'oasis'
 
 const DEFAULT_O_GRADES = [
   { grade: 'A', min: 75, max: 100 },

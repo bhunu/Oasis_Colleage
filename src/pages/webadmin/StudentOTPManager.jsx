@@ -22,7 +22,9 @@ const TD    = 'py-3 px-4 text-sm text-gray-300 font-montserrat'
 
 function generateOTP(len = 8) {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-  return Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+  const bytes = new Uint8Array(len)
+  crypto.getRandomValues(bytes)
+  return Array.from(bytes, b => chars[b % chars.length]).join('')
 }
 
 function getOtpStatus(user) {
@@ -107,20 +109,41 @@ function GenerateOTP() {
     if (!student) return
     setGenerating(true)
     try {
-      const otp        = generateOTP(8)
-      const expiryHrs  = settings?.otpExpiryHours ?? 24
-      const expiresAt  = new Date(Date.now() + expiryHrs * 3600 * 1000)
+      const expiryHrs = settings?.otpExpiryHours ?? 24
+      const expiresAt = new Date(Date.now() + expiryHrs * 3600 * 1000)
 
       const existingSnap = await getDocs(
         query(collection(db, 'users'), where('studentId', '==', student.id), where('role', '==', 'student'), limit(1))
       )
 
+      // Enforce 60-minute cooldown between regenerations for the same student
+      if (!existingSnap.empty) {
+        const lastData = existingSnap.docs[0].data()
+        const lastGen  = lastData.otpGeneratedAt?.toDate?.() ?? lastData.updatedAt?.toDate?.()
+        if (lastGen) {
+          const COOLDOWN_MS = 60 * 60 * 1000
+          const elapsed     = Date.now() - lastGen.getTime()
+          if (elapsed < COOLDOWN_MS) {
+            const minsLeft = Math.ceil((COOLDOWN_MS - elapsed) / 60000)
+            toast.error(
+              `OTP generated recently. Wait ${minsLeft} more minute${minsLeft !== 1 ? 's' : ''} before regenerating.`
+            )
+            setGenerating(false)
+            return
+          }
+        }
+      }
+
+      const otp       = generateOTP(8)
+      const adminName = JSON.parse(sessionStorage.getItem('adminSession') || '{}').name || 'Admin'
+
       if (!existingSnap.empty) {
         await updateDoc(existingSnap.docs[0].ref, {
-          otpCode:      otp,
-          otpExpiresAt: expiresAt,
-          otpUsed:      false,
-          updatedAt:    serverTimestamp(),
+          otpCode:        otp,
+          otpExpiresAt:   expiresAt,
+          otpUsed:        false,
+          updatedAt:      serverTimestamp(),
+          otpGeneratedAt: serverTimestamp(),
         })
       } else {
         await addDoc(collection(db, 'users'), {
@@ -133,10 +156,10 @@ function GenerateOTP() {
           otpUsed:          false,
           createdAt:        serverTimestamp(),
           updatedAt:        serverTimestamp(),
+          otpGeneratedAt:   serverTimestamp(),
         })
       }
 
-      const adminName = JSON.parse(sessionStorage.getItem('adminSession') || '{}').name || 'Admin'
       await addDoc(collection(db, 'otpLogs'), {
         studentId:   student.id,
         studentName: student.fullName || student.name || '',
