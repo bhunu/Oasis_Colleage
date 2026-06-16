@@ -2,6 +2,19 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // ── Web Admin override ────────────────────────────────────────────────
+    // Web admins have unrestricted access to all collections, including
+    // the database-reset operation which deletes documents normally blocked
+    // from deletion (students, users, financialLogs, etc.).
+    function isWebAdmin() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'web_admin';
+    }
+    match /{document=**} {
+      allow read, write, delete: if isWebAdmin();
+    }
+
     // ── students ─────────────────────────────────────────────────────────
     match /students/{studentId} {
       // TODO (Security C-03 — KNOWN RISK): Students do not use Firebase Auth.

@@ -13,6 +13,7 @@ import PortalSettings     from '../../pages/webadmin/PortalSettings'
 import SecurityLogs       from '../../pages/webadmin/SecurityLogs'
 import FinancialLogs      from '../../pages/webadmin/FinancialLogs'
 import TeacherAccounts    from '../../pages/admin/TeacherAccounts'
+import DatabaseReset      from '../../pages/webadmin/DatabaseReset'
 const TITLES = {
   '/admin':                    'Dashboard',
   '/admin/news':               'News & Announcements',
@@ -25,6 +26,7 @@ const TITLES = {
   '/admin/security-logs':      'Security Logs',
   '/admin/financial-logs':     'Financial Audit Logs',
   '/admin/teacher-accounts':   'Teacher Accounts',
+  '/admin/database-reset':     'Database Reset',
 }
 
 export default function AdminLayout() {
@@ -52,6 +54,7 @@ export default function AdminLayout() {
             <Route path="/admin/security-logs"    element={<SecurityLogs />} />
             <Route path="/admin/financial-logs"   element={<FinancialLogs />} />
             <Route path="/admin/teacher-accounts" element={<TeacherAccounts />} />
+            <Route path="/admin/database-reset"   element={<DatabaseReset />} />
             <Route path="*"                        element={<Navigate to="/admin" replace />} />
           </Routes>
         </main>

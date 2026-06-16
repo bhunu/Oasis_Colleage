@@ -2,6 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import {
   MdDashboard, MdArticle, MdEvent, MdPeople, MdPhotoLibrary,
   MdLogout, MdManageAccounts, MdKey, MdTune, MdSecurity, MdReceiptLong,
+  MdDeleteForever,
 } from 'react-icons/md'
 import { FaGraduationCap, FaChalkboardTeacher } from 'react-icons/fa'
 import { useEffect, useState } from 'react'
@@ -156,6 +157,22 @@ export default function AdminSidebar({ open, onClose }) {
             label="Financial Logs"
             onClose={onClose}
           />
+
+          <SectionLabel>Danger Zone</SectionLabel>
+          <NavLink
+            to="/admin/database-reset"
+            onClick={onClose}
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium font-montserrat transition-all border-l-2 pl-[10px] ${
+                isActive
+                  ? 'bg-red-900/30 text-red-400 border-red-600'
+                  : 'text-red-600/70 hover:bg-red-900/20 hover:text-red-400 border-transparent'
+              }`
+            }
+          >
+            <MdDeleteForever className="text-lg shrink-0" />
+            <span className="flex-1">Database Reset</span>
+          </NavLink>
         </nav>
 
         {/* Logout */}
