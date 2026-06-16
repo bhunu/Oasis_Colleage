@@ -9,7 +9,7 @@ import { sendOtpEmail } from '../utils/sendOtpEmail'
 import toast from 'react-hot-toast'
 import {
   MdUploadFile, MdDownload, MdCheckCircle, MdError,
-  MdWarning, MdClose, MdCloudUpload, MdEmail,
+  MdWarning, MdClose, MdCloudUpload, MdEmail, MdLoop,
 } from 'react-icons/md'
 
 function generateOTP(len = 8) {
@@ -132,38 +132,99 @@ function parseDate(val) {
   return d.toISOString().split('T')[0]
 }
 
+// ── Validation step definitions ───────────────────────────────────────────
+const VAL_STEPS = [
+  { key: 'read',    label: 'Reading file' },
+  { key: 'headers', label: 'Checking column headers' },
+  { key: 'classes', label: 'Loading class list' },
+  { key: 'rows',    label: 'Validating rows' },
+  { key: 'dupes',   label: 'Checking for duplicates' },
+]
+
+function initSteps() {
+  return VAL_STEPS.map(s => ({ ...s, status: 'pending' }))
+}
+
+// ── Step progress row UI ──────────────────────────────────────────────────
+function StepRow({ step }) {
+  return (
+    <div className="flex items-center gap-3 py-2.5 border-b border-white/5 last:border-0">
+      <div className="shrink-0 w-4 h-4 flex items-center justify-center">
+        {step.status === 'pending' && <div className="w-3 h-3 rounded-full border border-gray-600" />}
+        {step.status === 'running' && <MdLoop className="text-[#C9A84C] text-base animate-spin" />}
+        {step.status === 'done'    && <MdCheckCircle className="text-emerald-400 text-base" />}
+        {step.status === 'error'   && <MdError className="text-red-400 text-base" />}
+      </div>
+      <p className={`flex-1 text-sm font-montserrat ${
+        step.status === 'running' ? 'text-[#C9A84C]' :
+        step.status === 'done'    ? 'text-gray-200'  :
+        step.status === 'error'   ? 'text-red-400'   : 'text-gray-500'
+      }`}>
+        {step.label}
+        {step.status === 'running' && step.detail ? <span className="text-xs ml-2 text-gray-500">{step.detail}</span> : null}
+      </p>
+    </div>
+  )
+}
+
 // ── Main component ────────────────────────────────────────────────────────
 export default function BulkImport() {
   const [rows, setRows]           = useState([])   // { ...data, _errors[], _status }
   const [importing, setImporting] = useState(false)
   const [done, setDone]           = useState(false)
   const [fileName, setFileName]   = useState('')
+  const [valSteps, setValSteps]   = useState([])
+  const [validating, setValidating] = useState(false)
+
+  function setStep(key, patch) {
+    setValSteps(prev => prev.map(s => s.key === key ? { ...s, ...patch } : s))
+  }
 
   const processFile = useCallback((file) => {
+    const steps = initSteps()
+    setValSteps(steps)
+    setValidating(true)
+
     const reader = new FileReader()
     reader.onload = async (e) => {
       try {
+        // Step 1 — read
+        setStep('read', { status: 'running' })
         const wb   = XLSX.read(e.target.result, { type: 'array' })
         const ws   = wb.Sheets[wb.SheetNames[0]]
         const raw  = XLSX.utils.sheet_to_json(ws, { defval: '' })
+        if (raw.length === 0) {
+          setStep('read', { status: 'error' })
+          setValidating(false)
+          toast.error('The file is empty.')
+          return
+        }
+        setStep('read', { status: 'done' })
 
-        if (raw.length === 0) { toast.error('The file is empty.'); return }
-
-        // Check required columns exist
+        // Step 2 — headers
+        setStep('headers', { status: 'running' })
         const missing = REQUIRED_COLS.filter(c => !(c in raw[0]))
         if (missing.length > 0) {
+          setStep('headers', { status: 'error' })
+          setValidating(false)
           toast.error(`Missing columns: ${missing.join(', ')}`)
           return
         }
+        setStep('headers', { status: 'done' })
 
+        // Step 3 — class list (Firestore)
+        setStep('classes', { status: 'running' })
         const validClasses = await fetchValidClasses()
+        setStep('classes', { status: 'done' })
 
+        // Step 4 — validate rows
+        setStep('rows', { status: 'running', detail: `0 / ${raw.length}` })
         const parsed = raw.map((r, i) => {
           const row = {
             fullName:      String(r.fullName   || '').trim(),
             dateOfBirth:   parseDate(r.dateOfBirth),
             gender:        String(r.gender     || '').trim(),
-            class:         String(r.class || '').trim(),
+            class:         normalizeClass(String(r.class || '').trim()),
             guardianName:  String(r.guardianName  || '').trim(),
             guardianPhone: String(r.guardianPhone || '').trim(),
             guardianEmail: String(r.guardianEmail || '').trim().toLowerCase(),
@@ -174,10 +235,15 @@ export default function BulkImport() {
             studentEmail:   String(r.studentEmail   || '').trim().toLowerCase(),
           }
           const errs = validateRow(row, i, validClasses)
+          if ((i + 1) % 10 === 0 || i === raw.length - 1) {
+            setStep('rows', { detail: `${i + 1} / ${raw.length}` })
+          }
           return { ...row, _errors: errs, _status: errs.length === 0 ? 'valid' : 'error' }
         })
+        setStep('rows', { status: 'done', detail: null })
 
-        // Detect duplicates against already-uploaded students (match by fullName + dateOfBirth)
+        // Step 5 — duplicate check (Firestore)
+        setStep('dupes', { status: 'running' })
         const existing = await getStudents()
         const existingKeys = new Set(
           existing.map(s => `${s.fullName?.trim().toLowerCase()}|${s.dateOfBirth}`)
@@ -189,11 +255,14 @@ export default function BulkImport() {
           }
           return row
         })
+        setStep('dupes', { status: 'done' })
 
         setRows(deduplicated)
         setFileName(file.name)
         setDone(false)
+        setValidating(false)
       } catch {
+        setValidating(false)
         toast.error('Could not read the file. Make sure it is a valid .xlsx or .xls file.')
       }
     }
@@ -297,6 +366,40 @@ export default function BulkImport() {
   }
 
   const reset = () => { setRows([]); setFileName(''); setDone(false) }
+
+  // ── Validation progress ────────────────────────────────────────────────
+  if (validating) {
+    const done  = valSteps.filter(s => s.status === 'done' || s.status === 'error').length
+    const total = valSteps.length
+    const pct   = total > 0 ? Math.round((done / total) * 100) : 0
+
+    return (
+      <div className="max-w-md mx-auto py-6">
+        <div className="bg-[#0D1C35] border border-white/10 rounded-2xl p-6 space-y-4">
+          <div className="flex items-center gap-3 mb-1">
+            <MdLoop className="text-[#C9A84C] text-2xl animate-spin shrink-0" />
+            <div>
+              <p className="text-white font-semibold font-montserrat text-sm">Validating file…</p>
+              <p className="text-gray-500 font-montserrat text-xs">Do not close this tab</p>
+            </div>
+          </div>
+
+          {/* Progress bar */}
+          <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-[#C9A84C] rounded-full transition-all duration-500"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+
+          {/* Steps */}
+          <div className="divide-y divide-white/5">
+            {valSteps.map(step => <StepRow key={step.key} step={step} />)}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   // ── Dropzone (no file loaded) ──────────────────────────────────────────
   if (rows.length === 0) {
