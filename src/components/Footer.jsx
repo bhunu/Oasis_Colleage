@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { FaGraduationCap, FaFacebookF, FaTwitter, FaInstagram, FaYoutube, FaMapMarkerAlt, FaPhone, FaEnvelope, FaClock } from 'react-icons/fa'
+import { FaGraduationCap, FaFacebookF, FaTwitter, FaInstagram, FaYoutube, FaMapMarkerAlt, FaPhone, FaEnvelope, FaClock, FaCode } from 'react-icons/fa'
 
 const LINKS = {
   'Quick Links': [
@@ -112,6 +112,29 @@ export default function Footer() {
                 <div className="flex items-center gap-2 text-xs text-gray-400"><span className="w-2 h-2 rounded-full bg-gold" /> ZIMSEC Accredited</div>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Developer credit band */}
+      <div className="border-t border-white/5" style={{ background: 'linear-gradient(90deg, rgba(201,168,76,0.04) 0%, rgba(255,255,255,0.02) 50%, rgba(201,168,76,0.04) 100%)' }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-5">
+          <span className="text-[10px] uppercase tracking-widest text-gray-600 font-montserrat">Developed &amp; maintained by</span>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: 'rgba(201,168,76,0.15)', border: '1px solid rgba(201,168,76,0.25)' }}>
+                <FaCode className="text-[10px]" style={{ color: '#C9A84C' }} />
+              </div>
+              <span className="text-sm font-bold tracking-wide font-montserrat" style={{ color: '#C9A84C' }}>CloudTech</span>
+            </div>
+            <span className="w-px h-4 bg-white/10" />
+            <a
+              href="tel:+263775712114"
+              className="flex items-center gap-1.5 text-xs font-montserrat text-gray-500 hover:text-[#C9A84C] transition-colors duration-200"
+            >
+              <FaPhone className="text-[10px] text-gray-600" />
+              +263 775 712 114
+            </a>
           </div>
         </div>
       </div>
