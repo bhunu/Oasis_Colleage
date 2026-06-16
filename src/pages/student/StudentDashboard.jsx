@@ -80,7 +80,7 @@ export default function StudentDashboard() {
       {/* Welcome banner */}
       <div className="bg-gradient-to-r from-[#0D1C35] to-[#132140] border border-white/10 rounded-xl p-6">
         <p className="text-[10px] font-semibold text-[#C9A84C]/70 uppercase tracking-widest font-montserrat mb-1">
-          {portalSettings.currentTerm} · {portalSettings.currentYear}
+          {String(portalSettings.currentTerm).startsWith('Term') ? portalSettings.currentTerm : `Term ${portalSettings.currentTerm}`} · {portalSettings.currentYear}
         </p>
         <h1 className="font-playfair text-2xl font-bold text-white">
           Welcome back, {studentData?.name?.split(' ')[0] || 'Student'}.
