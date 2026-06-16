@@ -4,7 +4,6 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import { useStudent } from '../../context/StudentContext'
 import useStudentSessionTimeout from '../../hooks/useStudentSessionTimeout'
-import useStudentSessionGuard, { endStudentSession } from '../../hooks/useStudentSessionGuard'
 import {
   MdDashboard, MdBarChart, MdReceipt, MdCloudUpload,
   MdPerson, MdLogout, MdMenu, MdClose, MdNotifications,
@@ -57,15 +56,11 @@ export default function StudentLayout({ children }) {
     ...(isGated  ? [{ to: '/student/clearance/status', icon: MdVerifiedUser, label: 'My Clearance' }] : []),
   ]
 
-  // Concurrent session guard — signs out if another device kills this session
-  useStudentSessionGuard(studentData?.uid ?? null)
-
   const initials = studentData?.name
     ? studentData.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
     : 'ST'
 
-  const handleLogout = async () => {
-    await endStudentSession(studentData?.uid)
+  const handleLogout = () => {
     logout()
     toast.success('Signed out')
     navigate('/')

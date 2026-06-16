@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { collection, query, where, orderBy, getDocs, doc, updateDoc, writeBatch } from 'firebase/firestore'
+import { collection, query, where, getDocs, doc, updateDoc, writeBatch } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import { useStudent } from '../../context/StudentContext'
 import { MdNotifications, MdDoneAll, MdHourglassEmpty } from 'react-icons/md'
@@ -24,10 +24,17 @@ export default function StudentNotifications() {
       query(
         collection(db, 'notifications'),
         where('forStudent', '==', studentData.regNumber),
-        orderBy('createdAt', 'desc'),
       )
     )
-      .then(snap => setNotifications(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
+      .then(snap => {
+        const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        docs.sort((a, b) => {
+          const at = a.createdAt?.toDate?.() ?? new Date(a.createdAt ?? 0)
+          const bt = b.createdAt?.toDate?.() ?? new Date(b.createdAt ?? 0)
+          return bt - at
+        })
+        setNotifications(docs)
+      })
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [studentData?.regNumber])

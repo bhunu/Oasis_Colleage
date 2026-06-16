@@ -3,6 +3,10 @@ import {
   collection, getDocs, addDoc, query, where, serverTimestamp,
 } from 'firebase/firestore'
 import { db } from '../../firebase/config'
+import { getCurrentTerm } from '../../utils/termHelpers'
+
+const { number: CURR_TERM_NUM, year: CURR_TERM_YEAR } = getCurrentTerm()
+const CURR_TERM = `Term ${CURR_TERM_NUM}`
 import { MdFactCheck, MdCheckCircle, MdCancel, MdAccessTime, MdChevronLeft } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
@@ -55,16 +59,15 @@ export default function TeacherAttendance() {
     setSelPeriod(null)
     setMarkedPeriods([])
 
-    // Get most recent timetable for this class
-    getDocs(query(collection(db, 'timetables'), where('className', '==', selClass)))
-      .then(snap => {
+    // Get the current term's timetable for this class
+    getDocs(query(
+      collection(db, 'timetables'),
+      where('className', '==', selClass),
+      where('term', '==', CURR_TERM),
+      where('year', '==', CURR_TERM_YEAR),
+    )).then(snap => {
         if (snap.empty) return
-        // Use the first found (admin saves one per class/term/year)
-        const sorted = snap.docs.map(d => d.data()).sort((a, b) => {
-          const ya = a.year ?? 0, yb = b.year ?? 0
-          return yb - ya
-        })
-        const schedule = sorted[0]?.schedule || {}
+        const schedule = snap.docs[0].data().schedule || {}
         const dayPeriods = (schedule[today] || []).map((p, i) => ({ ...p, index: i }))
         setPeriods(dayPeriods)
       })
@@ -91,7 +94,7 @@ export default function TeacherAttendance() {
       .then(snap => {
         const list = snap.docs
           .map(d => ({ id: d.id, ...d.data() }))
-          .sort((a, b) => (a.surname ?? a.studentName ?? '').localeCompare(b.surname ?? b.studentName ?? ''))
+          .sort((a, b) => (a.fullName ?? a.studentName ?? a.surname ?? '').localeCompare(b.fullName ?? b.studentName ?? b.surname ?? ''))
         setStudents(list)
         // Default all to present
         const init = {}
@@ -122,7 +125,7 @@ export default function TeacherAttendance() {
       const rollRecords = students.map(s => ({
         studentId:   s.id,
         reg_number:  s.reg_number ?? s.studentId ?? '',
-        studentName: `${s.surname ?? ''} ${s.firstName ?? s.studentName ?? ''}`.trim(),
+        studentName: s.fullName || s.studentName || `${s.surname ?? ''} ${s.firstName ?? ''}`.trim() || '',
         status:      records[s.id] ?? 'present',
       }))
 
@@ -289,7 +292,7 @@ export default function TeacherAttendance() {
       ) : (
         <div className="space-y-2">
           {students.map((student, idx) => {
-            const name   = `${student.surname ?? ''} ${student.firstName ?? student.studentName ?? ''}`.trim() || 'Unknown'
+            const name   = student.fullName || student.studentName || `${student.surname ?? ''} ${student.firstName ?? ''}`.trim() || 'Unknown'
             const regNum = student.reg_number ?? student.studentId ?? ''
             const status = records[student.id] ?? 'present'
 

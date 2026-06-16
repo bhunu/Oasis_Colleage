@@ -1,13 +1,12 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import { doc, updateDoc, deleteField, onSnapshot, query, collection, where, limit } from 'firebase/firestore'
-import { signOut } from 'firebase/auth'
-import { db, auth } from '../firebase/config'
+import { doc, onSnapshot, query, collection, where, limit } from 'firebase/firestore'
+import { db } from '../firebase/config'
 
 const StudentContext = createContext(null)
 export const useStudent = () => useContext(StudentContext)
 
 const DEFAULT_SETTINGS = {
-  sessionTimeoutMinutes: 4,
+  sessionTimeoutMinutes: 20,
   otpExpiryHours: 24,
   resultsAccessThreshold: 75,
   currentTerm: 'Term 2',
@@ -72,21 +71,8 @@ export function StudentProvider({ children }) {
     return unsub
   }, [studentData?.regNumber])
 
-  const logout = useCallback(async () => {
-    try {
-      const sessionId = sessionStorage.getItem('studentSessionId')
-      const raw = sessionStorage.getItem('studentSession')
-      const uid = raw ? JSON.parse(raw)?.uid : null
-      if (uid && sessionId) {
-        await updateDoc(
-          doc(db, 'users', uid, 'activeSessions', '__sessions__'),
-          { [sessionId]: deleteField() }
-        )
-      }
-    } catch {}
-    await signOut(auth).catch(() => {})
+  const logout = useCallback(() => {
     sessionStorage.removeItem('studentSession')
-    sessionStorage.removeItem('studentSessionId')
     setStudentData(null)
     setIsBoarder(false)
     setFirestoreStudent(null)

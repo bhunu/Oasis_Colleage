@@ -17,7 +17,6 @@ import {
   MdSettings,
   MdLogout,
   MdAccountBalance,
-  MdLocalAtm,
   MdCalendarMonth,
   MdCloudUpload,
 } from 'react-icons/md'
@@ -66,11 +65,8 @@ const NAV = [
     ],
   },
   {
-    section: 'FINANCE',
+    section: 'TERM MANAGEMENT',
     items: [
-      { label: 'Fees accounts',         icon: MdReceiptLong,   path: '/bursar/student-accounts' },
-      { label: 'Fees arrears',          icon: MdWarning,       path: '/bursar/arrears' },
-      { label: 'Payments',              icon: MdLocalAtm,      path: '/bursar/receive-payment' },
       { label: 'End of term procedure', icon: MdCalendarMonth, path: '/bursar/end-of-term', termBadge: true },
     ],
   },

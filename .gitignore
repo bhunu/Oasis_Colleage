@@ -30,3 +30,4 @@ scripts/serviceAccount.json
 *.njsproj
 *.sln
 *.sw?
+dev-dist/

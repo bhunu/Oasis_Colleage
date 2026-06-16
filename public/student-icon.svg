@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <circle cx="256" cy="256" r="256" fill="#0A1628"/>
+  <path d="M256 80 L400 160 L400 320 Q400 432 256 464 Q112 432 112 320 L112 160 Z" fill="none" stroke="#C9A84C" stroke-width="20"/>
+  <path d="M256 110 L372 178 L372 316 Q372 412 256 440 Q140 412 140 316 L140 178 Z" fill="none" stroke="#e8c96a" stroke-width="6" opacity="0.4"/>
+  <!-- Graduation cap -->
+  <polygon points="256,160 336,200 256,240 176,200" fill="#C9A84C"/>
+  <line x1="336" y1="200" x2="336" y2="248" stroke="#C9A84C" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="336" cy="252" r="10" fill="#e8c96a"/>
+  <!-- Student body -->
+  <circle cx="256" cy="290" r="24" fill="#C9A84C"/>
+  <path d="M205 375 Q205 335 256 335 Q307 335 307 375" fill="#C9A84C"/>
+  <text x="256" y="425" font-family="Georgia,serif" font-size="28" font-weight="bold" fill="#C9A84C" text-anchor="middle" letter-spacing="2">STUDENT</text>
+</svg>

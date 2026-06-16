@@ -137,21 +137,25 @@ function GenerateOTP() {
       const otp       = generateOTP(8)
       const adminName = JSON.parse(sessionStorage.getItem('adminSession') || '{}').name || 'Admin'
 
+      let userDocRef
       if (!existingSnap.empty) {
-        await updateDoc(existingSnap.docs[0].ref, {
-          otpCode:        otp,
+        userDocRef = existingSnap.docs[0].ref
+        await updateDoc(userDocRef, {
+          hasActiveOtp:   true,
           otpExpiresAt:   expiresAt,
           otpUsed:        false,
           updatedAt:      serverTimestamp(),
           otpGeneratedAt: serverTimestamp(),
         })
       } else {
-        await addDoc(collection(db, 'users'), {
+        userDocRef = doc(collection(db, 'users'))
+        await setDoc(userDocRef, {
           studentId:        student.id,
+          regNumber:        student.reg_number || '',
           role:             'student',
           uid:              null,
           hasSetupPassword: false,
-          otpCode:          otp,
+          hasActiveOtp:     true,
           otpExpiresAt:     expiresAt,
           otpUsed:          false,
           createdAt:        serverTimestamp(),
@@ -159,6 +163,13 @@ function GenerateOTP() {
           otpGeneratedAt:   serverTimestamp(),
         })
       }
+
+      // OTP code stored in subcollection — not returned by queries on users/
+      await setDoc(doc(db, 'users', userDocRef.id, 'otpSecret', 'current'), {
+        otpCode:   otp,
+        expiresAt: expiresAt,
+        createdAt: serverTimestamp(),
+      })
 
       await addDoc(collection(db, 'otpLogs'), {
         studentId:   student.id,
@@ -363,7 +374,7 @@ function ActiveOTPLogs() {
 
       const list = userSnap.docs
         .map(d => ({ docId: d.id, ref: d.ref, ...d.data() }))
-        .filter(u => u.otpCode)
+        .filter(u => u.otpExpiresAt != null || u.hasActiveOtp)
         .map(u => ({ ...u, student: studMap[u.studentId] || null, status: getOtpStatus(u) }))
         .sort((a, b) => {
           const ta = a.updatedAt?.seconds ?? a.createdAt?.seconds ?? 0
@@ -384,7 +395,8 @@ function ActiveOTPLogs() {
     if (!confirm(`Revoke OTP for ${row.student?.fullName ?? row.studentId}? They will no longer be able to use this code.`)) return
     setRevoking(r => ({ ...r, [row.docId]: true }))
     try {
-      await updateDoc(row.ref, { otpExpiresAt: new Date(), updatedAt: serverTimestamp() })
+      await updateDoc(row.ref, { otpExpiresAt: new Date(), hasActiveOtp: false, updatedAt: serverTimestamp() })
+      await deleteDoc(doc(db, 'users', row.docId, 'otpSecret', 'current')).catch(() => {})
       setRows(prev => prev.map(r => r.docId === row.docId
         ? { ...r, otpExpiresAt: new Date(), status: 'expired' }
         : r))

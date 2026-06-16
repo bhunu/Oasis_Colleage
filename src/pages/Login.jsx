@@ -6,12 +6,10 @@ import {
   FaEye, FaEyeSlash, FaLock, FaEnvelope, FaArrowLeft, FaShieldAlt,
 } from 'react-icons/fa'
 import SetPasswordModal from '../components/auth/SetPasswordModal'
-import { getDocs, collection, query, where, limit } from 'firebase/firestore'
-import { signInWithCustomToken } from 'firebase/auth'
-import { httpsCallable } from 'firebase/functions'
-import { db, auth, functions } from '../firebase/config'
+import { getDocs, getDoc, doc, collection, query, where, limit } from 'firebase/firestore'
+import { db } from '../firebase/config'
+import { hashPassword, hashPasswordLegacy } from '../utils/hash'
 import { checkLockStatus, recordFailedAttempt, resetAttempts } from '../utils/loginSecurity'
-import { initStudentSession } from '../hooks/useStudentSessionGuard'
 
 const fadeLeft  = { initial: { opacity: 0, x: -40 }, animate: { opacity: 1, x: 0 } }
 const fadeRight = { initial: { opacity: 0, x:  40 }, animate: { opacity: 1, x: 0 } }
@@ -25,7 +23,7 @@ function formatCountdown(ms) {
 }
 
 function attemptsMessage(remaining) {
-  if (remaining <= 0) return 'Account locked for 30 minutes due to multiple failed login attempts.'
+  if (remaining <= 0) return 'Account locked for 3 minutes due to multiple failed login attempts.'
   return `Incorrect credentials. ${remaining} attempt${remaining !== 1 ? 's' : ''} remaining.`
 }
 
@@ -66,7 +64,7 @@ export default function Login() {
     const result = await recordFailedAttempt(identifier, 'student-portal')
     if (result.locked) {
       setLockInfo({ lockedUntil: result.lockedUntil })
-      setAuthError('Account locked for 30 minutes due to multiple failed login attempts.')
+      setAuthError('Account locked for 3 minutes due to multiple failed login attempts.')
     } else {
       setAuthError(msg ?? attemptsMessage(result.remaining))
     }
@@ -101,7 +99,9 @@ export default function Login() {
       const otpDoc  = snap.docs[0]
       const otpData = otpDoc.data()
 
-      if (otpData.otpCode !== otp) {
+      // OTP code is stored in a subcollection to prevent bulk enumeration
+      const secretSnap = await getDoc(doc(db, 'users', otpDoc.id, 'otpSecret', 'current'))
+      if (!secretSnap.exists() || secretSnap.data().otpCode !== otp) {
         await handleFail(regNum, null)
         return
       }
@@ -125,25 +125,81 @@ export default function Login() {
     const pass   = form.password
     if (!regNum || !pass) return setAuthError('Enter your student ID and password.')
     try {
-      const verifyStudent = httpsCallable(functions, 'verifyStudentPassword')
-      const result = await verifyStudent({ regNumber: regNum, password: pass })
-      const { customToken, sessionData } = result.data
+      // 1. Look up student record for session data
+      const studentSnap = await getDocs(
+        query(collection(db, 'students'), where('reg_number', '==', regNum), limit(1))
+      )
+      const studentDoc  = studentSnap.empty ? null : studentSnap.docs[0]
+      const studentDocId = studentDoc?.id ?? null
+      const studentData  = studentDoc?.data() ?? {}
 
-      await signInWithCustomToken(auth, customToken)
+      // 2. Find the users doc — try by studentId first, then by regNumber field
+      let userDoc = null
 
-      sessionStorage.setItem('studentSession', JSON.stringify(sessionData))
-      await initStudentSession(sessionData.uid).catch(() => {})
+      if (studentDocId) {
+        const snap = await getDocs(
+          query(collection(db, 'users'),
+            where('role',             '==', 'student'),
+            where('hasSetupPassword', '==', true),
+            where('studentId',        '==', studentDocId),
+            limit(1)
+          )
+        )
+        if (!snap.empty) userDoc = snap.docs[0]
+      }
+
+      if (!userDoc) {
+        const snap = await getDocs(
+          query(collection(db, 'users'),
+            where('role',             '==', 'student'),
+            where('hasSetupPassword', '==', true),
+            where('regNumber',        '==', regNum),
+            limit(1)
+          )
+        )
+        if (!snap.empty) userDoc = snap.docs[0]
+      }
+
+      if (!userDoc) {
+        await handleFail(regNum, 'No account found. Use "First time (OTP)" if this is your first login.')
+        return
+      }
+
+      const userData = userDoc.data()
+
+      // 3. Verify password (SHA-256, with legacy MD5 fallback)
+      const sha256Hash = await hashPassword(pass)
+      const md5Hash    = hashPasswordLegacy(pass)
+
+      if (sha256Hash !== userData.password && md5Hash !== userData.password) {
+        await handleFail(regNum, null)
+        return
+      }
+
+      // 4. Store session and navigate
+      sessionStorage.setItem('studentSession', JSON.stringify({
+        uid:              userDoc.id,
+        studentId:        regNum,
+        studentDocId,
+        hasSetupPassword: true,
+        name:             studentData.fullName        || userData.name  || '',
+        class:            studentData.class           || userData.class || '',
+        regNumber:        studentData.reg_number      || regNum,
+        dateOfBirth:      studentData.dateOfBirth     || '',
+        guardianName:     studentData.guardianName    || studentData.parentName   || '',
+        guardianPhone:    studentData.guardianPhone   || studentData.parentPhone  || '',
+        guardianEmail:    studentData.guardianEmail   || studentData.parentEmail  || '',
+        email:            studentData.email           || studentData.studentEmail || '',
+        phone:            studentData.phone           || '',
+        hasEmail:         studentData.hasEmail        ?? (!!studentData.email || !!studentData.studentEmail),
+      }))
+
       await resetAttempts(regNum, 'student-portal').catch(() => {})
       clearForm()
       navigate('/student/dashboard')
-    } catch (err) {
-      if (err.code === 'functions/not-found') {
-        await handleFail(regNum, 'No account found. Use "First time (OTP)" if this is your first login.')
-      } else if (err.code === 'functions/unauthenticated') {
-        await handleFail(regNum, null)
-      } else {
-        await handleFail(regNum, 'Something went wrong. Please try again.')
-      }
+    } catch {
+      setAuthError('Something went wrong. Please try again.')
+      clearForm()
     }
   }
 

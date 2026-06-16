@@ -3,6 +3,9 @@ import {
   collection, getDocs, query, where, setDoc, doc, serverTimestamp,
 } from 'firebase/firestore'
 import { db } from '../../firebase/config'
+import { getCurrentTerm } from '../../utils/termHelpers'
+
+const { number: CURR_NUM, year: CURR_YEAR } = getCurrentTerm()
 import { MdAdd, MdDelete, MdSave, MdClose, MdTableChart } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
@@ -17,13 +20,13 @@ export default function AdminTimetable() {
   const [subjects,  setSubjects]  = useState([])
   const [teachers,  setTeachers]  = useState([])
   const [selClass,  setSelClass]  = useState('')
-  const [term,      setTerm]      = useState('Term 2')
-  const [year,      setYear]      = useState(new Date().getFullYear())
+  const [term,      setTerm]      = useState(`Term ${CURR_NUM}`)
+  const [year,      setYear]      = useState(CURR_YEAR)
   const [schedule,  setSchedule]  = useState(EMPTY_SCHEDULE)
   const [loading,   setLoading]   = useState(true)
   const [saving,    setSaving]    = useState(false)
   const [addModal,  setAddModal]  = useState(null) // day name or null
-  const [periodForm, setPeriodForm] = useState({ time: '', subject: '', teacher: '' })
+  const [periodForm, setPeriodForm] = useState({ timeStart: '', timeEnd: '', subject: '', teacher: '' })
 
   useEffect(() => {
     Promise.all([
@@ -56,12 +59,14 @@ export default function AdminTimetable() {
     .map(s => s.name)
 
   const addPeriod = () => {
-    if (!periodForm.time || !periodForm.subject) return toast.error('Time and subject are required.')
+    if (!periodForm.timeStart || !periodForm.timeEnd || !periodForm.subject)
+      return toast.error('Start time, end time and subject are required.')
+    const time = `${periodForm.timeStart} – ${periodForm.timeEnd}`
     setSchedule(prev => ({
       ...prev,
-      [addModal]: [...(prev[addModal] || []), { ...periodForm }],
+      [addModal]: [...(prev[addModal] || []), { time, subject: periodForm.subject, teacher: periodForm.teacher }],
     }))
-    setPeriodForm({ time: '', subject: '', teacher: '' })
+    setPeriodForm({ timeStart: '', timeEnd: '', subject: '', teacher: '' })
     setAddModal(null)
   }
 
@@ -162,7 +167,7 @@ export default function AdminTimetable() {
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-playfair font-semibold text-white text-sm">{day}</h3>
                 <button
-                  onClick={() => { setAddModal(day); setPeriodForm({ time: '', subject: '', teacher: '' }) }}
+                  onClick={() => { setAddModal(day); setPeriodForm({ timeStart: '', timeEnd: '', subject: '', teacher: '' }) }}
                   className="p-1 rounded-lg text-[#C9A84C] hover:bg-[#C9A84C]/10 transition"
                 >
                   <MdAdd className="text-lg" />
@@ -210,8 +215,21 @@ export default function AdminTimetable() {
             <div className="space-y-4">
               <div>
                 <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 font-montserrat block mb-1">Time</label>
-                <input className={inputCls} placeholder="e.g. 07:30 – 08:10" value={periodForm.time}
-                  onChange={e => setPeriodForm(p => ({ ...p, time: e.target.value }))} />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="time"
+                    value={periodForm.timeStart}
+                    onChange={e => setPeriodForm(p => ({ ...p, timeStart: e.target.value }))}
+                    className={`${inputCls} flex-1 [color-scheme:dark]`}
+                  />
+                  <span className="text-gray-500 font-montserrat text-xs shrink-0">to</span>
+                  <input
+                    type="time"
+                    value={periodForm.timeEnd}
+                    onChange={e => setPeriodForm(p => ({ ...p, timeEnd: e.target.value }))}
+                    className={`${inputCls} flex-1 [color-scheme:dark]`}
+                  />
+                </div>
               </div>
               <div>
                 <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 font-montserrat block mb-1">Subject</label>

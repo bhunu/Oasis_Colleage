@@ -55,8 +55,11 @@ import Gallery from './pages/Gallery'
 import Staff from './pages/Staff'
 import News from './pages/News'
 import Contact from './pages/Contact'
-import Login      from './pages/Login'
-import StaffLogin  from './pages/StaffLogin'
+import Login             from './pages/Login'
+import StaffLogin        from './pages/StaffLogin'
+import StaffPortalSelect from './pages/StaffPortalSelect'
+import AdminTimetable    from './pages/admin/Timetable'
+import AdminExamTimetable from './pages/admin/ExamTimetable'
 import Users from './pages/Users'
 import AdminRoute from './components/admin/AdminRoute'
 import AdminLayout from './components/admin/Layout'
@@ -132,8 +135,11 @@ export default function App() {
                      location.pathname.startsWith('/class-performance') ||
                      location.pathname.startsWith('/classes') ||
                      location.pathname.startsWith('/grade-settings') ||
-                     location.pathname.startsWith('/prize-giving')
-  const isLogin   = location.pathname === '/login' || location.pathname === '/staff-login'
+                     location.pathname.startsWith('/prize-giving') ||
+                     location.pathname.startsWith('/timetable') ||
+                     location.pathname.startsWith('/exam-timetable') ||
+                     location.pathname === '/users'
+  const isLogin   = location.pathname === '/login' || location.pathname === '/staff-login' || location.pathname === '/staff-portal'
   const isBursar  = location.pathname.startsWith('/bursar')
   const isTeacher = location.pathname.startsWith('/teacher')
   const isStudent = location.pathname.startsWith('/student/')
@@ -287,6 +293,15 @@ export default function App() {
           <Route path="/prize-giving" element={
             <ProtectedRoute><Layout><PrizeGivingPage /></Layout></ProtectedRoute>
           }/>
+          <Route path="/timetable" element={
+            <ProtectedRoute><Layout><AdminTimetable /></Layout></ProtectedRoute>
+          }/>
+          <Route path="/exam-timetable" element={
+            <ProtectedRoute><Layout><AdminExamTimetable /></Layout></ProtectedRoute>
+          }/>
+          <Route path="/users" element={
+            <ProtectedRoute><Users /></ProtectedRoute>
+          }/>
         </Routes>
       </>
     )
@@ -311,9 +326,9 @@ export default function App() {
             <Route path="/staff"       element={<PageWrapper><Staff      /></PageWrapper>} />
             <Route path="/news"        element={<PageWrapper><News       /></PageWrapper>} />
             <Route path="/contact"     element={<PageWrapper><Contact    /></PageWrapper>} />
-            <Route path="/login"        element={<Login />} />
-            <Route path="/staff-login" element={<StaffLogin />} />
-            <Route path="/users"       element={<PageWrapper><Users      /></PageWrapper>} />
+            <Route path="/login"         element={<Login />} />
+            <Route path="/staff-portal" element={<StaffPortalSelect />} />
+            <Route path="/staff-login"  element={<StaffLogin />} />
             <Route path="/verify/:clearanceSerial" element={<VerifyClearancePage />} />
             <Route path="/verify-balance/:regNumber" element={<VerifyBalancePage />} />
             <Route path="*"            element={<Navigate to="/" replace />} />

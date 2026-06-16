@@ -15,6 +15,8 @@ import {
   MdClass as IconClass,
   MdGrade as IconGrade,
   MdEmojiEvents as IconPrize,
+  MdCalendarToday as IconTimetable,
+  MdEventNote as IconExamTimetable,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
@@ -42,6 +44,8 @@ const NAV = [
       { label: 'Class Performance',  icon: IconLeaderboard,     path: '/class-performance' },
       { label: 'Prize Giving',       icon: IconPrize,           path: '/prize-giving' },
       { label: 'Grade Settings',     icon: IconGrade,           path: '/grade-settings' },
+      { label: 'Timetables',          icon: IconTimetable,        path: '/timetable' },
+      { label: 'Exam Timetable',     icon: IconExamTimetable,    path: '/exam-timetable' },
     ],
   },
   {

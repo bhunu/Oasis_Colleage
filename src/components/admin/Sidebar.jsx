@@ -2,7 +2,6 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import {
   MdDashboard, MdArticle, MdEvent, MdPeople, MdPhotoLibrary,
   MdLogout, MdManageAccounts, MdKey, MdTune, MdSecurity, MdReceiptLong,
-  MdCalendarToday,
 } from 'react-icons/md'
 import { FaGraduationCap, FaChalkboardTeacher } from 'react-icons/fa'
 import { useEffect, useState } from 'react'
@@ -124,12 +123,6 @@ export default function AdminSidebar({ open, onClose }) {
             to="/admin/teacher-accounts"
             icon={FaChalkboardTeacher}
             label="Teacher Accounts"
-            onClose={onClose}
-          />
-          <SidebarLink
-            to="/admin/timetable"
-            icon={MdCalendarToday}
-            label="Timetables"
             onClose={onClose}
           />
 

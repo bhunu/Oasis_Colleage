@@ -4,9 +4,12 @@ service cloud.firestore {
 
     // ── students ─────────────────────────────────────────────────────────
     match /students/{studentId} {
-      // Students don't use Firebase Auth, so unauthenticated reads are required
-      // for login-time queries and throughout the student portal session.
-      // Full restriction requires migrating students to Firebase Auth (C-03 note).
+      // TODO (Security C-03 — KNOWN RISK): Students do not use Firebase Auth.
+      // Until custom-token auth is implemented (signInWithCustomToken via Cloud
+      // Function), unauthenticated reads are required for login-time queries and
+      // throughout the student portal session.
+      // RISK: Any unauthenticated client can bulk-query all student records
+      // (names, DOBs, guardian contacts). Planned fix: Firebase Custom Token login.
       allow read: if true;
 
       // Authenticated staff can update any field (status, class, clearance, etc.)
@@ -29,6 +32,11 @@ service cloud.firestore {
       allow read: if request.auth == null
         && resource.data.role == 'student'
         && resource.data.otpUsed == false;
+
+      // Unauthenticated: read own record for returning-student password verification
+      allow read: if request.auth == null
+        && resource.data.role == 'student'
+        && resource.data.hasSetupPassword == true;
 
       // Authenticated users: read their own doc or any doc for admin purposes
       allow read: if request.auth != null;
@@ -135,11 +143,19 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // ── expenses ──────────────────────────────────────────────────────────
+    match /expenses/{docId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if false;
+    }
+
     // ── financialLogs ─────────────────────────────────────────────────────
-    // Immutable audit trail. Bursar portal writes (unauthenticated session)
-    // are allowed to create; reads restricted to authenticated admin roles.
+    // Immutable audit trail. Anyone can create (bursar writes from Firebase Auth
+    // session); reads restricted to authenticated admin/staff roles.
     match /financialLogs/{docId} {
       allow read: if request.auth != null
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
              in ['web_admin', 'admin', 'staff'];
       allow create: if true;
@@ -155,8 +171,26 @@ service cloud.firestore {
 
     // ── loginAttempts ─────────────────────────────────────────────────────
     match /loginAttempts/{docId} {
-      allow read, create, update: if true;
+      allow read, create: if true;
+      // Only allow updates that either increment the counter (record failure)
+      // or reset it while NOT actively locked (successful login clears counter).
+      // Prevents attackers from resetting their own lockout to bypass brute-force protection.
+      allow update: if
+        request.resource.data.failedAttempts >= resource.data.failedAttempts
+        || (request.resource.data.failedAttempts == 0
+            && (resource.data.lockedUntil == null
+                || resource.data.lockedUntil.toMillis() <= request.time.toMillis()));
       allow delete: if false;
+    }
+
+    // ── otpSecret subcollection ───────────────────────────────────────────
+    // OTP code is stored here rather than on the parent users doc, so bulk
+    // queries on users/ do not expose active OTP codes.
+    match /users/{uid}/otpSecret/current {
+      // Unauthenticated students can read by exact path to verify their OTP.
+      // list is blocked — attackers cannot enumerate OTP codes in bulk.
+      allow get: if request.auth == null;
+      allow list, write, delete: if request.auth != null;
     }
 
   }
