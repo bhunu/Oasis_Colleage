@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { NavLink, useNavigate, Outlet } from 'react-router-dom'
 import {
   MdDashboard, MdCalendarToday, MdFactCheck, MdCampaign,
-  MdBarChart, MdLogout, MdMenu, MdClose,
+  MdBarChart, MdLogout, MdMenu, MdClose, MdMenuBook,
 } from 'react-icons/md'
 import { FaChalkboardTeacher } from 'react-icons/fa'
 import toast from 'react-hot-toast'
@@ -13,6 +13,7 @@ const NAV = [
   { to: '/teacher/attendance',   icon: MdFactCheck,     label: 'Attendance'    },
   { to: '/teacher/announcements',icon: MdCampaign,      label: 'Announcements' },
   { to: '/teacher/performance',  icon: MdBarChart,      label: 'Performance'   },
+  { to: '/teacher/materials',    icon: MdMenuBook,      label: 'Study Materials' },
 ]
 
 const VIOLET = '#7C3AED'

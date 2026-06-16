@@ -12,6 +12,7 @@ import TeacherTimetable      from './pages/teacher/TeacherTimetable'
 import TeacherAttendance     from './pages/teacher/TeacherAttendance'
 import TeacherAnnouncements  from './pages/teacher/TeacherAnnouncements'
 import TeacherPerformance    from './pages/teacher/TeacherPerformance'
+import TeacherMaterials      from './pages/teacher/TeacherMaterials'
 // Bursar imports
 import BursarProtectedRoute from './components/auth/BursarProtectedRoute'
 import BursarLayout         from './components/bursar/BursarLayout'
@@ -39,6 +40,7 @@ import StudentFees          from './pages/student/StudentFees'
 import StudentProfile       from './pages/student/StudentProfile'
 import StudentUploadPOP     from './pages/student/StudentUploadPOP'
 import StudentNotifications from './pages/student/StudentNotifications'
+import StudentMaterials     from './pages/student/StudentMaterials'
 import SetupPassword        from './pages/student/SetupPassword'
 // Web-admin pages
 import StudentOTPManager    from './pages/webadmin/StudentOTPManager'
@@ -163,6 +165,7 @@ export default function App() {
           <Route path="/student/clearance/apply"       element={<StudentProtectedRoute><StudentLayout><ClearanceApplicationForm /></StudentLayout></StudentProtectedRoute>} />
           <Route path="/student/clearance/status"      element={<StudentProtectedRoute><StudentLayout><MyClearanceStatus /></StudentLayout></StudentProtectedRoute>} />
           <Route path="/student/notifications"         element={<StudentProtectedRoute><StudentLayout><StudentNotifications /></StudentLayout></StudentProtectedRoute>} />
+          <Route path="/student/materials"             element={<StudentProtectedRoute><StudentLayout><StudentMaterials /></StudentLayout></StudentProtectedRoute>} />
           <Route path="/student/timetable"             element={<StudentProtectedRoute><StudentLayout><StudentTimetable /></StudentLayout></StudentProtectedRoute>} />
         </Routes>
       </StudentProvider>
@@ -182,6 +185,7 @@ export default function App() {
               <Route path="attendance"       element={<TeacherAttendance />} />
               <Route path="announcements"    element={<TeacherAnnouncements />} />
               <Route path="performance"      element={<TeacherPerformance />} />
+              <Route path="materials"        element={<TeacherMaterials />} />
             </Route>
           </Routes>
         </TeacherProtectedRoute>

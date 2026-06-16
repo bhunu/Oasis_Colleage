@@ -7,7 +7,7 @@ import useStudentSessionTimeout from '../../hooks/useStudentSessionTimeout'
 import {
   MdDashboard, MdBarChart, MdReceipt, MdCloudUpload,
   MdPerson, MdLogout, MdMenu, MdClose, MdNotifications,
-  MdSchool, MdExitToApp, MdSwapHoriz, MdVerifiedUser, MdCalendarToday,
+  MdSchool, MdExitToApp, MdSwapHoriz, MdVerifiedUser, MdCalendarToday, MdMenuBook,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
@@ -20,6 +20,7 @@ const BASE_NAV = [
   { to: '/student/results',               icon: MdBarChart,       label: 'My Results'      },
   { to: '/student/fees',                  icon: MdReceipt,        label: 'My Fees'         },
   { to: '/student/timetable',             icon: MdCalendarToday,  label: 'Timetable'       },
+  { to: '/student/materials',             icon: MdMenuBook,       label: 'Study Materials' },
   { to: '/student/upload-pop',            icon: MdCloudUpload,    label: 'Upload Payment'  },
   { to: '/student/notifications',         icon: MdNotifications,  label: 'Notifications', notifBadge: true },
   { to: '/student/exeat/my-applications', icon: MdExitToApp,      label: 'Exit Pass',      boarderOnly: true },

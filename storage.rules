@@ -31,6 +31,19 @@ service firebase.storage {
         && (request.resource.contentType.matches('image/.*') || request.resource.contentType == 'application/pdf');
     }
 
+    // Study materials — teachers upload, students (unauthenticated) download
+    match /studyMaterials/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null
+        && request.resource.size < 20 * 1024 * 1024
+        && (request.resource.contentType.matches('application/pdf')
+            || request.resource.contentType.matches('application/.*word.*')
+            || request.resource.contentType.matches('application/.*presentation.*')
+            || request.resource.contentType.matches('application/vnd\\.ms-powerpoint')
+            || request.resource.contentType.matches('image/.*'));
+      allow delete: if request.auth != null;
+    }
+
     // Fallback deny
     match /{allPaths=**} {
       allow read, write: if false;
