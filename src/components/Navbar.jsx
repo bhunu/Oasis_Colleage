@@ -1,15 +1,18 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { FaBars, FaTimes, FaGraduationCap, FaChevronDown, FaSignInAlt, FaLaptopCode, FaClipboardList, FaUserGraduate, FaMoneyCheckAlt } from 'react-icons/fa'
+import { FaBars, FaTimes, FaGraduationCap, FaChevronDown, FaSignInAlt, FaLaptopCode, FaClipboardList, FaUserGraduate, FaMoneyCheckAlt, FaShieldAlt } from 'react-icons/fa'
 import { useScrollNav } from '../hooks/useScrollNav'
 
-const LOGIN_PORTALS = [
-  { key: 'web-admin',        label: 'Web Admin',         icon: FaLaptopCode,    desc: 'System administration',     href: '/staff-login?portal=web-admin' },
-  { key: 'students-records', label: 'Students Records',  icon: FaClipboardList, desc: 'Academic data management',  href: '/staff-login?portal=students-records' },
-  { key: 'student-portal',   label: 'Student Portal',    icon: FaUserGraduate,  desc: 'Grades & resources',        href: '/login' },
-  { key: 'bursar',           label: 'Bursar',            icon: FaMoneyCheckAlt, desc: 'Finance & fee management',  href: '/staff-login?portal=bursar' },
+const STAFF_PORTALS = [
+  { key: 'web-admin',        label: 'Web Admin',        icon: FaLaptopCode,    desc: 'System administration',    href: '/staff-login?portal=web-admin' },
+  { key: 'students-records', label: 'Students Records', icon: FaClipboardList, desc: 'Academic data management', href: '/staff-login?portal=students-records' },
+  { key: 'bursar',           label: 'Bursar',           icon: FaMoneyCheckAlt, desc: 'Finance & fee management', href: '/staff-login?portal=bursar' },
 ]
+
+const STUDENT_PORTAL = { key: 'student-portal', label: 'Student Portal', icon: FaUserGraduate, desc: 'Grades & resources', href: '/login' }
+
+const LOGIN_PORTALS = [...STAFF_PORTALS, STUDENT_PORTAL]
 
 const NAV_LINKS = [
   { label: 'Home', href: '/' },
@@ -176,26 +179,49 @@ function LoginDropdown() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 6 }}
             transition={{ duration: 0.15 }}
-            className="absolute top-full right-0 mt-2 w-56 bg-navy border border-white/10 rounded-xl shadow-2xl shadow-black/50 overflow-hidden z-50"
+            className="absolute top-full right-0 mt-2 w-60 bg-navy border border-white/10 rounded-xl shadow-2xl shadow-black/50 overflow-hidden z-50"
           >
-            {LOGIN_PORTALS.map(portal => {
-              const Icon = portal.icon
+            {/* Staff Portal — single entry */}
+            <div className="px-4 pt-3 pb-1">
+              <span className="font-montserrat text-[9px] uppercase tracking-[0.18em] text-gray-600">Staff</span>
+            </div>
+            <Link
+              to="/staff-portal"
+              className="flex items-start gap-3 px-4 py-3 hover:bg-white/5 transition-colors group"
+            >
+              <div className="w-7 h-7 rounded-lg bg-gold/10 flex items-center justify-center flex-shrink-0 mt-0.5 group-hover:bg-gold/20 transition-colors">
+                <FaShieldAlt className="text-gold text-xs" />
+              </div>
+              <div>
+                <div className="font-montserrat text-xs font-semibold text-white uppercase tracking-wide">Staff Portal</div>
+                <div className="font-montserrat text-[10px] text-gray-500 mt-0.5">Web Admin · Records · Bursar · Teacher</div>
+              </div>
+            </Link>
+
+            {/* Divider */}
+            <div className="border-t border-white/10 mx-4" />
+
+            {/* Student Portal */}
+            <div className="px-4 pt-3 pb-1">
+              <span className="font-montserrat text-[9px] uppercase tracking-[0.18em] text-gray-600">Student</span>
+            </div>
+            {(() => {
+              const Icon = STUDENT_PORTAL.icon
               return (
                 <Link
-                  key={portal.key}
-                  to={portal.href}
-                  className="flex items-start gap-3 px-4 py-3.5 hover:bg-white/5 transition-colors group border-b border-white/5 last:border-0"
+                  to={STUDENT_PORTAL.href}
+                  className="flex items-start gap-3 px-4 py-3 pb-4 hover:bg-white/5 transition-colors group"
                 >
                   <div className="w-7 h-7 rounded-lg bg-gold/10 flex items-center justify-center flex-shrink-0 mt-0.5 group-hover:bg-gold/20 transition-colors">
                     <Icon className="text-gold text-xs" />
                   </div>
                   <div>
-                    <div className="font-montserrat text-xs font-semibold text-white uppercase tracking-wide">{portal.label}</div>
-                    <div className="font-montserrat text-[10px] text-gray-500 mt-0.5">{portal.desc}</div>
+                    <div className="font-montserrat text-xs font-semibold text-white uppercase tracking-wide">{STUDENT_PORTAL.label}</div>
+                    <div className="font-montserrat text-[10px] text-gray-500 mt-0.5">{STUDENT_PORTAL.desc}</div>
                   </div>
                 </Link>
               )
-            })}
+            })()}
           </motion.div>
         )}
       </AnimatePresence>
@@ -345,23 +371,32 @@ export default function Navbar() {
               </nav>
 
               <div className="p-6 border-t border-white/10 flex flex-col gap-3">
-                <p className="font-montserrat text-[10px] uppercase tracking-[0.15em] text-gray-600">Login Portals</p>
-                <div className="flex flex-col gap-1">
-                  {LOGIN_PORTALS.map(portal => {
-                    const Icon = portal.icon
+                <p className="font-montserrat text-[10px] uppercase tracking-[0.15em] text-gray-600">Login</p>
+                <div className="flex flex-col gap-0.5">
+                  <Link
+                    to="/staff-portal"
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors group"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-gold/10 flex items-center justify-center flex-shrink-0 group-hover:bg-gold/20 transition-colors">
+                      <FaShieldAlt className="text-gold text-xs" />
+                    </div>
+                    <span className="font-montserrat text-xs font-semibold text-gray-300 uppercase tracking-wide">Staff Portal</span>
+                  </Link>
+                  <div className="border-t border-white/10 mx-3 my-1" />
+                  {(() => {
+                    const Icon = STUDENT_PORTAL.icon
                     return (
                       <Link
-                        key={portal.key}
-                        to={portal.href}
+                        to={STUDENT_PORTAL.href}
                         className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors group"
                       >
                         <div className="w-7 h-7 rounded-lg bg-gold/10 flex items-center justify-center flex-shrink-0 group-hover:bg-gold/20 transition-colors">
                           <Icon className="text-gold text-xs" />
                         </div>
-                        <span className="font-montserrat text-xs font-semibold text-gray-300 uppercase tracking-wide">{portal.label}</span>
+                        <span className="font-montserrat text-xs font-semibold text-gray-300 uppercase tracking-wide">{STUDENT_PORTAL.label}</span>
                       </Link>
                     )
-                  })}
+                  })()}
                 </div>
                 <Link
                   to="/admissions"

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { collection, getDocs, query, where } from 'firebase/firestore'
+import { collection, getDocs, query, where, documentId } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import { SCHOOL_ID } from '../../utils/schoolConfig'
 import { getCurrentTerm } from '../../utils/termHelpers'
@@ -69,13 +69,40 @@ export default function TeacherPerformance() {
     const path    = `schools/${SCHOOL_ID}/terms/${termId}/classes/${classId}/students`
     setLoadingData(true)
     setStudents([])
-    getDocs(collection(db, path))
-      .then(snap => setStudents(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
-      .catch(() => {})
-      .finally(() => setLoadingData(false))
+
+    getDocs(collection(db, path)).then(async snap => {
+      const results = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+
+      // Fetch names from students collection by reg_number
+      const regNos = results.map(r => r.regNo || r.reg_number || r.id).filter(Boolean)
+      let nameMap = {}
+      if (regNos.length > 0) {
+        const sSnap = await getDocs(
+          query(collection(db, 'students'), where('reg_number', 'in', regNos.slice(0, 30)))
+        ).catch(() => null)
+        if (sSnap) {
+          sSnap.docs.forEach(d => {
+            const data = d.data()
+            const reg  = data.reg_number
+            nameMap[reg] = data.fullName || data.studentName || ''
+          })
+        }
+      }
+
+      setStudents(results.map(r => {
+        const reg  = r.regNo || r.reg_number || r.id
+        return { ...r, name: nameMap[reg] || r.name || null, regNumber: reg }
+      }))
+    }).catch(() => {}).finally(() => setLoadingData(false))
   }, [selClass, term])
 
   const uniqueClasses = [...new Set(assignments.map(a => a.className))]
+
+  // Subjects this teacher is assigned to teach in the selected class
+  const teacherSubjects = useMemo(() => {
+    const asgn = assignments.find(a => a.className === selClass)
+    return Array.isArray(asgn?.subjects) ? asgn.subjects : []
+  }, [assignments, selClass])
 
   const filtered = useMemo(() => {
     if (!search.trim()) return students
@@ -88,8 +115,16 @@ export default function TeacherPerformance() {
 
   const gradeTable = DEFAULT_O_GRADES
 
+  // Average only over the teacher's own subjects
   const avg = (s) => {
-    const marks = Object.values(s.subjects ?? {}).map(sub => sub.average ?? sub.mark ?? sub).filter(v => typeof v === 'number')
+    const subjData = s.subjects ?? {}
+    const marks = teacherSubjects
+      .map(name => {
+        const entry = subjData[name]
+        if (entry == null) return null
+        return typeof entry === 'object' ? (entry.average ?? entry.mark ?? null) : entry
+      })
+      .filter(v => typeof v === 'number')
     if (marks.length === 0) return null
     return marks.reduce((a, b) => a + b, 0) / marks.length
   }
@@ -98,7 +133,7 @@ export default function TeacherPerformance() {
     const avgs = students.map(avg).filter(v => v !== null)
     if (avgs.length === 0) return null
     return avgs.reduce((a, b) => a + b, 0) / avgs.length
-  }, [students])
+  }, [students, teacherSubjects])
 
   const r1 = (n) => n == null ? '—' : `${Math.round(n * 10) / 10}%`
 
@@ -107,7 +142,7 @@ export default function TeacherPerformance() {
 
       <div>
         <h1 className="font-playfair text-2xl font-bold text-white">Class Performance</h1>
-        <p className="text-gray-400 font-montserrat text-sm mt-1">View exam results for your assigned classes.</p>
+        <p className="text-gray-400 font-montserrat text-sm mt-1">Exam results for your assigned subjects only.</p>
       </div>
 
       {loadingBase ? (
@@ -185,10 +220,9 @@ export default function TeacherPerformance() {
                     <tr className="border-b border-white/10">
                       <th className="text-left px-4 py-3 text-[10px] uppercase tracking-wider text-gray-500 font-montserrat">#</th>
                       <th className="text-left px-4 py-3 text-[10px] uppercase tracking-wider text-gray-500 font-montserrat">Student</th>
-                      {Object.keys(filtered[0]?.subjects ?? {}).map(subj => (
+                      {teacherSubjects.map(subj => (
                         <th key={subj} className="text-center px-3 py-3 text-[10px] uppercase tracking-wider text-gray-500 font-montserrat whitespace-nowrap">{subj}</th>
                       ))}
-                      <th className="text-center px-4 py-3 text-[10px] uppercase tracking-wider text-gray-500 font-montserrat">Avg</th>
                       <th className="text-center px-4 py-3 text-[10px] uppercase tracking-wider text-gray-500 font-montserrat">Grade</th>
                     </tr>
                   </thead>
@@ -203,15 +237,15 @@ export default function TeacherPerformance() {
                             <p className="text-white font-montserrat font-semibold text-sm">{s.name ?? '—'}</p>
                             <p className="text-gray-500 font-montserrat text-[10px]">{s.regNumber ?? s.reg_number ?? ''}</p>
                           </td>
-                          {Object.entries(s.subjects ?? {}).map(([subj, data]) => {
-                            const mark = typeof data === 'object' ? (data.average ?? data.mark ?? null) : data
+                          {teacherSubjects.map(subj => {
+                            const data = (s.subjects ?? {})[subj]
+                            const mark = data == null ? null : typeof data === 'object' ? (data.average ?? data.mark ?? null) : data
                             return (
                               <td key={subj} className="px-3 py-3 text-center font-montserrat text-sm text-gray-300">
                                 {mark != null ? `${Math.round(mark * 10) / 10}%` : '—'}
                               </td>
                             )
                           })}
-                          <td className="px-4 py-3 text-center font-montserrat text-sm text-gray-300">{r1(a)}</td>
                           <td className={`px-4 py-3 text-center font-montserrat font-bold text-sm ${GRADE_CLS[g] ?? 'text-gray-500'}`}>{g}</td>
                         </tr>
                       )

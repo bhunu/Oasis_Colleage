@@ -1,23 +1,10 @@
 import { useState, useEffect, useMemo } from 'react'
-import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore'
+import { collection, getDocs, orderBy, query } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import {
   MdReceiptLong, MdDownload, MdTrendingUp, MdTrendingDown,
   MdAccountBalance, MdFilterAlt,
 } from 'react-icons/md'
-
-const TYPE_META = {
-  PAYMENT_RECEIVED: {
-    label: 'Payment Received',
-    cls:   'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
-  },
-  EXPENSE_RECORDED: {
-    label: 'Expense Recorded',
-    cls:   'bg-red-500/15 text-red-300 border-red-500/30',
-  },
-}
-
-const TYPES = ['ALL', 'PAYMENT_RECEIVED', 'EXPENSE_RECORDED']
 
 const CARD = 'bg-[#0D1C35] border border-white/10 rounded-xl'
 
@@ -30,8 +17,14 @@ function fmtTs(ts) {
   const d = ts?.toDate ? ts.toDate() : new Date(ts)
   return d.toLocaleString('en-GB', {
     day: '2-digit', month: 'short', year: 'numeric',
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hour: '2-digit', minute: '2-digit',
   })
+}
+
+function tsMillis(ts) {
+  if (!ts) return 0
+  if (ts?.toDate) return ts.toDate().getTime()
+  return new Date(ts).getTime()
 }
 
 function SummaryCard({ icon: Icon, label, value, sub, colorBg, colorText }) {
@@ -49,22 +42,69 @@ function SummaryCard({ icon: Icon, label, value, sub, colorBg, colorText }) {
   )
 }
 
+const TYPES = ['ALL', 'PAYMENT_RECEIVED', 'EXPENSE_RECORDED']
+
 export default function FinancialLogs() {
-  const [logs,       setLogs]       = useState([])
-  const [loading,    setLoading]    = useState(true)
+  const [logs,       setLogs]      = useState([])
+  const [loading,    setLoading]   = useState(true)
+  const [loadError,  setLoadError] = useState(null)
   const [typeFilter, setTypeFilter] = useState('ALL')
-  const [search,     setSearch]     = useState('')
-  const [dateFrom,   setDateFrom]   = useState('')
-  const [dateTo,     setDateTo]     = useState('')
+  const [search,     setSearch]    = useState('')
+  const [dateFrom,   setDateFrom]  = useState('')
+  const [dateTo,     setDateTo]    = useState('')
 
   useEffect(() => {
     setLoading(true)
-    const q = query(collection(db, 'financialLogs'), orderBy('timestamp', 'desc'), limit(500))
-    const unsub = onSnapshot(q, snap => {
-      setLogs(snap.docs.map(d => ({ id: d.id, ...d.data() })))
-      setLoading(false)
-    }, () => setLoading(false))
-    return () => unsub()
+    setLoadError(null)
+
+    Promise.all([
+      getDocs(query(collection(db, 'receipts'), orderBy('issuedAt', 'desc'))).catch(() => null),
+      getDocs(query(collection(db, 'expenses'), orderBy('recordedAt', 'desc'))).catch(() => null),
+    ]).then(([receiptsSnap, expensesSnap]) => {
+      const payments = receiptsSnap
+        ? receiptsSnap.docs.map(d => ({
+            id:            d.id,
+            type:          'PAYMENT_RECEIVED',
+            timestamp:     d.data().issuedAt,
+            amount:        Number(d.data().amount || 0),
+            performedBy:   d.data().issuedBy || '',
+            studentName:   d.data().studentName || '',
+            reg_number:    d.data().reg_number || '',
+            class:         d.data().class || '',
+            paymentMethod: d.data().paymentMethod || '',
+            receiptNumber: d.data().receiptNumber || '',
+            paymentDate:   d.data().date || '',
+            term:          d.data().term || '',
+            notes:         d.data().notes || '',
+            reference:     d.data().reference || '',
+          }))
+        : []
+
+      const expenses = expensesSnap
+        ? expensesSnap.docs.map(d => ({
+            id:            d.id,
+            type:          'EXPENSE_RECORDED',
+            timestamp:     d.data().recordedAt,
+            amount:        Number(d.data().amount || 0),
+            performedBy:   d.data().recordedBy || '',
+            description:   d.data().description || '',
+            category:      d.data().category || '',
+            paymentMethod: d.data().paymentMethod || '',
+            reference:     d.data().reference || '',
+            date:          d.data().date || '',
+            term:          d.data().term || '',
+            notes:         d.data().notes || '',
+          }))
+        : []
+
+      const combined = [...payments, ...expenses].sort(
+        (a, b) => tsMillis(b.timestamp) - tsMillis(a.timestamp)
+      )
+      setLogs(combined)
+    }).catch(err => {
+      console.error('FinancialLogs fetch error:', err)
+      setLoadError(err.message || 'Failed to load financial logs.')
+    }).finally(() => setLoading(false))
   }, [])
 
   const filtered = useMemo(() => {
@@ -96,16 +136,15 @@ export default function FinancialLogs() {
 
   const paymentsIn  = filtered.filter(l => l.type === 'PAYMENT_RECEIVED')
   const expensesOut = filtered.filter(l => l.type === 'EXPENSE_RECORDED')
-  const totalIn     = paymentsIn.reduce((s, l)  => s + (l.amount || 0), 0)
-  const totalOut    = expensesOut.reduce((s, l) => s + (l.amount || 0), 0)
+  const totalIn     = paymentsIn.reduce((s, l)  => s + l.amount, 0)
+  const totalOut    = expensesOut.reduce((s, l) => s + l.amount, 0)
   const net         = totalIn - totalOut
 
   const exportCsv = () => {
     const headers = [
       'Timestamp', 'Type', 'Performed By', 'Student Name', 'Reg No',
       'Description', 'Category', 'Amount ($)', 'Payment Method',
-      'Reference', 'Receipt Number', 'Payment Date', 'Term', 'Notes',
-      'Total Paid After', 'Balance After', 'Balance Type',
+      'Reference', 'Receipt Number', 'Date', 'Term', 'Notes',
     ]
     const rows = filtered.map(l => [
       fmtTs(l.timestamp),
@@ -122,9 +161,6 @@ export default function FinancialLogs() {
       l.paymentDate || l.date || '',
       l.term             ?? '',
       l.notes            ?? '',
-      l.totalPaidAfter   ?? '',
-      l.balanceAfter     ?? '',
-      l.balanceType      ?? '',
     ].map(v => `"${String(v).replace(/"/g, '""')}"`))
     const csv  = [headers, ...rows].map(r => r.join(',')).join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
@@ -137,6 +173,11 @@ export default function FinancialLogs() {
   }
 
   const hasFilter = typeFilter !== 'ALL' || search || dateFrom || dateTo
+
+  const methodLabel = m =>
+    m === 'bank'   ? 'Bank Transfer'  :
+    m === 'mobile' ? 'Mobile Money'   :
+    m ? m.charAt(0).toUpperCase() + m.slice(1) : '—'
 
   return (
     <div className="space-y-5">
@@ -179,7 +220,6 @@ export default function FinancialLogs() {
 
       {/* Filters + Export */}
       <div className="flex flex-col gap-3">
-        {/* Top row: type chips + export */}
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-1 flex-wrap">
             <MdFilterAlt className="text-gray-600 text-base mr-1" />
@@ -214,7 +254,6 @@ export default function FinancialLogs() {
           </button>
         </div>
 
-        {/* Second row: date range + search */}
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-montserrat text-[10px] uppercase tracking-widest text-gray-600">Date range</span>
           <input
@@ -246,6 +285,12 @@ export default function FinancialLogs() {
             <div className="w-6 h-6 border-2 border-[#C9A84C] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
             <p className="font-montserrat text-gray-500 text-sm">Loading financial logs…</p>
           </div>
+        ) : loadError ? (
+          <div className="py-16 text-center px-6">
+            <p className="font-montserrat text-red-400 text-sm font-semibold mb-2">Failed to load financial logs</p>
+            <p className="font-montserrat text-gray-600 text-xs max-w-md mx-auto">{loadError}</p>
+            <p className="font-montserrat text-gray-700 text-[10px] mt-3">Check the browser console for details.</p>
+          </div>
         ) : filtered.length === 0 ? (
           <div className="py-16 text-center font-montserrat text-gray-500 text-sm">
             {hasFilter ? 'No entries match your filter.' : 'No financial transactions have been recorded yet.'}
@@ -271,34 +316,26 @@ export default function FinancialLogs() {
               </thead>
               <tbody>
                 {filtered.map(log => {
-                  const meta      = TYPE_META[log.type] ?? { label: log.type, cls: 'bg-white/10 text-gray-400 border-white/20' }
                   const isPayment = log.type === 'PAYMENT_RECEIVED'
-                  const methodLabel = log.paymentMethod === 'bank'
-                    ? 'Bank Transfer'
-                    : log.paymentMethod === 'mobile'
-                    ? 'Mobile Money'
-                    : log.paymentMethod
-                      ? log.paymentMethod.charAt(0).toUpperCase() + log.paymentMethod.slice(1)
-                      : '—'
                   return (
                     <tr
                       key={log.id}
                       className="border-b border-white/5 hover:bg-white/[0.025] transition-colors"
                     >
-                      {/* Timestamp */}
                       <td className="py-3 px-4 text-gray-400 whitespace-nowrap">{fmtTs(log.timestamp)}</td>
 
-                      {/* Type badge */}
                       <td className="py-3 px-4">
-                        <span className={`inline-flex px-2 py-0.5 rounded-full border text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap ${meta.cls}`}>
-                          {meta.label}
+                        <span className={`inline-flex px-2 py-0.5 rounded-full border text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap ${
+                          isPayment
+                            ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                            : 'bg-red-500/15 text-red-300 border-red-500/30'
+                        }`}>
+                          {isPayment ? 'Payment Received' : 'Expense Recorded'}
                         </span>
                       </td>
 
-                      {/* Performed by */}
                       <td className="py-3 px-4 text-gray-300 whitespace-nowrap">{log.performedBy || '—'}</td>
 
-                      {/* Student (for payments) or Description (for expenses) */}
                       <td className="py-3 px-4 max-w-[200px]">
                         {isPayment ? (
                           <>
@@ -316,22 +353,14 @@ export default function FinancialLogs() {
                         )}
                       </td>
 
-                      {/* Amount */}
                       <td className="py-3 px-4 whitespace-nowrap font-semibold">
                         <span className={isPayment ? 'text-emerald-300' : 'text-red-300'}>
                           {isPayment ? '+' : '−'}{fmt(log.amount)}
                         </span>
-                        {isPayment && log.balanceAfter !== undefined && (
-                          <p className="text-[9px] text-gray-600 mt-0.5 font-normal">
-                            bal: {fmt(log.balanceAfter)} {log.balanceType}
-                          </p>
-                        )}
                       </td>
 
-                      {/* Method */}
-                      <td className="py-3 px-4 text-gray-400 whitespace-nowrap">{methodLabel}</td>
+                      <td className="py-3 px-4 text-gray-400 whitespace-nowrap">{methodLabel(log.paymentMethod)}</td>
 
-                      {/* Receipt / Reference */}
                       <td className="py-3 px-4 max-w-[160px]">
                         {log.receiptNumber && (
                           <p className="text-[#C9A84C] font-semibold">{log.receiptNumber}</p>
@@ -344,12 +373,10 @@ export default function FinancialLogs() {
                         {!log.receiptNumber && !log.reference && <span className="text-gray-600">—</span>}
                       </td>
 
-                      {/* Payment / Expense date */}
                       <td className="py-3 px-4 text-gray-500 whitespace-nowrap">
                         {log.paymentDate || log.date || '—'}
                       </td>
 
-                      {/* Notes */}
                       <td className="py-3 px-4 max-w-[180px]">
                         <span className="text-gray-500 truncate block" title={log.notes || ''}>
                           {log.notes || '—'}
@@ -365,7 +392,7 @@ export default function FinancialLogs() {
       </div>
 
       <p className="text-[10px] text-gray-600 font-montserrat text-right">
-        Showing {filtered.length} of {logs.length} entries · Real-time updates active
+        Showing {filtered.length} of {logs.length} entries · from receipts &amp; expenses collections
       </p>
     </div>
   )

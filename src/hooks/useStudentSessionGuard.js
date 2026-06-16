@@ -80,10 +80,17 @@ export async function endStudentSession(uid) {
  * Watches the sessions registry doc and signs the student out when
  * their session entry is removed (concurrent session kill).
  */
+// How long after mount before the guard starts enforcing session presence.
+// Covers the window between initStudentSession completing and the first
+// onSnapshot delivery, and handles one retry-delayed session write.
+const MOUNT_GRACE_MS = 5_000
+
 export default function useStudentSessionGuard(uid) {
   const navigate = useNavigate()
   const { logout } = useStudent()
   const pingRef  = useRef(null)
+  const readyRef = useRef(false)
+  const graceRef = useRef(null)
 
   useEffect(() => {
     if (!uid) return
@@ -93,7 +100,14 @@ export default function useStudentSessionGuard(uid) {
 
     const ref = registryRef(uid)
 
+    readyRef.current = false
+    graceRef.current = setTimeout(() => { readyRef.current = true }, MOUNT_GRACE_MS)
+
     const unsubscribe = onSnapshot(ref, (snap) => {
+      // During the grace window, ignore snapshots — the session write may not
+      // have propagated yet (especially after a retry in Login.jsx).
+      if (!readyRef.current) return
+
       if (!snap.exists() || !(sessionId in (snap.data() ?? {}))) {
         logSecurityEvent({ uid, action: 'CONCURRENT_SESSION_KILLED' })
         logout()
@@ -109,6 +123,7 @@ export default function useStudentSessionGuard(uid) {
     }, PING_INTERVAL_MS)
 
     return () => {
+      clearTimeout(graceRef.current)
       unsubscribe()
       clearInterval(pingRef.current)
     }
