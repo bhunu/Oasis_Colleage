@@ -4,6 +4,7 @@ import { collection, getDocs, query, where, orderBy, limit, onSnapshot, doc } fr
 import { db } from '../../firebase/config'
 import { useStudent } from '../../context/StudentContext'
 import { MdLock, MdBarChart, MdReceipt, MdCloudUpload, MdCheckCircle } from 'react-icons/md'
+import { getCurrentTerm } from '../../utils/termHelpers'
 
 const GOLD = '#C9A84C'
 
@@ -53,6 +54,13 @@ export default function StudentDashboard() {
   const resultUnlocked = paidPct >= threshold
   const amountNeeded   = termFees > 0 ? Math.max(0, (threshold / 100) * termFees - totalPaid) : 0
 
+  const { number: autoTermNum, year: autoYear } = getCurrentTerm()
+  const storedTerm = portalSettings.currentTerm
+  const termLabel  = storedTerm
+    ? (String(storedTerm).startsWith('Term') ? storedTerm : `Term ${storedTerm}`)
+    : `Term ${autoTermNum}`
+  const termYear   = portalSettings.currentYear || autoYear
+
   const fmt = v => `$${Number(v || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
   const CARD = 'bg-[#0D1C35] border border-white/10 rounded-xl p-5'
   const SKL  = 'animate-pulse bg-white/5 rounded-lg'
@@ -80,7 +88,7 @@ export default function StudentDashboard() {
       {/* Welcome banner */}
       <div className="bg-gradient-to-r from-[#0D1C35] to-[#132140] border border-white/10 rounded-xl p-6">
         <p className="text-[10px] font-semibold text-[#C9A84C]/70 uppercase tracking-widest font-montserrat mb-1">
-          {String(portalSettings.currentTerm).startsWith('Term') ? portalSettings.currentTerm : `Term ${portalSettings.currentTerm}`} · {portalSettings.currentYear}
+          {termLabel} · {termYear}
         </p>
         <h1 className="font-playfair text-2xl font-bold text-white">
           Welcome back, {studentData?.name?.split(' ')[0] || 'Student'}.
