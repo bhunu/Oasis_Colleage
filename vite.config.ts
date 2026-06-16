@@ -112,8 +112,7 @@ export default defineConfig({
         ],
       },
       devOptions: {
-        // Enable PWA in dev mode so you can test install prompt locally
-        enabled: true,
+        enabled: false,
       },
     }),
   ],
