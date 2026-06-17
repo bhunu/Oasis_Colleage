@@ -1,4 +1,4 @@
-# Oasis Private College — Full System Audit Report
+  # Oasis Private College — Full System Audit Report
 **Date:** 2026-06-16  
 **Auditor:** Claude Code (automated code-level analysis)  
 **Scope:** All five portals — Main Dashboard, Student, Teacher, Bursar, Web Admin
