@@ -1,11 +1,11 @@
-import { useStudent } from '../../context/StudentContext'
+﻿import { useStudent } from '../../context/StudentContext'
 import { Navigate } from 'react-router-dom'
 
 function Spinner() {
   return (
-    <div className="fixed inset-0 bg-[#0A1628] flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-navy flex items-center justify-center z-50">
       <div className="text-center">
-        <div className="w-10 h-10 border-2 border-[#C9A84C] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+        <div className="w-10 h-10 border-2 border-gold border-t-transparent rounded-full animate-spin mx-auto mb-3" />
         <p className="text-gray-500 font-montserrat text-xs uppercase tracking-widest">Loading…</p>
       </div>
     </div>

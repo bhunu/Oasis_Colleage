@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import {
   collection, addDoc, getDocs, deleteDoc,
   doc, serverTimestamp, query, where, getCountFromServer,
@@ -37,7 +37,7 @@ function getLevel(name = '') {
   return 'Other'
 }
 
-const sInput = 'w-full bg-white/5 border border-white/10 focus:border-[#C9A84C]/50 focus:outline-none rounded-xl px-4 py-2.5 text-white font-montserrat text-sm placeholder-gray-600 transition-all'
+const sInput = 'w-full bg-white/5 border border-white/10 focus:border-gold/50 focus:outline-none rounded-xl px-4 py-2.5 text-white font-montserrat text-sm placeholder-gray-600 transition-all'
 const sLabel = 'block text-[11px] font-semibold text-gray-500 uppercase tracking-widest font-montserrat mb-1.5'
 
 export default function Classes() {
@@ -143,8 +143,8 @@ export default function Classes() {
       {/* Header */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-[#C9A84C]/15 rounded-lg flex items-center justify-center shrink-0">
-            <MdClass className="text-[#C9A84C]" />
+          <div className="w-9 h-9 bg-gold/15 rounded-lg flex items-center justify-center shrink-0">
+            <MdClass className="text-gold" />
           </div>
           <div>
             <h1 className="font-playfair text-2xl font-bold text-white">Classes</h1>
@@ -161,12 +161,12 @@ export default function Classes() {
               placeholder="Search classes…"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="bg-white/5 border border-white/10 focus:border-[#C9A84C]/40 focus:outline-none rounded-xl pl-9 pr-4 py-2 text-white font-montserrat text-xs placeholder-gray-600 w-44 transition-all"
+              className="bg-white/5 border border-white/10 focus:border-gold/40 focus:outline-none rounded-xl pl-9 pr-4 py-2 text-white font-montserrat text-xs placeholder-gray-600 w-44 transition-all"
             />
           </div>
           <button
             onClick={() => { setShowForm(true); setName('') }}
-            className="flex items-center gap-2 bg-[#C9A84C] hover:bg-yellow-400 text-[#0A1628] font-montserrat font-bold text-xs uppercase tracking-wider px-4 py-2.5 rounded-xl transition"
+            className="flex items-center gap-2 bg-gold hover:bg-yellow-400 text-navy font-montserrat font-bold text-xs uppercase tracking-wider px-4 py-2.5 rounded-xl transition"
           >
             <MdAdd className="text-base" /> Add Class
           </button>
@@ -175,7 +175,7 @@ export default function Classes() {
 
       {/* Add Class Form */}
       {showForm && (
-        <div className="bg-[#0D1C35] border border-[#C9A84C]/30 rounded-2xl p-6">
+        <div className="bg-navy-800 border border-gold/30 rounded-2xl p-6">
           <div className="flex items-center justify-between mb-5">
             <div>
               <h2 className="font-playfair text-base font-bold text-white">New Class</h2>
@@ -199,10 +199,10 @@ export default function Classes() {
             <button
               type="submit"
               disabled={saving || !name.trim()}
-              className="flex items-center gap-2 bg-[#C9A84C] hover:bg-yellow-400 disabled:opacity-50 text-[#0A1628] font-montserrat font-bold text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl transition shrink-0"
+              className="flex items-center gap-2 bg-gold hover:bg-yellow-400 disabled:opacity-50 text-navy font-montserrat font-bold text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl transition shrink-0"
             >
               {saving
-                ? <div className="w-4 h-4 border-2 border-[#0A1628]/30 border-t-[#0A1628] rounded-full animate-spin" />
+                ? <div className="w-4 h-4 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
                 : <MdAdd className="text-base" />}
               {saving ? 'Adding…' : 'Add'}
             </button>
@@ -226,7 +226,7 @@ export default function Classes() {
                     key={n}
                     type="button"
                     onClick={() => setName(n)}
-                    className="text-[10px] font-montserrat font-semibold px-2.5 py-1 rounded-full border border-white/10 text-gray-400 hover:border-[#C9A84C]/40 hover:text-[#C9A84C] transition"
+                    className="text-[10px] font-montserrat font-semibold px-2.5 py-1 rounded-full border border-white/10 text-gray-400 hover:border-gold/40 hover:text-gold transition"
                   >
                     {n}
                   </button>
@@ -240,7 +240,7 @@ export default function Classes() {
       {/* Classes grid */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#C9A84C]" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gold" />
         </div>
       ) : filtered.length === 0 ? (
         <div className="py-20 text-center space-y-3">
@@ -260,7 +260,7 @@ export default function Classes() {
                 {group.items.map(cls => (
                   <div
                     key={cls.id}
-                    className="bg-[#0D1C35] border border-white/10 rounded-xl px-4 py-4 flex flex-col gap-3 group hover:border-white/20 transition"
+                    className="bg-navy-800 border border-white/10 rounded-xl px-4 py-4 flex flex-col gap-3 group hover:border-white/20 transition"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border font-montserrat ${LEVEL_COLORS[getLevel(cls.name)]}`}>
@@ -290,7 +290,7 @@ export default function Classes() {
       {/* Delete confirmation modal */}
       {confirmDel && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0D1C35] border border-white/10 rounded-2xl p-6 w-full max-w-sm">
+          <div className="bg-navy-800 border border-white/10 rounded-2xl p-6 w-full max-w-sm">
             <h3 className="font-playfair text-lg font-bold text-white mb-2">Delete Class?</h3>
             <p className="text-sm text-gray-400 font-montserrat mb-1">
               You are about to delete <span className="text-white font-semibold">{confirmDel.name}</span>.

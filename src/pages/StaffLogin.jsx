@@ -1,4 +1,4 @@
-import { useSearchParams, Link, useNavigate } from 'react-router-dom'
+﻿import { useSearchParams, Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useState, useEffect } from 'react'
 import {
@@ -7,18 +7,27 @@ import {
   FaEye, FaEyeSlash, FaLock, FaEnvelope, FaArrowLeft, FaShieldAlt,
 } from 'react-icons/fa'
 import SignUpModal from '../components/SignUpModal'
-import { signInWithEmailAndPassword, signOut } from 'firebase/auth'
+import { signInWithEmailAndPassword, signOut, sendPasswordResetEmail, setPersistence, browserLocalPersistence, browserSessionPersistence } from 'firebase/auth'
 import { doc, getDoc } from 'firebase/firestore'
 import { auth, db } from '../firebase/config'
 import { checkLockStatus, recordFailedAttempt, resetAttempts } from '../utils/loginSecurity'
 import { logSecurityEvent } from '../utils/logSecurityEvent'
+import sc from '../utils/schoolConfig'
+import { useLicense } from '../license/LicenseContext'
+
+const PORTAL_FEATURE = {
+  'web-admin':       'web-admin',
+  'students-records': 'student-records',
+  'bursar':          'bursar',
+  'teacher':         'teacher-portal',
+}
 
 const PORTALS = {
   'web-admin': {
     label: 'Web Admin',
     icon: FaLaptopCode,
     description: 'School website & system administration',
-    gradient: 'from-[#0d1f3c] via-[#0f2a4a] to-[#0A1628]',
+    gradient: 'from-[#0d1f3c] via-[#0f2a4a] to-navy',
     accentBg: 'bg-blue-500/15',
     accentBorder: 'border-blue-400/30',
     accentText: 'text-blue-300',
@@ -33,7 +42,7 @@ const PORTALS = {
     label: 'Students Records',
     icon: FaClipboardList,
     description: 'Academic records & student data management',
-    gradient: 'from-[#0d2d1f] via-[#0f3626] to-[#0A1628]',
+    gradient: 'from-[#0d2d1f] via-[#0f3626] to-navy',
     accentBg: 'bg-emerald-500/15',
     accentBorder: 'border-emerald-400/30',
     accentText: 'text-emerald-300',
@@ -48,7 +57,7 @@ const PORTALS = {
     label: 'School Bursar',
     icon: FaMoneyCheckAlt,
     description: 'Fee collections, expenses & financial reports',
-    gradient: 'from-[#032e22] via-[#04382a] to-[#0A1628]',
+    gradient: 'from-[#032e22] via-[#04382a] to-navy',
     accentBg: 'bg-teal-600/15',
     accentBorder: 'border-teal-500/30',
     accentText: 'text-teal-400',
@@ -63,7 +72,7 @@ const PORTALS = {
     label: 'Teacher Portal',
     icon: FaChalkboardTeacher,
     description: 'Attendance, timetable & class management',
-    gradient: 'from-[#1a0d33] via-[#1f1040] to-[#0A1628]',
+    gradient: 'from-[#1a0d33] via-[#1f1040] to-navy',
     accentBg: 'bg-violet-500/15',
     accentBorder: 'border-violet-400/30',
     accentText: 'text-violet-300',
@@ -102,14 +111,37 @@ export default function StaffLogin() {
   const Icon     = portal.icon
 
   const navigate = useNavigate()
+  const { hasFeature } = useLicense()
+  const isLicensed = hasFeature(PORTAL_FEATURE[portalKey])
 
   const [showPass,   setShowPass]   = useState(false)
   const [form,       setForm]       = useState({ email: '', password: '' })
+  const [rememberMe, setRememberMe] = useState(false)
   const [showSignUp, setShowSignUp] = useState(false)
   const [authError,  setAuthError]  = useState('')
   const [loading,    setLoading]    = useState(false)
   const [lockInfo,   setLockInfo]   = useState(null)
   const [countdown,  setCountdown]  = useState(null)
+
+  if (!isLicensed) {
+    return (
+      <div className="min-h-screen bg-navy flex flex-col items-center justify-center text-center p-8">
+        <div className="w-14 h-14 bg-amber-500/10 rounded-2xl flex items-center justify-center mb-4">
+          <FaLock className="text-amber-400 text-2xl" />
+        </div>
+        <h2 className="text-white font-bold font-playfair text-xl mb-2">Not Available on Your Plan</h2>
+        <p className="text-gray-500 text-sm font-montserrat max-w-xs leading-relaxed mb-6">
+          The <span className="text-white font-semibold">{portal.label}</span> is not included in your current license. Upgrade to Premium to unlock this portal.
+        </p>
+        <button
+          onClick={() => navigate('/staff-portal')}
+          className="text-xs font-semibold font-montserrat text-gold hover:text-[#d4b05a] transition-colors"
+        >
+          ← Back to Portal Select
+        </button>
+      </div>
+    )
+  }
 
   // Countdown ticker
   useEffect(() => {
@@ -132,6 +164,20 @@ export default function StaffLogin() {
   }, [portalKey])
 
   const clearForm = () => setForm({ email: '', password: '' })
+
+  const handleForgotPassword = async () => {
+    if (!form.email.trim()) {
+      setAuthError('Enter your email address above, then click "Forgot password?".')
+      return
+    }
+    try {
+      await sendPasswordResetEmail(auth, form.email.trim())
+      setAuthError('')
+      alert(`Password reset email sent to ${form.email.trim()}. Check your inbox.`)
+    } catch {
+      setAuthError('Could not send reset email. Check the address and try again.')
+    }
+  }
 
   const handleFail = async (identifier, msg) => {
     const result = await recordFailedAttempt(identifier, portalKey)
@@ -160,6 +206,8 @@ export default function StaffLogin() {
         setAuthError('Account is temporarily locked. Try again after the countdown.')
         return
       }
+
+      await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence)
 
       let cred
       try {
@@ -244,8 +292,8 @@ export default function StaffLogin() {
               <FaGraduationCap className="text-navy text-xl" />
             </div>
             <div>
-              <div className="font-playfair font-bold text-white text-xl leading-tight">Oasis Private College</div>
-              <div className="font-montserrat text-gold text-[10px] uppercase tracking-[0.2em]">Checheche, Zimbabwe</div>
+              <div className="font-playfair font-bold text-white text-xl leading-tight">{sc.name}</div>
+              <div className="font-montserrat text-gold text-[10px] uppercase tracking-[0.2em]">{sc.address}</div>
             </div>
           </Link>
 
@@ -281,8 +329,17 @@ export default function StaffLogin() {
           <p className="font-montserrat text-[10px] uppercase tracking-[0.18em] text-gray-500 mb-5">Switch portal</p>
           <div className="flex items-end gap-5">
             {ALL_PORTALS.map(p => {
-              const PIcon = p.icon
-              const active = p.key === portalKey
+              const PIcon   = p.icon
+              const active  = p.key === portalKey
+              const allowed = hasFeature(PORTAL_FEATURE[p.key])
+              if (!allowed) return (
+                <div key={p.key} className="flex flex-col items-center gap-2 opacity-20 cursor-not-allowed" title="Not available on your plan">
+                  <div className="w-11 h-11 rounded-xl flex items-center justify-center border bg-white/5 border-white/10">
+                    <PIcon className="text-gray-600" />
+                  </div>
+                  <span className="font-montserrat text-[9px] uppercase tracking-wider text-gray-600 text-center leading-tight max-w-[56px]">{p.label}</span>
+                </div>
+              )
               return (
                 <Link
                   key={p.key}
@@ -300,16 +357,18 @@ export default function StaffLogin() {
             })}
           </div>
 
-          {/* Link to student portal */}
-          <div className="mt-8 pt-6 border-t border-white/10">
-            <Link
-              to="/login"
-              className="font-montserrat text-[10px] uppercase tracking-widest text-gray-600 hover:text-gold transition-colors flex items-center gap-2"
-            >
-              <FaGraduationCap className="text-xs" />
-              Student Portal Login
-            </Link>
-          </div>
+          {/* Link to student portal — only if licensed */}
+          {hasFeature('student-portal') && (
+            <div className="mt-8 pt-6 border-t border-white/10">
+              <Link
+                to="/login"
+                className="font-montserrat text-[10px] uppercase tracking-widest text-gray-600 hover:text-gold transition-colors flex items-center gap-2"
+              >
+                <FaGraduationCap className="text-xs" />
+                Student Portal Login
+              </Link>
+            </div>
+          )}
         </div>
       </motion.div>
 
@@ -326,7 +385,7 @@ export default function StaffLogin() {
             <div className="w-10 h-10 bg-gold rounded-full flex items-center justify-center shadow-md shadow-gold/30">
               <FaGraduationCap className="text-navy" />
             </div>
-            <div className="font-playfair font-bold text-white text-lg leading-tight">Oasis Private College</div>
+            <div className="font-playfair font-bold text-white text-lg leading-tight">{sc.name}</div>
           </Link>
           <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-xs font-montserrat font-semibold uppercase tracking-wider ${portal.badgeClass}`}>
             <Icon className="text-sm" />
@@ -407,11 +466,20 @@ export default function StaffLogin() {
             {/* Remember / sign up */}
             <div className="flex items-center justify-between">
               <label className="flex items-center gap-2 cursor-pointer group">
-                <input type="checkbox" className="accent-gold w-3.5 h-3.5 rounded" />
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={e => setRememberMe(e.target.checked)}
+                  className="accent-gold w-3.5 h-3.5 rounded"
+                />
                 <span className="font-montserrat text-xs text-gray-500 group-hover:text-gray-400 transition-colors">Remember me</span>
               </label>
               <div className="flex items-center gap-3">
-                <button type="button" className="font-montserrat text-xs text-gold hover:text-yellow-300 transition-colors">
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  className="font-montserrat text-xs text-gold hover:text-yellow-300 transition-colors"
+                >
                   Forgot password?
                 </button>
                 <>
@@ -472,8 +540,15 @@ export default function StaffLogin() {
             <p className="font-montserrat text-[10px] uppercase tracking-[0.15em] text-gray-600 mb-4">Switch portal</p>
             <div className="flex gap-3">
               {ALL_PORTALS.map(p => {
-                const PIcon = p.icon
-                const active = p.key === portalKey
+                const PIcon   = p.icon
+                const active  = p.key === portalKey
+                const allowed = hasFeature(PORTAL_FEATURE[p.key])
+                if (!allowed) return (
+                  <div key={p.key} className="flex-1 flex flex-col items-center gap-2 py-3 px-1 rounded-xl border bg-white/5 border-white/10 opacity-20 cursor-not-allowed">
+                    <PIcon className="text-gray-600" />
+                    <span className="font-montserrat text-[8px] uppercase tracking-wider text-center leading-tight text-gray-600">{p.label}</span>
+                  </div>
+                )
                 return (
                   <Link
                     key={p.key}
@@ -490,11 +565,13 @@ export default function StaffLogin() {
                 )
               })}
             </div>
-            <div className="mt-4 text-center">
-              <Link to="/login" className="font-montserrat text-[10px] uppercase tracking-widest text-gray-600 hover:text-gold transition-colors">
-                Student Portal Login
-              </Link>
-            </div>
+            {hasFeature('student-portal') && (
+              <div className="mt-4 text-center">
+                <Link to="/login" className="font-montserrat text-[10px] uppercase tracking-widest text-gray-600 hover:text-gold transition-colors">
+                  Student Portal Login
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       </motion.div>

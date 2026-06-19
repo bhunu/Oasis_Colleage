@@ -8,7 +8,7 @@ import { DEPARTMENTS } from '../constants/departments'
 import { FaUsers } from 'react-icons/fa'
 
 export default function Staff() {
-  const { staff, loading, getFeatured, getByDepartment } = useStaff()
+  const { staff, loading, error, getFeatured, getByDepartment } = useStaff()
   const [activeDept, setActiveDept] = useState('All')
 
   const featuredStaff  = getFeatured()
@@ -24,8 +24,18 @@ export default function Staff() {
         image="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1920&q=80"
       />
 
+      {/* Error fallback */}
+      {!loading && error && (
+        <section className="section-padding">
+          <div className="container-max text-center py-16">
+            <FaUsers className="text-gray-600 text-4xl mx-auto mb-4" />
+            <p className="text-gray-400 font-montserrat text-sm">Could not load staff list. Please try again later.</p>
+          </div>
+        </section>
+      )}
+
       {/* FEATURED LEADERSHIP */}
-      {!loading && featuredStaff.length > 0 && (
+      {!loading && !error && featuredStaff.length > 0 && (
         <section className="section-padding bg-navy">
           <div className="container-max">
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">

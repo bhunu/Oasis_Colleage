@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { MdAdd, MdEdit, MdDelete, MdClose, MdEvent } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import { getCalendarEvents, addCalendarEvent, updateCalendarEvent, deleteCalendarEvent } from '../../firebase/calendarEvents'
@@ -15,7 +15,7 @@ const CATEGORIES = [
   { value: 'holiday',       label: 'Holiday'       },
 ]
 
-const inputCls = 'w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-[#C9A84C]/50 font-montserrat'
+const inputCls = 'w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-gold/50 font-montserrat'
 const labelCls = 'text-[10px] font-semibold uppercase tracking-wider text-gray-400 font-montserrat block mb-1'
 
 function CategoryBadge({ category }) {
@@ -33,18 +33,18 @@ function EventCard({ item, onEdit, onDelete }) {
   const d = item.date ? new Date(item.date + 'T00:00') : null
   const isMultiDay = item.endDate && item.endDate !== item.date
   return (
-    <div className="bg-[#132140] rounded-xl border border-white/10 p-4">
+    <div className="bg-navy-light rounded-xl border border-white/10 p-4">
       <div className="flex items-start justify-between gap-2 mb-3">
         {d && (
-          <div className="w-10 h-10 bg-[#C9A84C]/10 border border-[#C9A84C]/20 rounded-lg flex flex-col items-center justify-center shrink-0">
-            <span className="text-[8px] font-bold text-[#C9A84C] uppercase leading-none font-montserrat">
+          <div className="w-10 h-10 bg-gold/10 border border-gold/20 rounded-lg flex flex-col items-center justify-center shrink-0">
+            <span className="text-[8px] font-bold text-gold uppercase leading-none font-montserrat">
               {d.toLocaleString('default', { month: 'short' })}
             </span>
-            <span className="text-sm font-bold text-[#C9A84C] leading-none font-playfair">{d.getDate()}</span>
+            <span className="text-sm font-bold text-gold leading-none font-playfair">{d.getDate()}</span>
           </div>
         )}
         <div className="flex gap-1 ml-auto">
-          <button onClick={() => onEdit(item)}      className="p-1.5 rounded text-gray-500 hover:bg-white/5    hover:text-[#C9A84C] transition"><MdEdit   className="text-sm" /></button>
+          <button onClick={() => onEdit(item)}      className="p-1.5 rounded text-gray-500 hover:bg-white/5    hover:text-gold transition"><MdEdit   className="text-sm" /></button>
           <button onClick={() => onDelete(item.id)} className="p-1.5 rounded text-gray-500 hover:bg-red-900/30 hover:text-red-400   transition"><MdDelete className="text-sm" /></button>
         </div>
       </div>
@@ -112,17 +112,17 @@ export default function AdminEvents() {
     <div className="relative">
       <div className="flex items-center justify-between mb-5">
         <p className="text-xs text-gray-500 font-montserrat">{upcoming.length} upcoming · {past.length} past</p>
-        <button onClick={openNew} className="flex items-center gap-2 bg-[#C9A84C] text-[#0A1628] text-xs font-bold px-4 py-2 rounded-lg hover:bg-[#D4B96A] transition font-montserrat">
+        <button onClick={openNew} className="flex items-center gap-2 bg-gold text-navy text-xs font-bold px-4 py-2 rounded-lg hover:bg-[#D4B96A] transition font-montserrat">
           <MdAdd className="text-base" /> Add Event
         </button>
       </div>
 
       {loading ? (
         <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
-          {[...Array(6)].map((_, i) => <div key={i} className="h-32 bg-[#132140] animate-pulse rounded-xl border border-white/10" />)}
+          {[...Array(6)].map((_, i) => <div key={i} className="h-32 bg-navy-light animate-pulse rounded-xl border border-white/10" />)}
         </div>
       ) : items.length === 0 ? (
-        <div className="bg-[#132140] rounded-xl border border-white/10 p-16 text-center">
+        <div className="bg-navy-light rounded-xl border border-white/10 p-16 text-center">
           <MdEvent className="text-4xl text-gray-600 mx-auto mb-3" />
           <p className="text-gray-500 text-sm font-montserrat">No events yet.</p>
         </div>
@@ -150,7 +150,7 @@ export default function AdminEvents() {
       {open && (
         <div className="fixed inset-0 z-40 flex">
           <div className="flex-1 bg-black/60" onClick={closePanel} />
-          <div className="w-full max-w-md bg-[#0D1C35] border-l border-white/10 shadow-2xl flex flex-col">
+          <div className="w-full max-w-md bg-navy-800 border-l border-white/10 shadow-2xl flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
               <h2 className="text-sm font-bold text-white font-playfair">{editing ? 'Edit Event' : 'New Event'}</h2>
               <button onClick={closePanel} className="p-1 rounded text-gray-500 hover:text-gray-200"><MdClose className="text-lg" /></button>
@@ -196,7 +196,7 @@ export default function AdminEvents() {
               </div>
 
               <button type="submit" disabled={saving}
-                className="w-full bg-[#C9A84C] text-[#0A1628] text-sm font-bold py-3 rounded-lg hover:bg-[#D4B96A] disabled:opacity-60 transition font-montserrat">
+                className="w-full bg-gold text-navy text-sm font-bold py-3 rounded-lg hover:bg-[#D4B96A] disabled:opacity-60 transition font-montserrat">
                 {saving ? 'Saving…' : editing ? 'Update Event' : 'Add Event'}
               </button>
             </form>

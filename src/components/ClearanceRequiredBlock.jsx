@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+﻿import { useNavigate } from 'react-router-dom'
 import { MdLock, MdArrowForward, MdAssignment } from 'react-icons/md'
 
 const MESSAGES = {
@@ -26,7 +26,7 @@ export default function ClearanceRequiredBlock({ studentName, exitType }) {
         </p>
         <button
           onClick={() => navigate('/student/clearance/apply')}
-          className="flex items-center gap-2 bg-[#C9A84C] hover:bg-yellow-400 text-[#0A1628] font-montserrat font-bold text-sm px-6 py-3 rounded-xl mx-auto transition mb-4"
+          className="flex items-center gap-2 bg-gold hover:bg-yellow-400 text-navy font-montserrat font-bold text-sm px-6 py-3 rounded-xl mx-auto transition mb-4"
         >
           <MdAssignment className="text-lg" />
           Apply for Clearance
@@ -36,7 +36,7 @@ export default function ClearanceRequiredBlock({ studentName, exitType }) {
           Already applied?{' '}
           <button
             onClick={() => navigate('/student/clearance/status')}
-            className="text-[#C9A84C] hover:underline"
+            className="text-gold hover:underline"
           >
             Check My Clearance Status
           </button>

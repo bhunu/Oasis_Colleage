@@ -1,11 +1,12 @@
-import { useState, useEffect, useCallback } from 'react'
-import { getCurrentTerm } from '../utils/termHelpers'
+﻿import { useState, useEffect, useCallback } from 'react'
+import { parseTermNumber } from '../utils/termHelpers'
 import { useTermDates, fmtTermDate, isTermEnded } from '../hooks/useTermDates'
 import { useDropzone } from 'react-dropzone'
 import Papa from 'papaparse'
 import { db } from '../firebase/config'
-import { doc, writeBatch, serverTimestamp, getDocs, deleteDoc, collection, query, where } from 'firebase/firestore'
+import { doc, writeBatch, serverTimestamp, getDocs, getDoc, deleteDoc, collection, query, where } from 'firebase/firestore'
 import toast from 'react-hot-toast'
+import sc from '../utils/schoolConfig'
 import {
   MdCloudUpload, MdUploadFile, MdCheckCircle, MdError,
   MdWarning, MdClose, MdVisibility, MdDownload, MdDelete, MdRefresh,
@@ -13,14 +14,8 @@ import {
 import { FaGraduationCap } from 'react-icons/fa'
 import { SCHOOL_ID } from '../utils/schoolConfig'
 
-// ── Constants ─────────────────────────────────────────────────────────────
-
-
-const { number, year } = getCurrentTerm()
-const TERMS = [`Term ${number} ${year}`]
-
 // Reserved columns that are NOT subjects
-const NON_SUBJECT = new Set(['regno', 'name', 'comment'])
+const NON_SUBJECT = new Set(['regno', 'name', 'fullname', 'comment'])
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 function toTermId(term) {
@@ -92,19 +87,20 @@ function chunks(arr, n) {
 
 
 // ── Shared style shortcuts ────────────────────────────────────────────────
-const sInput  = 'w-full bg-white/5 border border-white/10 focus:border-[#C9A84C]/50 focus:outline-none rounded-xl px-4 py-2.5 text-white font-montserrat text-sm placeholder-gray-600 transition-all'
+const sInput  = 'w-full bg-white/5 border border-white/10 focus:border-gold/50 focus:outline-none rounded-xl px-4 py-2.5 text-white font-montserrat text-sm placeholder-gray-600 transition-all'
 const sLabel  = 'block text-[11px] font-semibold text-gray-500 uppercase tracking-widest font-montserrat mb-1.5'
-const GOLD    = '#C9A84C'
-const NAVY    = '#0A1628'
-const CARD    = '#0D1C35'
+const GOLD    = 'var(--color-primary-hex)'
+const NAVY    = 'var(--color-navy-hex)'
+const CARD    = 'var(--color-navy-800-hex)'
 
 // ── Main component ────────────────────────────────────────────────────────
 export default function Exams() {
   const { termEndDate } = useTermDates()
+  const [terms,     setTerms]       = useState([])
   const [classes,   setClasses]     = useState([])
   const [teacher, setTeacher]       = useState('')
   const [className, setClassName]   = useState('')
-  const [term, setTerm]             = useState(TERMS[0])
+  const [term, setTerm]             = useState('')
   const [fileName, setFileName]     = useState('')
   const [parsed, setParsed]         = useState(null)   // { rows, subjectCols }
   const [verifying, setVerifying]   = useState(false)
@@ -243,6 +239,15 @@ export default function Exams() {
       const names = snap.docs.map(d => d.data().name).filter(Boolean).sort()
       if (names.length > 0) setClasses(names)
     })
+    getDoc(doc(db, 'portalSettings', 'main')).then(snap => {
+      if (snap.exists() && snap.data().currentTerm) {
+        const n = parseTermNumber(snap.data().currentTerm)
+        const termStr = `Term ${n} ${new Date().getFullYear()}`
+        setTerms([termStr])
+        setTerm(prev => prev || termStr)
+        setMgmtTerm(prev => prev || termStr)
+      }
+    })
   }, [])
 
   const handleDownloadTemplate = async () => {
@@ -298,7 +303,7 @@ export default function Exams() {
 
   // ── Manage uploaded marks ─────────────────────────────────────────────────
   const [mgmtClass,    setMgmtClass]    = useState('')
-  const [mgmtTerm,     setMgmtTerm]     = useState(TERMS[0])
+  const [mgmtTerm,     setMgmtTerm]     = useState('')
   const [mgmtRows,     setMgmtRows]     = useState(null)   // null = not loaded yet
   const [mgmtCols,     setMgmtCols]     = useState([])
   const [mgmtLoading,  setMgmtLoading]  = useState(false)
@@ -384,23 +389,23 @@ export default function Exams() {
       )}
 
       {/* ── Upload form card ─────────────────────────────────────────────── */}
-      <div className={`bg-[${CARD}] bg-[#0D1C35] border border-white/10 rounded-2xl p-8`}>
+      <div className={`bg-navy-800 border border-white/10 rounded-2xl p-8`}>
 
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-[#C9A84C]/15 rounded-lg flex items-center justify-center">
-              <FaGraduationCap className="text-[#C9A84C]" />
+            <div className="w-9 h-9 bg-gold/15 rounded-lg flex items-center justify-center">
+              <FaGraduationCap className="text-gold" />
             </div>
             <div>
               <h2 className="font-playfair text-xl font-bold text-white leading-tight">End of Term Marks Upload</h2>
-              <p className="font-montserrat text-[11px] text-gray-500 uppercase tracking-wider">Oasis Private College · CSV batch upload</p>
+              <p className="font-montserrat text-[11px] text-gray-500 uppercase tracking-wider">{sc.name} · CSV batch upload</p>
             </div>
           </div>
           <button
             onClick={handleDownloadTemplate}
             disabled={downloading}
-            className="flex items-center gap-1.5 text-xs font-montserrat font-semibold text-[#C9A84C] hover:text-yellow-300 disabled:opacity-50 transition-colors"
+            className="flex items-center gap-1.5 text-xs font-montserrat font-semibold text-gold hover:text-yellow-300 disabled:opacity-50 transition-colors"
           >
             <MdDownload className="text-base" />
             {downloading ? 'Downloading…' : 'Download Template'}
@@ -418,14 +423,14 @@ export default function Exams() {
             <label className={sLabel}>Class *</label>
             <select value={className} onChange={e => setClassName(e.target.value)} className={sInput}>
               <option value="">Select class…</option>
-              {classes.map(c => <option key={c} value={c} className="bg-[#0D1C35]">{c}</option>)}
+              {classes.map(c => <option key={c} value={c} className="bg-navy-800">{c}</option>)}
             </select>
           </div>
           <div>
             <label className={sLabel}>Term *</label>
             <select value={term} onChange={e => setTerm(e.target.value)} className={sInput}>
               <option value="">Select term…</option>
-              {TERMS.map(t => <option key={t} value={t} className="bg-[#0D1C35]">{t}</option>)}
+              {terms.map(t => <option key={t} value={t} className="bg-navy-800">{t}</option>)}
             </select>
           </div>
         </div>
@@ -436,12 +441,12 @@ export default function Exams() {
             {...getRootProps()}
             className={`border-2 border-dashed rounded-xl px-8 py-12 text-center cursor-pointer transition-all ${
               isDragActive
-                ? 'border-[#C9A84C] bg-[#C9A84C]/5'
-                : 'border-white/15 hover:border-[#C9A84C]/40 hover:bg-white/[0.02]'
+                ? 'border-gold bg-gold/5'
+                : 'border-white/15 hover:border-gold/40 hover:bg-white/[0.02]'
             }`}
           >
             <input {...getInputProps()} />
-            <MdCloudUpload className={`text-5xl mx-auto mb-3 transition-colors ${isDragActive ? 'text-[#C9A84C]' : 'text-gray-600'}`} />
+            <MdCloudUpload className={`text-5xl mx-auto mb-3 transition-colors ${isDragActive ? 'text-gold' : 'text-gray-600'}`} />
             <p className="font-montserrat font-semibold text-white text-sm mb-1">
               {isDragActive ? 'Drop your CSV here…' : 'Drag & drop a CSV file'}
             </p>
@@ -451,8 +456,8 @@ export default function Exams() {
             </p>
           </div>
         ) : verifying ? (
-          <div className="border-2 border-dashed border-[#C9A84C]/30 rounded-xl px-8 py-12 text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#C9A84C] mb-4" />
+          <div className="border-2 border-dashed border-gold/30 rounded-xl px-8 py-12 text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gold mb-4" />
             <p className="font-montserrat text-sm text-white font-semibold mb-1">Verifying registration numbers…</p>
             <p className="font-montserrat text-xs text-gray-500">Checking each reg number against the students table</p>
           </div>
@@ -461,7 +466,7 @@ export default function Exams() {
             <div className="flex items-center gap-3">
               {uploadDone
                 ? <MdCheckCircle className="text-emerald-400 text-xl" />
-                : <MdUploadFile className="text-[#C9A84C] text-xl" />}
+                : <MdUploadFile className="text-gold text-xl" />}
               <div>
                 <p className="font-montserrat text-sm text-white font-semibold">{fileName}</p>
                 <p className="font-montserrat text-[11px] text-gray-500">
@@ -482,7 +487,7 @@ export default function Exams() {
           <p className="font-montserrat text-xs text-red-400 mt-3">{formErr}</p>
         )}
         {progress && (
-          <p className="font-montserrat text-xs text-[#C9A84C] mt-3 animate-pulse">{progress}</p>
+          <p className="font-montserrat text-xs text-gold mt-3 animate-pulse">{progress}</p>
         )}
 
         {/* Action buttons */}
@@ -497,7 +502,7 @@ export default function Exams() {
             <button
               onClick={handleUpload}
               disabled={!canUpload}
-              className="flex-1 bg-[#C9A84C] hover:bg-yellow-400 disabled:opacity-50 disabled:cursor-not-allowed text-[#0A1628] font-montserrat text-xs font-bold uppercase tracking-wider py-3 rounded-xl shadow-lg shadow-[#C9A84C]/20 transition-all flex items-center justify-center gap-2"
+              className="flex-1 bg-gold hover:bg-yellow-400 disabled:opacity-50 disabled:cursor-not-allowed text-navy font-montserrat text-xs font-bold uppercase tracking-wider py-3 rounded-xl shadow-lg shadow-gold/20 transition-all flex items-center justify-center gap-2"
             >
               <MdCloudUpload className="text-base" />
               {uploading ? progress || 'Uploading…' : `Upload ${validCount} Record${validCount !== 1 ? 's' : ''} to Firebase`}
@@ -517,7 +522,7 @@ export default function Exams() {
 
       {/* ── Preview table ─────────────────────────────────────────────────── */}
       {parsed && (
-        <div className="bg-[#0D1C35] border border-white/10 rounded-2xl overflow-hidden">
+        <div className="bg-navy-800 border border-white/10 rounded-2xl overflow-hidden">
 
           {/* Table header bar */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
@@ -561,7 +566,7 @@ export default function Exams() {
           {/* Scrollable table */}
           <div className="overflow-auto max-h-[500px]">
             <table className="w-full text-xs font-montserrat">
-              <thead className="sticky top-0 bg-[#0A1628] border-b border-white/10 z-10">
+              <thead className="sticky top-0 bg-navy border-b border-white/10 z-10">
                 <tr>
                   <th className="text-left px-4 py-3 text-gray-500 uppercase tracking-wider w-10">#</th>
                   <th className="text-left px-4 py-3 text-gray-500 uppercase tracking-wider">Reg No</th>
@@ -583,7 +588,7 @@ export default function Exams() {
                     }`}
                   >
                     <td className="px-4 py-3 text-gray-600">{row._idx}</td>
-                    <td className={`px-4 py-3 font-mono font-semibold ${row.regNo ? 'text-[#C9A84C]' : 'text-red-400 italic'}`}>
+                    <td className={`px-4 py-3 font-mono font-semibold ${row.regNo ? 'text-gold' : 'text-red-400 italic'}`}>
                       {row.regNo || 'missing'}
                     </td>
                     {parsed.subjectCols.map(col => {
@@ -618,7 +623,7 @@ export default function Exams() {
       )}
 
       {/* ── Manage Uploaded Marks ─────────────────────────────────────────── */}
-      <div className="bg-[#0D1C35] border border-white/10 rounded-2xl p-6">
+      <div className="bg-navy-800 border border-white/10 rounded-2xl p-6">
         <div className="flex items-center gap-2 mb-5">
           <MdDelete className="text-red-400" />
           <h3 className="font-playfair text-base font-bold text-white">Manage Uploaded Marks</h3>
@@ -631,13 +636,13 @@ export default function Exams() {
             <label className={sLabel}>Class</label>
             <select value={mgmtClass} onChange={e => { setMgmtClass(e.target.value); setMgmtRows(null) }} className={sInput}>
               <option value="">Select class…</option>
-              {classes.map(c => <option key={c} value={c} className="bg-[#0D1C35]">{c}</option>)}
+              {classes.map(c => <option key={c} value={c} className="bg-navy-800">{c}</option>)}
             </select>
           </div>
           <div>
             <label className={sLabel}>Term</label>
             <select value={mgmtTerm} onChange={e => { setMgmtTerm(e.target.value); setMgmtRows(null) }} className={sInput}>
-              {TERMS.map(t => <option key={t} value={t} className="bg-[#0D1C35]">{t}</option>)}
+              {terms.map(t => <option key={t} value={t} className="bg-navy-800">{t}</option>)}
             </select>
           </div>
           <div className="flex items-end">
@@ -657,7 +662,7 @@ export default function Exams() {
           <div className="flex items-center justify-between mb-3">
             <span className="font-montserrat text-xs text-gray-500">
               {mgmtRows.length} record{mgmtRows.length !== 1 ? 's' : ''}
-              {selected.size > 0 && <span className="text-[#C9A84C] ml-2">· {selected.size} selected</span>}
+              {selected.size > 0 && <span className="text-gold ml-2">· {selected.size} selected</span>}
             </span>
             {selected.size > 0 && (
               <button
@@ -676,14 +681,14 @@ export default function Exams() {
         {mgmtRows && mgmtRows.length > 0 && (
           <div className="overflow-auto rounded-xl border border-white/10">
             <table className="w-full text-xs font-montserrat">
-              <thead className="bg-[#0A1628] border-b border-white/10">
+              <thead className="bg-navy border-b border-white/10">
                 <tr>
                   <th className="px-3 py-3 w-8">
                     <input
                       type="checkbox"
                       checked={selected.size === mgmtRows.length && mgmtRows.length > 0}
                       onChange={toggleSelectAll}
-                      className="accent-[#C9A84C] w-3 h-3"
+                      className="accent-gold w-3 h-3"
                     />
                   </th>
                   <th className="text-left px-4 py-3 text-gray-500 uppercase tracking-wider">Reg No</th>
@@ -703,10 +708,10 @@ export default function Exams() {
                         type="checkbox"
                         checked={selected.has(row._docId)}
                         onChange={() => toggleSelect(row._docId)}
-                        className="accent-[#C9A84C] w-3 h-3"
+                        className="accent-gold w-3 h-3"
                       />
                     </td>
-                    <td className="px-4 py-3 font-mono font-semibold text-[#C9A84C]">{row.regNo}</td>
+                    <td className="px-4 py-3 font-mono font-semibold text-gold">{row.regNo}</td>
                     {mgmtCols.map(col => {
                       const val = row.subjects?.[col]
                       return (

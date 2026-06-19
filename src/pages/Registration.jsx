@@ -7,10 +7,9 @@ import {
   MdBadge as IconBadge,
 } from 'react-icons/md'
 
-const CLASSES = ['All classes', 'Form 1A', 'Form 1B', 'Form 2A', 'Form 2B', 'Form 3A', 'Form 3B', 'Form 4A', 'Form 4B']
-
 export default function Registration() {
   const [students, setStudents] = useState([])
+  const [classes, setClasses] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [classFilter, setClassFilter] = useState('All classes')
@@ -19,10 +18,16 @@ export default function Registration() {
   useEffect(() => {
     async function load() {
       try {
-        const snap = await getDocs(query(collection(db, 'students'), orderBy('createdAt', 'desc')))
-        setStudents(snap.docs.map(d => ({ firestoreId: d.id, ...d.data() })))
+        const [studSnap, classSnap] = await Promise.all([
+          getDocs(query(collection(db, 'students'), orderBy('createdAt', 'desc'))),
+          getDocs(collection(db, 'classes')),
+        ])
+        setStudents(studSnap.docs.map(d => ({ firestoreId: d.id, ...d.data() })))
+        const names = classSnap.docs.map(d => d.data().name).filter(Boolean).sort()
+        setClasses(['All classes', ...names])
       } catch {
         setStudents([])
+        setClasses(['All classes'])
       } finally {
         setLoading(false)
       }
@@ -33,7 +38,7 @@ export default function Registration() {
   const filtered = students.filter(s => {
     const matchSearch =
       s.fullName?.toLowerCase().includes(search.toLowerCase()) ||
-      s.registrationId?.toLowerCase().includes(search.toLowerCase())
+      s.reg_number?.toLowerCase().includes(search.toLowerCase())
     const matchClass = classFilter === 'All classes' || s.class === classFilter
     return matchSearch && matchClass
   })
@@ -70,7 +75,7 @@ export default function Registration() {
             onChange={e => setClassFilter(e.target.value)}
             className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
           >
-            {CLASSES.map(c => <option key={c}>{c}</option>)}
+            {classes.map(c => <option key={c}>{c}</option>)}
           </select>
         </div>
 
@@ -135,7 +140,7 @@ function IDCard({ student }) {
         </div>
         <div className="bg-white/10 rounded p-2">
           <p className="text-xs opacity-75">REG. ID</p>
-          <p className="font-bold text-xs font-mono">{student.registrationId}</p>
+          <p className="font-bold text-xs font-mono">{student.reg_number}</p>
         </div>
       </div>
       {student.enrolmentDate && (

@@ -10,6 +10,7 @@ export default function PaymentModal({ isOpen, onClose, onSave, studentId, stude
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    if (!formData.amount || Number(formData.amount) <= 0)  return
     onSave(formData)
     setFormData({ amount: '', date: new Date().toLocaleDateString('en-CA'), method: 'bank_transfer', reference: '' })
   }
@@ -27,6 +28,7 @@ export default function PaymentModal({ isOpen, onClose, onSave, studentId, stude
             <label className="block text-sm font-medium text-gray-700 mb-1">Amount ($)</label>
             <input
               type="number"
+              min="0.01"
               step="0.01"
               value={formData.amount}
               onChange={(e) => setFormData({ ...formData, amount: e.target.value })}

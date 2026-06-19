@@ -2,6 +2,10 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App'
+import { ThemeProvider } from './context/ThemeContext'
+import { BrandProvider } from './context/BrandContext'
+import { LicenseProvider } from './license/LicenseContext'
+import LicenseGate from './license/LicenseGate'
 import './index.css'
 
 // Suppress raw Firestore/Firebase internals from browser DevTools in production.
@@ -16,8 +20,16 @@ if (import.meta.env.PROD) {
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
+    <BrandProvider>
+    <ThemeProvider>
+      <LicenseProvider>
+        <BrowserRouter>
+          <LicenseGate>
+            <App />
+          </LicenseGate>
+        </BrowserRouter>
+      </LicenseProvider>
+    </ThemeProvider>
+    </BrandProvider>
   </React.StrictMode>,
 )

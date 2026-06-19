@@ -12,12 +12,14 @@ function normalise(doc) {
 export function useStaff() {
   const [staff, setStaff]     = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError]     = useState(false)
 
   const load = useCallback(() => {
     setLoading(true)
+    setError(false)
     getAdminStaff()
       .then(docs => setStaff(docs.map(normalise)))
-      .catch(err => console.error('Failed to load staff:', err))
+      .catch(() => setError(true))
       .finally(() => setLoading(false))
   }, [])
 
@@ -32,5 +34,5 @@ export function useStaff() {
     return dept === 'All' ? sorted : sorted.filter(m => m.department === dept)
   }, [staff])
 
-  return { staff, loading, getFeatured, getByDepartment }
+  return { staff, loading, error, getFeatured, getByDepartment }
 }

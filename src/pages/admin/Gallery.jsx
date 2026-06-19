@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+﻿import { useEffect, useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { MdDelete, MdPhotoLibrary, MdCloudUpload } from 'react-icons/md'
 import toast from 'react-hot-toast'
@@ -54,13 +54,13 @@ export default function AdminGallery() {
   return (
     <div className="space-y-5">
       {/* Upload zone */}
-      <div className="bg-[#132140] rounded-xl border border-white/10 p-5">
+      <div className="bg-navy-light rounded-xl border border-white/10 p-5">
         <div className="flex flex-wrap items-center gap-3 mb-4">
           <label className="text-xs font-semibold text-gray-400 font-montserrat uppercase tracking-wider">Category:</label>
           <select
             value={category}
             onChange={e => setCategory(e.target.value)}
-            className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-[#C9A84C]/50 font-montserrat"
+            className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-gold/50 font-montserrat"
           >
             {CATEGORIES.map(c => <option key={c} value={c}>{CAT_LABEL[c]}</option>)}
           </select>
@@ -74,13 +74,13 @@ export default function AdminGallery() {
             value={caption}
             onChange={e => setCaption(e.target.value)}
             placeholder="e.g. Students competing at the 2026 Annual Sports Day…"
-            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-[#C9A84C]/50 font-montserrat resize-none"
+            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-gold/50 font-montserrat resize-none"
           />
         </div>
         <div
           {...getRootProps()}
           className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
-            isDragActive ? 'border-[#C9A84C] bg-[#C9A84C]/5' : 'border-white/10 hover:border-white/20'
+            isDragActive ? 'border-gold bg-gold/5' : 'border-white/10 hover:border-white/20'
           } ${uploading ? 'opacity-60 pointer-events-none' : ''}`}
         >
           <input {...getInputProps()} />
@@ -100,8 +100,8 @@ export default function AdminGallery() {
             onClick={() => setFilter(a)}
             className={`text-xs px-3 py-1.5 rounded-full font-medium font-montserrat transition ${
               filter === a
-                ? 'bg-[#C9A84C] text-[#0A1628]'
-                : 'bg-[#132140] border border-white/10 text-gray-400 hover:border-white/20 hover:text-gray-200'
+                ? 'bg-gold text-navy'
+                : 'bg-navy-light border border-white/10 text-gray-400 hover:border-white/20 hover:text-gray-200'
             }`}
           >
             {a === 'All' ? 'All' : CAT_LABEL[a]}
@@ -115,10 +115,10 @@ export default function AdminGallery() {
       {/* Grid */}
       {loading ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-          {[...Array(10)].map((_, i) => <div key={i} className="aspect-square bg-[#132140] animate-pulse rounded-xl border border-white/10" />)}
+          {[...Array(10)].map((_, i) => <div key={i} className="aspect-square bg-navy-light animate-pulse rounded-xl border border-white/10" />)}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="bg-[#132140] rounded-xl border border-white/10 p-16 text-center">
+        <div className="bg-navy-light rounded-xl border border-white/10 p-16 text-center">
           <MdPhotoLibrary className="text-4xl text-gray-600 mx-auto mb-3" />
           <p className="text-gray-500 text-sm font-montserrat">
             {filter === 'All' ? 'No photos yet. Upload some above.' : `No photos in ${filter} album.`}
@@ -129,8 +129,8 @@ export default function AdminGallery() {
           {filtered.map(item => (
             <div key={item.id} className="relative group aspect-square rounded-xl overflow-hidden border border-white/10">
               <img src={item.url} alt={item.name} className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-[#0A1628]/70 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
-                <p className="text-[#C9A84C] text-[10px] font-medium font-montserrat px-2 text-center leading-tight">{CAT_LABEL[item.category] ?? item.category}</p>
+              <div className="absolute inset-0 bg-navy/70 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
+                <p className="text-gold text-[10px] font-medium font-montserrat px-2 text-center leading-tight">{CAT_LABEL[item.category] ?? item.category}</p>
                 {confirmingDelete === item.id ? (
                   <div className="flex gap-1">
                     <button

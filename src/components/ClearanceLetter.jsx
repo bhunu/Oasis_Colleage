@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { doc, getDoc, getDocs, query, collection, where, limit, updateDoc, increment } from 'firebase/firestore'
 import { db } from '../firebase/config'
 import { QRCodeSVG } from 'qrcode.react'
 import { MdPrint, MdDownload } from 'react-icons/md'
 import toast from 'react-hot-toast'
+import sc from '../utils/schoolConfig'
 
 const VERIFY_BASE = 'https://oasiscollegeplacholder.ac.zw/verify'
 
@@ -33,16 +34,19 @@ function certBody(data, student) {
   const name    = data.studentName
   const regNo   = data.reg_number
   if (data.exitType === 'OLevelCompletion') {
-    return `This is to certify that ${name}, Registration Number ${regNo}, was a registered student at Oasis Private College from ${enrolDate} to ${clearDate}, having successfully completed the Ordinary Level (O Level) programme. This letter serves as confirmation that the above-named student has met all financial obligations to the school, including settlement of all current and arrear fees, and has been duly cleared by the school administration. The school wishes ${p.obj} well in future academic and personal endeavours.`
+    return `This is to certify that ${name}, Registration Number ${regNo}, was a registered student at ${sc.name} from ${enrolDate} to ${clearDate}, having successfully completed the Ordinary Level (O Level) programme. This letter serves as confirmation that the above-named student has met all financial obligations to the school, including settlement of all current and arrear fees, and has been duly cleared by the school administration. The school wishes ${p.obj} well in future academic and personal endeavours.`
   }
   if (data.exitType === 'ALevelCompletion') {
-    return `This is to certify that ${name}, Registration Number ${regNo}, was a registered student at Oasis Private College from ${enrolDate} to ${clearDate}, having successfully completed the Advanced Level (A Level) programme. This letter serves as confirmation that the above-named student has met all financial obligations to the school, including settlement of all current and arrear fees, and has been duly cleared by the school administration. The school wishes ${p.obj} every success in future academic pursuits and career endeavours.`
+    return `This is to certify that ${name}, Registration Number ${regNo}, was a registered student at ${sc.name} from ${enrolDate} to ${clearDate}, having successfully completed the Advanced Level (A Level) programme. This letter serves as confirmation that the above-named student has met all financial obligations to the school, including settlement of all current and arrear fees, and has been duly cleared by the school administration. The school wishes ${p.obj} every success in future academic pursuits and career endeavours.`
   }
-  return `This is to certify that ${name}, Registration Number ${regNo}, was a registered student at Oasis Private College from ${enrolDate} to ${clearDate}. The student has been granted permission to transfer to ${data.destinationSchool || '[Destination School]'}. This letter serves as confirmation that the above-named student has met all financial obligations to the school, including settlement of all current and arrear fees, and has been duly cleared by the school administration. The school wishes ${p.obj} well at ${data.destinationSchool || '[Destination School]'}.`
+  return `This is to certify that ${name}, Registration Number ${regNo}, was a registered student at ${sc.name} from ${enrolDate} to ${clearDate}. The student has been granted permission to transfer to ${data.destinationSchool || '[Destination School]'}. This letter serves as confirmation that the above-named student has met all financial obligations to the school, including settlement of all current and arrear fees, and has been duly cleared by the school administration. The school wishes ${p.obj} well at ${data.destinationSchool || '[Destination School]'}.`
 }
 
 function buildPrintHTML({ data, schoolInfo, student, qrSvg, feeAccount }) {
-  const borderColor = BORDER_COLOR[data.exitType] || '#C9A84C'
+  const root = document.documentElement
+  const cssGold = getComputedStyle(root).getPropertyValue('--color-primary-hex').trim() || '#C9A84C'
+  const cssNavy = getComputedStyle(root).getPropertyValue('--color-navy-hex').trim() || '#0A1628'
+  const borderColor = BORDER_COLOR[data.exitType] || cssGold
   const clearDate = data.issuedAt?.toDate?.()?.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }) || '—'
   const issueTime = data.issuedAt?.toDate?.()?.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) || '—'
   const body    = certBody(data, student)
@@ -50,7 +54,7 @@ function buildPrintHTML({ data, schoolInfo, student, qrSvg, feeAccount }) {
   const arrears   = feeAccount?.arrears   || data.arrears    || 0
   const verifyURL = `${VERIFY_BASE}/${data.clearanceSerial}`
   const photoLine = student?.photoURL
-    ? `<img src="${student.photoURL}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid #C9A84C;" />`
+    ? `<img src="${student.photoURL}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid ${getComputedStyle(document.documentElement).getPropertyValue('--color-primary-hex').trim() || '#C9A84C'};" />`
     : ''
 
   return `<!DOCTYPE html>
@@ -70,21 +74,21 @@ function buildPrintHTML({ data, schoolInfo, student, qrSvg, feeAccount }) {
       white-space: nowrap; pointer-events: none; letter-spacing: 4px;
       font-family: Arial, sans-serif; z-index: 0;
     }
-    .letterhead { display: flex; align-items: flex-start; justify-content: space-between; padding-bottom: 14px; border-bottom: 2px solid #C9A84C; margin-bottom: 18px; }
-    .school-name { font-size: 17px; font-weight: bold; color: #0A1628; }
+    .letterhead { display: flex; align-items: flex-start; justify-content: space-between; padding-bottom: 14px; border-bottom: 2px solid ${cssGold}; margin-bottom: 18px; }
+    .school-name { font-size: 17px; font-weight: bold; color: ${cssNavy}; }
     .school-sub  { font-size: 10px; color: #666; margin-top: 2px; }
     .serial-block { text-align: right; font-size: 10px; color: #555; }
-    .serial-mono { font-family: monospace; font-size: 11px; font-weight: bold; color: #C9A84C; }
+    .serial-mono { font-family: monospace; font-size: 11px; font-weight: bold; color: ${cssGold}; }
     .recipient { margin: 14px 0; font-size: 12px; }
     .subject { text-align: center; font-size: 13px; font-weight: bold; text-decoration: underline; text-transform: uppercase; margin: 14px 0; }
     .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 16px 0; }
     .detail-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; color: #888; margin-bottom: 3px; }
     .detail-value { font-size: 12px; font-weight: 600; color: #1a1a1a; }
     .cert-body { margin: 18px 0; font-size: 12px; line-height: 1.8; text-align: justify; }
-    .fee-box { border: 1px solid #C9A84C; border-radius: 6px; padding: 14px; margin: 18px 0; background: #fffdf5; }
-    .fee-box-title { font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; color: #C9A84C; margin-bottom: 10px; }
+    .fee-box { border: 1px solid ${cssGold}; border-radius: 6px; padding: 14px; margin: 18px 0; background: #fffdf5; }
+    .fee-box-title { font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; color: ${cssGold}; margin-bottom: 10px; }
     .fee-row { display: flex; justify-content: space-between; font-size: 11px; margin: 4px 0; color: #333; }
-    .fee-row.total { font-weight: bold; border-top: 1px dashed #C9A84C; padding-top: 6px; margin-top: 6px; color: #166534; }
+    .fee-row.total { font-weight: bold; border-top: 1px dashed ${cssGold}; padding-top: 6px; margin-top: 6px; color: #166534; }
     .security-notices { font-size: 9px; color: #888; margin: 14px 0; line-height: 1.7; }
     .stamp { width: 110px; height: 110px; border: 2px dashed #aaa; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 9px; font-weight: bold; color: #aaa; text-align: center; text-transform: uppercase; letter-spacing: 1px; margin-top: 10px; }
     .sig-line { margin-top: 40px; }
@@ -100,15 +104,15 @@ function buildPrintHTML({ data, schoolInfo, student, qrSvg, feeAccount }) {
   </style>
 </head>
 <body>
-  <div class="watermark">OASIS PRIVATE COLLEGE — CLEARED</div>
+  <div class="watermark">${sc.name.toUpperCase()} — CLEARED</div>
   <div class="page">
     <!-- Letterhead -->
     <div class="letterhead">
       <div style="display:flex;align-items:center;gap:14px;">
         <img src="/assets/logo.png" style="width:64px;height:64px;object-fit:contain;" onerror="this.style.display='none'" />
         <div>
-          <div class="school-name">${schoolInfo?.schoolName || 'Oasis Private College'}</div>
-          <div class="school-sub">${schoolInfo?.address || 'Checheche, Zimbabwe'}</div>
+          <div class="school-name">${schoolInfo?.schoolName || sc.name}</div>
+          <div class="school-sub">${schoolInfo?.address || sc.address}</div>
           <div class="school-sub">Tel: ${schoolInfo?.phone || '—'} | Email: ${schoolInfo?.email || '—'}</div>
         </div>
       </div>
@@ -165,7 +169,7 @@ function buildPrintHTML({ data, schoolInfo, student, qrSvg, feeAccount }) {
       <div class="sig-underline"></div>
       <div class="sig-name">${data.issuedBy}</div>
       <div class="sig-title">Student Administrator</div>
-      <div class="sig-title">On behalf of Oasis Private College</div>
+      <div class="sig-title">On behalf of ${sc.name}</div>
     </div>
 
     <!-- Security notices -->
@@ -173,7 +177,7 @@ function buildPrintHTML({ data, schoolInfo, student, qrSvg, feeAccount }) {
       This letter is issued once and is non-transferable. &nbsp;|&nbsp;
       Any alterations to this document render it null and void. &nbsp;|&nbsp;
       Verify authenticity by scanning the QR code above. &nbsp;|&nbsp;
-      Issued under the authority of Oasis Private College, Zimbabwe.
+      Issued under the authority of ${sc.name}.
     </div>
 
     <div class="bottom-row">
@@ -187,7 +191,7 @@ function buildPrintHTML({ data, schoolInfo, student, qrSvg, feeAccount }) {
 
     <div class="footer">
       <span style="font-family:monospace;">${data.clearanceSerial}</span>
-      <span>Oasis Private College | ${schoolInfo?.address || 'Checheche, Zimbabwe'}</span>
+      <span>${sc.name} | ${schoolInfo?.address || sc.address}</span>
       <span>Page 1 of 1</span>
     </div>
   </div>
@@ -231,13 +235,13 @@ export default function ClearanceLetter({ clearanceData, mode = 'student' }) {
   if (loadingMeta) {
     return (
       <div className="flex items-center justify-center py-10">
-        <div className="w-6 h-6 border-2 border-[#C9A84C] border-t-transparent rounded-full animate-spin" />
+        <div className="w-6 h-6 border-2 border-gold border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }
 
   const verifyURL = `${VERIFY_BASE}/${clearanceData.clearanceSerial}`
-  const borderColor = BORDER_COLOR[clearanceData.exitType] || '#C9A84C'
+  const borderColor = BORDER_COLOR[clearanceData.exitType] || getComputedStyle(document.documentElement).getPropertyValue('--color-primary-hex').trim() || '#C9A84C'
   const clearDate = clearanceData.issuedAt?.toDate?.()?.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }) || '—'
   const issueTime = clearanceData.issuedAt?.toDate?.()?.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) || '—'
 
@@ -362,18 +366,18 @@ export default function ClearanceLetter({ clearanceData, mode = 'student' }) {
       >
         <div className="p-8">
           {/* Letterhead */}
-          <div className="flex items-start justify-between pb-4 mb-5" style={{ borderBottom: '2px solid #C9A84C' }}>
+          <div className="flex items-start justify-between pb-4 mb-5" style={{ borderBottom: '2px solid var(--color-primary-hex)' }}>
             <div className="flex items-center gap-4">
               <img src="/assets/logo.png" alt="" className="w-16 h-16 object-contain" onError={e => { e.target.style.display = 'none' }} />
               <div>
-                <p className="font-bold text-lg" style={{ color: '#0A1628' }}>{schoolInfo?.schoolName || 'Oasis Private College'}</p>
-                <p className="text-xs text-gray-500">{schoolInfo?.address || 'Checheche, Zimbabwe'}</p>
+                <p className="font-bold text-lg" style={{ color: 'var(--color-navy-hex)' }}>{schoolInfo?.schoolName || sc.name}</p>
+                <p className="text-xs text-gray-500">{schoolInfo?.address || sc.address}</p>
                 <p className="text-xs text-gray-500">Tel: {schoolInfo?.phone || '—'} | Email: {schoolInfo?.email || '—'}</p>
               </div>
             </div>
             <div className="text-right text-xs text-gray-500">
               <p>Clearance Serial:</p>
-              <p className="font-mono font-bold text-[#C9A84C] text-sm mt-0.5">{clearanceData.clearanceSerial}</p>
+              <p className="font-mono font-bold text-gold text-sm mt-0.5">{clearanceData.clearanceSerial}</p>
               <p className="mt-1.5">Date of Issue: {clearDate}</p>
               <p className="text-[10px] mt-0.5">Issued: {clearDate} at {issueTime}</p>
             </div>
@@ -390,7 +394,7 @@ export default function ClearanceLetter({ clearanceData, mode = 'student' }) {
             <div className="space-y-3">
               <div className="flex items-center gap-3 mb-3">
                 {student?.photoURL && (
-                  <img src={student.photoURL} alt="" className="w-16 h-16 rounded-full object-cover border-2 border-[#C9A84C]" />
+                  <img src={student.photoURL} alt="" className="w-16 h-16 rounded-full object-cover border-2 border-gold" />
                 )}
                 <div>
                   <p className="text-[9px] uppercase tracking-widest text-gray-400">Full Name</p>
@@ -414,8 +418,8 @@ export default function ClearanceLetter({ clearanceData, mode = 'student' }) {
           <p className="text-sm leading-7 text-justify mb-5">{certBody(clearanceData, student)}</p>
 
           {/* Fee box */}
-          <div className="border rounded-lg p-4 mb-5" style={{ borderColor: '#C9A84C', background: '#fffdf5' }}>
-            <p className="text-[9px] font-bold uppercase tracking-widest mb-3" style={{ color: '#C9A84C' }}>
+          <div className="border rounded-lg p-4 mb-5" style={{ borderColor: 'var(--color-primary-hex)', background: '#fffdf5' }}>
+            <p className="text-[9px] font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--color-primary-hex)' }}>
               Financial Clearance Confirmed
             </p>
             <div className="space-y-1.5 text-xs">
@@ -433,14 +437,14 @@ export default function ClearanceLetter({ clearanceData, mode = 'student' }) {
             <div className="w-44 border-b border-gray-700 mb-1" />
             <p className="font-bold text-sm">{clearanceData.issuedBy}</p>
             <p className="text-xs text-gray-500">Student Administrator</p>
-            <p className="text-xs text-gray-500">On behalf of Oasis Private College</p>
+            <p className="text-xs text-gray-500">On behalf of {sc.name}</p>
           </div>
 
           <p className="text-[9px] text-gray-400 leading-6 mb-4">
             This letter is issued once and is non-transferable. &nbsp;|&nbsp;
             Any alterations to this document render it null and void. &nbsp;|&nbsp;
             Verify authenticity by scanning the QR code. &nbsp;|&nbsp;
-            Issued under the authority of Oasis Private College, Zimbabwe.
+            Issued under the authority of {sc.name}.
           </p>
 
           <div className="flex justify-between items-end">
@@ -456,7 +460,7 @@ export default function ClearanceLetter({ clearanceData, mode = 'student' }) {
 
           <div className="flex justify-between items-center mt-5 pt-3 text-[9px] text-gray-300" style={{ borderTop: '1px solid #e5e7eb' }}>
             <span className="font-mono">{clearanceData.clearanceSerial}</span>
-            <span>Oasis Private College | {schoolInfo?.address || 'Checheche, Zimbabwe'}</span>
+            <span>{sc.name} | {schoolInfo?.address || sc.address}</span>
             <span>Page 1 of 1</span>
           </div>
         </div>
@@ -477,7 +481,7 @@ function DRow({ label, value }) {
 function FeeRow({ label, value, bold, green }) {
   return (
     <div className="flex justify-between">
-      <span className={`text-gray-600 ${bold ? 'font-bold pt-1 border-t border-dashed border-[#C9A84C] w-full' : ''}`}>{label}</span>
+      <span className={`text-gray-600 ${bold ? 'font-bold pt-1 border-t border-dashed border-gold w-full' : ''}`}>{label}</span>
       <span className={bold ? `font-bold ${green ? 'text-green-700' : ''}` : 'text-gray-700'}>{value}</span>
     </div>
   )

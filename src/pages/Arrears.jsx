@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore'
 import { db } from '../firebase/config'
 import { MdSearch as IconSearch, MdDownload as IconDownload, MdWarning as IconWarn } from 'react-icons/md'
+import { parseTermNumber } from '../utils/termHelpers'
 
 export default function Arrears() {
   const [accounts,    setAccounts]    = useState([])
@@ -14,8 +15,9 @@ export default function Arrears() {
     async function load() {
       try {
         const settingsSnap = await getDoc(doc(db, 'portalSettings', 'main'))
-        const term = settingsSnap.exists()
-          ? `${settingsSnap.data().currentTerm}-${settingsSnap.data().currentYear}`
+        const raw = settingsSnap.exists() ? settingsSnap.data() : null
+        const term = raw
+          ? `${parseTermNumber(raw.currentTerm)}-${raw.currentYear}`
           : ''
         setCurrentTerm(term)
 

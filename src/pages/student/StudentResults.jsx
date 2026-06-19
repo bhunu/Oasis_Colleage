@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { collection, doc, getDoc, getDocs, query, where, limit } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import { useStudent } from '../../context/StudentContext'
-import { getCurrentTerm } from '../../utils/termHelpers'
+import { getCurrentTerm, parseTermNumber } from '../../utils/termHelpers'
 import { SCHOOL_ID } from '../../utils/schoolConfig'
 import { MdLock, MdCloudUpload } from 'react-icons/md'
 import ClearanceRequiredBlock from '../../components/ClearanceRequiredBlock'
@@ -31,8 +31,8 @@ function gradeColorByLetter(grade) {
   if (!grade) return 'text-gray-400'
   const g = grade.toUpperCase()
   if (g.startsWith('A')) return 'text-emerald-400'
-  if (g.startsWith('B')) return 'text-emerald-400'
-  if (g.startsWith('C')) return 'text-[#C9A84C]'
+  if (g.startsWith('B')) return 'text-teal-400'
+  if (g.startsWith('C')) return 'text-gold'
   if (g.startsWith('D')) return 'text-orange-400'
   return 'text-red-400'
 }
@@ -69,10 +69,12 @@ export default function StudentResults() {
         const regNo   = studentData.regNumber
         const classId = toClassId(studentData.class)
 
-        // Build the current term ID (same logic as Exams.jsx)
-        const { number, year } = getCurrentTerm()
-        const currentTermStr   = `Term ${number} ${year}`
-        const currentTermId    = toTermId(currentTermStr)
+        // Prefer portalSettings term over clock-based fallback
+        const rawTerm        = portalSettings?.currentTerm ?? getCurrentTerm().number
+        const termNum        = parseTermNumber(rawTerm)
+        const year           = new Date().getFullYear()
+        const currentTermStr = `Term ${termNum} ${year}`
+        const currentTermId  = toTermId(currentTermStr)
 
         // Collect all term IDs — fall back to just current if listing fails
         let termIds = [currentTermId]
@@ -116,7 +118,7 @@ export default function StudentResults() {
         finish()
       }
     })()
-  }, [studentData?.regNumber]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [studentData?.regNumber, portalSettings?.currentTerm]) // eslint-disable-line react-hooks/exhaustive-deps
 
   /* Check clearance pass for gated exit types */
   useEffect(() => {
@@ -126,7 +128,7 @@ export default function StudentResults() {
       return
     }
     getDocs(
-      query(collection(db, 'clearancePasses'), where('regNo', '==', studentData.regNumber), where('valid', '==', true), limit(1))
+      query(collection(db, 'clearancePasses'), where('reg_number', '==', studentData.regNumber), where('valid', '==', true), limit(1))
     ).then(snap => {
       setClearancePass(snap.empty ? null : { id: snap.docs[0].id, ...snap.docs[0].data() })
     }).catch(() => setClearancePass(null)).finally(() => setClearanceChecked(true))
@@ -148,7 +150,7 @@ export default function StudentResults() {
   if (loading || !clearanceChecked) {
     return (
       <div className="flex items-center justify-center py-24">
-        <div className="w-8 h-8 border-2 border-[#C9A84C] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }
@@ -179,7 +181,7 @@ export default function StudentResults() {
         </p>
 
         {/* Fee progress */}
-        <div className="bg-[#0D1C35] border border-white/10 rounded-xl p-5 text-left mb-6">
+        <div className="bg-navy-800 border border-white/10 rounded-xl p-5 text-left mb-6">
           <div className="flex justify-between text-xs font-montserrat mb-3">
             <span className="text-gray-400">Your current payment</span>
             <span className="text-white font-semibold">{fmt(totalPaid)} of {fmt(termFees)}</span>
@@ -195,13 +197,13 @@ export default function StudentResults() {
             {/* Threshold marker line */}
             <div
               className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-1 h-5 rounded-full z-10"
-              style={{ left: `${threshold}%`, backgroundColor: '#C9A84C' }}
+              style={{ left: `${threshold}%`, backgroundColor: 'var(--color-primary-hex)' }}
               title={`${threshold}% unlock threshold`}
             />
             {/* Threshold label */}
             <div
               className="absolute -top-6 -translate-x-1/2 text-[9px] font-montserrat font-semibold whitespace-nowrap"
-              style={{ left: `${threshold}%`, color: '#C9A84C' }}
+              style={{ left: `${threshold}%`, color: 'var(--color-primary-hex)' }}
             >
               {threshold}% unlock
             </div>
@@ -222,7 +224,7 @@ export default function StudentResults() {
 
         <button
           onClick={() => navigate('/student/upload-pop')}
-          className="flex items-center gap-2 bg-[#C9A84C] hover:bg-yellow-400 text-[#0A1628] font-montserrat font-bold text-sm px-6 py-3 rounded-xl mx-auto transition"
+          className="flex items-center gap-2 bg-gold hover:bg-yellow-400 text-navy font-montserrat font-bold text-sm px-6 py-3 rounded-xl mx-auto transition"
         >
           <MdCloudUpload className="text-lg" />
           Upload Proof of Payment
@@ -260,16 +262,17 @@ export default function StudentResults() {
   const overallAvg     = subjectList.length
     ? Math.round(subjectList.reduce((s, r) => s + r.mark, 0) / subjectList.length * 10) / 10
     : null
-  const passCount  = subjectList.filter(r => r.mark >= 50).length
+  const passMark   = Math.min(...gradeTable.filter(g => g.grade !== 'U').map(g => g.min))
+  const passCount  = subjectList.filter(r => r.mark >= passMark).length
   const strongSubs = subjectList.filter(r => r.mark >= 65)
-  const weakSubs   = subjectList.filter(r => r.mark < 50)
+  const weakSubs   = subjectList.filter(r => r.mark < passMark)
   const bestSub    = subjectsSorted[0]
   const weakestSub = subjectsSorted[subjectsSorted.length - 1]
 
   const barColor = (mark) => {
-    if (mark >= 65) return '#22c55e'
-    if (mark >= 50) return '#C9A84C'
-    if (mark >= 40) return '#f97316'
+    if (mark >= 65)       return '#22c55e'
+    if (mark >= passMark) return 'var(--color-primary-hex)'
+    if (mark >= 40)       return '#f97316'
     return '#ef4444'
   }
 
@@ -282,14 +285,14 @@ export default function StudentResults() {
       </div>
 
       {Object.keys(grouped).length === 0 ? (
-        <div className="bg-[#0D1C35] border border-white/10 rounded-xl p-12 text-center">
+        <div className="bg-navy-800 border border-white/10 rounded-xl p-12 text-center">
           <p className="text-gray-500 font-montserrat text-sm">
             No results have been uploaded yet. Check back after exams.
           </p>
         </div>
       ) : (
         Object.entries(grouped).map(([term, termResults]) => (
-          <div key={term} className="bg-[#0D1C35] border border-white/10 rounded-xl overflow-hidden">
+          <div key={term} className="bg-navy-800 border border-white/10 rounded-xl overflow-hidden">
             <div className="px-5 py-3 border-b border-white/10 bg-white/2">
               <h3 className="font-playfair font-semibold text-white">{term}</h3>
             </div>
@@ -339,7 +342,7 @@ export default function StudentResults() {
                     <td />
                     <td />
                     <td className="py-3 px-4">
-                      <span className="text-base font-bold font-playfair text-[#C9A84C]">
+                      <span className="text-base font-bold font-playfair text-gold">
                         {termResults.reduce((sum, r) => sum + (gradeEntry(r.mark)?.points ?? 0), 0)}
                       </span>
                       <span className="text-gray-500 text-[10px] font-montserrat ml-1">pts</span>
@@ -355,7 +358,7 @@ export default function StudentResults() {
 
       {/* ── Performance Analysis ── */}
       {subjectList.length > 0 && (
-        <div className="bg-[#0D1C35] border border-white/10 rounded-xl overflow-hidden">
+        <div className="bg-navy-800 border border-white/10 rounded-xl overflow-hidden">
 
           <div className="px-5 py-4 border-b border-white/10">
             <h3 className="font-playfair font-semibold text-white">Performance Analysis</h3>
@@ -380,13 +383,13 @@ export default function StudentResults() {
                 <p className="text-[9px] uppercase tracking-widest text-gray-500 font-montserrat mb-1.5">Subjects Passed</p>
                 <p className={`text-2xl font-bold font-playfair ${
                   passCount === subjectList.length ? 'text-emerald-400'
-                  : passCount >= subjectList.length / 2 ? 'text-[#C9A84C]'
+                  : passCount >= subjectList.length / 2 ? 'text-gold'
                   : 'text-red-400'
                 }`}>
                   {passCount}<span className="text-sm text-gray-500 font-montserrat">/{subjectList.length}</span>
                 </p>
                 <span className="text-[11px] font-montserrat text-gray-500">
-                  {passCount === subjectList.length ? 'All passed' : `${subjectList.length - passCount} below 50%`}
+                  {passCount === subjectList.length ? 'All passed' : `${subjectList.length - passCount} below ${passMark}%`}
                 </span>
               </div>
 

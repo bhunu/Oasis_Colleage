@@ -1,14 +1,14 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { collection, getDocs, query, where } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 
 const TEAL = '#0F6E56'
-const CARD  = 'bg-[#0D1C35] border border-white/10 rounded-xl p-6'
+const CARD  = 'bg-navy-800 border border-white/10 rounded-xl p-6'
 const TH    = 'text-left py-3 px-4 text-[10px] font-semibold text-gray-500 uppercase tracking-widest font-montserrat'
 const TD    = 'py-3 px-4 text-sm text-gray-300 font-montserrat'
 const TIP   = {
-  contentStyle: { backgroundColor: '#0D1C35', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, color: '#fff', fontSize: 12 },
+  contentStyle: { backgroundColor: 'var(--color-navy-800-hex)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, color: '#fff', fontSize: 12 },
   labelStyle: { color: '#0F6E56' },
 }
 

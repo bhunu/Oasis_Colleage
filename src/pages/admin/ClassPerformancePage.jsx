@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo } from 'react'
+﻿import { useState, useEffect, useMemo } from 'react'
 import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import { getCurrentTerm } from '../../utils/termHelpers'
 import { useTermDates, fmtTermDate } from '../../hooks/useTermDates'
-import { SCHOOL_ID } from '../../utils/schoolConfig'
+import sc, { SCHOOL_ID } from '../../utils/schoolConfig'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine,
@@ -61,7 +61,7 @@ function computeGrade(avg, gradeTable) {
 const GRADE_COLORS = {
   A: 'text-emerald-400',
   B: 'text-emerald-400',
-  C: 'text-[#C9A84C]',
+  C: 'text-gold',
   D: 'text-orange-400',
   U: 'text-red-400',
   '—': 'text-gray-500',
@@ -114,13 +114,13 @@ const TIER = {
 }
 
 const RANK_ROW = {
-  1: 'bg-[#C9A84C]/10 border-l-2 border-[#C9A84C]',
+  1: 'bg-gold/10 border-l-2 border-gold',
   2: 'bg-gray-400/5 border-l-2 border-gray-400/40',
   3: 'bg-orange-700/5 border-l-2 border-orange-700/30',
 }
 
 const RANK_BADGE = {
-  1: 'text-[#C9A84C] font-bold text-base',
+  1: 'text-gold font-bold text-base',
   2: 'text-gray-300 font-bold text-base',
   3: 'text-orange-400 font-bold text-base',
 }
@@ -152,7 +152,7 @@ function StudentBreakdownModal({ student, rank, classTotal, onClose, gradeTable,
 
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex items-start justify-center p-4 overflow-y-auto">
-      <div className="w-full max-w-2xl bg-[#0D1C35] border border-white/10 rounded-2xl overflow-hidden my-4">
+      <div className="w-full max-w-2xl bg-navy-800 border border-white/10 rounded-2xl overflow-hidden my-4">
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
@@ -160,8 +160,8 @@ function StudentBreakdownModal({ student, rank, classTotal, onClose, gradeTable,
             {student.photoURL ? (
               <img src={student.photoURL} alt={student.name} className="w-12 h-12 rounded-full object-cover border border-white/10 shrink-0" />
             ) : (
-              <div className="w-12 h-12 rounded-full bg-[#C9A84C]/20 border border-white/10 flex items-center justify-center shrink-0">
-                <MdPerson className="text-[#C9A84C] text-2xl" />
+              <div className="w-12 h-12 rounded-full bg-gold/20 border border-white/10 flex items-center justify-center shrink-0">
+                <MdPerson className="text-gold text-2xl" />
               </div>
             )}
             <div>
@@ -219,9 +219,9 @@ function StudentBreakdownModal({ student, rank, classTotal, onClose, gradeTable,
                       tickLine={false}
                     />
                     <Tooltip
-                      contentStyle={{ background: '#0D1C35', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontFamily: 'Montserrat', fontSize: 12 }}
+                      contentStyle={{ background: 'var(--color-navy-800-hex)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontFamily: 'Montserrat', fontSize: 12 }}
                       labelStyle={{ color: '#fff' }}
-                      itemStyle={{ color: '#C9A84C' }}
+                      itemStyle={{ color: 'var(--color-primary-hex)' }}
                       formatter={(value, name, props) => [value, props.payload.fullSubject]}
                     />
                     <ReferenceLine
@@ -230,7 +230,7 @@ function StudentBreakdownModal({ student, rank, classTotal, onClose, gradeTable,
                       strokeDasharray="4 3"
                       label={{ value: 'Pass line (50)', fill: '#ef4444', fontSize: 9, fontFamily: 'Montserrat' }}
                     />
-                    <Bar dataKey="mark" radius={[4, 4, 0, 0]} fill="#C9A84C" />
+                    <Bar dataKey="mark" radius={[4, 4, 0, 0]} fill="var(--color-primary-hex)" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -265,7 +265,7 @@ function StudentBreakdownModal({ student, rank, classTotal, onClose, gradeTable,
                           <td className={`py-2.5 px-4 text-sm text-center font-bold font-montserrat ${isFail ? 'text-red-400' : 'text-white'}`}>{mark}</td>
                           <td className={`py-2.5 px-4 text-sm text-center font-bold font-montserrat ${GRADE_COLORS[g]}`}>{g}</td>
                           {isALevel && (
-                            <td className={`py-2.5 px-4 text-sm text-center font-bold font-montserrat ${pts > 0 ? 'text-[#C9A84C]' : 'text-gray-600'}`}>
+                            <td className={`py-2.5 px-4 text-sm text-center font-bold font-montserrat ${pts > 0 ? 'text-gold' : 'text-gray-600'}`}>
                               {pts}
                             </td>
                           )}
@@ -281,12 +281,12 @@ function StudentBreakdownModal({ student, rank, classTotal, onClose, gradeTable,
                 </tbody>
                 {isALevel && student.marks.length > 0 && (
                   <tfoot>
-                    <tr className="bg-[#C9A84C]/10 border-t border-[#C9A84C]/30">
-                      <td className="py-2.5 px-4 text-xs font-bold text-[#C9A84C] font-montserrat uppercase tracking-wider" colSpan={3}>
+                    <tr className="bg-gold/10 border-t border-gold/30">
+                      <td className="py-2.5 px-4 text-xs font-bold text-gold font-montserrat uppercase tracking-wider" colSpan={3}>
                         Total Points
                       </td>
                       <td className="py-2.5 px-4 text-center">
-                        <span className="text-lg font-bold text-[#C9A84C] font-playfair">{totalPoints}</span>
+                        <span className="text-lg font-bold text-gold font-playfair">{totalPoints}</span>
                         <span className="text-gray-500 text-[10px] font-montserrat ml-1">/ {sortedMarks.length * (gradeTable[0]?.points ?? 5)}</span>
                       </td>
                       <td />
@@ -516,8 +516,8 @@ export default function ClassPerformancePage() {
   const SortIcon = ({ col }) => {
     if (sortCol !== col) return <span className="ml-1 text-gray-600">↕</span>
     return sortDir === 'asc'
-      ? <MdArrowUpward className="inline ml-1 text-[#C9A84C] text-xs" />
-      : <MdArrowDownward className="inline ml-1 text-[#C9A84C] text-xs" />
+      ? <MdArrowUpward className="inline ml-1 text-gold text-xs" />
+      : <MdArrowDownward className="inline ml-1 text-gold text-xs" />
   }
 
   return (
@@ -542,8 +542,8 @@ export default function ClassPerformancePage() {
         {/* ── Page header ─────────────────────────────────────────────────── */}
         <div className="flex items-center justify-between gap-4 flex-wrap no-print">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-[#C9A84C]/15 rounded-lg flex items-center justify-center shrink-0">
-              <MdSearch className="text-[#C9A84C]" />
+            <div className="w-9 h-9 bg-gold/15 rounded-lg flex items-center justify-center shrink-0">
+              <MdSearch className="text-gold" />
             </div>
             <div>
               <h1 className="font-playfair text-2xl font-bold text-white">Class Performance</h1>
@@ -560,7 +560,7 @@ export default function ClassPerformancePage() {
               </button>
               <button
                 onClick={() => window.print()}
-                className="flex items-center gap-2 bg-[#C9A84C] hover:bg-yellow-400 text-[#0A1628] font-montserrat font-bold text-xs uppercase tracking-wider px-4 py-2.5 rounded-xl transition"
+                className="flex items-center gap-2 bg-gold hover:bg-yellow-400 text-navy font-montserrat font-bold text-xs uppercase tracking-wider px-4 py-2.5 rounded-xl transition"
               >
                 <MdPrint className="text-base" /> Print Report
               </button>
@@ -569,17 +569,17 @@ export default function ClassPerformancePage() {
         </div>
 
         {/* ── Filters ─────────────────────────────────────────────────────── */}
-        <div className="bg-[#0D1C35] border border-white/10 rounded-2xl p-5 no-print">
+        <div className="bg-navy-800 border border-white/10 rounded-2xl p-5 no-print">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
             <div>
               <label className="block text-[10px] uppercase tracking-widest text-gray-500 font-montserrat mb-1.5">Class</label>
               <select
                 value={selectedClass}
                 onChange={e => { setSelectedClass(e.target.value); setLoaded(false) }}
-                className="w-full bg-white/5 border border-white/10 focus:border-[#C9A84C]/40 focus:outline-none rounded-xl px-4 py-2.5 text-white font-montserrat text-sm"
+                className="w-full bg-white/5 border border-white/10 focus:border-gold/40 focus:outline-none rounded-xl px-4 py-2.5 text-white font-montserrat text-sm"
               >
                 <option value="">Select class…</option>
-                {classes.map(c => <option key={c} value={c} className="bg-[#0D1C35]">{c}</option>)}
+                {classes.map(c => <option key={c} value={c} className="bg-navy-800">{c}</option>)}
               </select>
             </div>
             <div>
@@ -587,19 +587,19 @@ export default function ClassPerformancePage() {
               <select
                 value={selectedTerm}
                 onChange={e => { setSelectedTerm(e.target.value); setLoaded(false) }}
-                className="w-full bg-white/5 border border-white/10 focus:border-[#C9A84C]/40 focus:outline-none rounded-xl px-4 py-2.5 text-white font-montserrat text-sm"
+                className="w-full bg-white/5 border border-white/10 focus:border-gold/40 focus:outline-none rounded-xl px-4 py-2.5 text-white font-montserrat text-sm"
               >
-                {TERMS.map(t => <option key={t} value={t} className="bg-[#0D1C35]">{t}</option>)}
+                {TERMS.map(t => <option key={t} value={t} className="bg-navy-800">{t}</option>)}
               </select>
             </div>
             <div className="flex items-end">
               <button
                 onClick={handleLoad}
                 disabled={loading || !selectedClass}
-                className="w-full flex items-center justify-center gap-2 bg-[#C9A84C] hover:bg-yellow-400 disabled:opacity-50 text-[#0A1628] font-montserrat font-bold text-xs uppercase tracking-wider py-3 rounded-xl transition"
+                className="w-full flex items-center justify-center gap-2 bg-gold hover:bg-yellow-400 disabled:opacity-50 text-navy font-montserrat font-bold text-xs uppercase tracking-wider py-3 rounded-xl transition"
               >
                 {loading
-                  ? <div className="w-4 h-4 border-2 border-[#0A1628]/30 border-t-[#0A1628] rounded-full animate-spin" />
+                  ? <div className="w-4 h-4 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
                   : null
                 }
                 {loading ? 'Loading…' : 'Load Results'}
@@ -626,12 +626,12 @@ export default function ClassPerformancePage() {
             {/* Print header (hidden on screen) */}
             <div className="hidden print:block mb-6">
               <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 bg-[#C9A84C] rounded-lg flex items-center justify-center shrink-0">
-                  <FaGraduationCap className="text-[#0A1628]" />
+                <div className="w-10 h-10 bg-gold rounded-lg flex items-center justify-center shrink-0">
+                  <FaGraduationCap className="text-navy" />
                 </div>
                 <div>
-                  <p className="font-bold text-lg">Oasis Private College</p>
-                  <p className="text-xs text-gray-500">Checheche, Zimbabwe</p>
+                  <p className="font-bold text-lg">{sc.name}</p>
+                  <p className="text-xs text-gray-500">{sc.address}</p>
                 </div>
               </div>
               <p className="font-bold text-base mt-2">Class Performance Report — {selectedClass} · {selectedTerm}{termStartDate && termEndDate ? ` · ${fmtTermDate(termStartDate)} – ${fmtTermDate(termEndDate)}` : ''}</p>
@@ -644,9 +644,9 @@ export default function ClassPerformancePage() {
                 { label: 'Total Students',  value: summary.total,          sub: 'in selected class',      cls: 'text-white' },
                 { label: 'Class Average',   value: `${summary.classAvg}%`, sub: 'overall average mark',   cls: avgColor },
                 { label: 'Pass Rate',       value: `${summary.passRate}%`, sub: 'students avg ≥ 50',      cls: summary.passRate >= 50 ? 'text-emerald-400' : 'text-red-400' },
-                { label: 'Highest Average', value: `${summary.highest}%`,  sub: 'top student overall avg', cls: 'text-[#C9A84C]' },
+                { label: 'Highest Average', value: `${summary.highest}%`,  sub: 'top student overall avg', cls: 'text-gold' },
               ].map(({ label, value, sub, cls }) => (
-                <div key={label} className="bg-[#0D1C35] border border-white/10 rounded-2xl p-5">
+                <div key={label} className="bg-navy-800 border border-white/10 rounded-2xl p-5">
                   <p className="text-[10px] uppercase tracking-widest text-gray-500 font-montserrat mb-1">{label}</p>
                   <p className={`text-3xl font-bold font-playfair ${cls}`}>{value}</p>
                   <p className="text-[10px] text-gray-600 font-montserrat mt-1">{sub}</p>
@@ -676,7 +676,7 @@ export default function ClassPerformancePage() {
             )}
 
             {/* ── Subject performance table ───────────────────────────────── */}
-            <div className="bg-[#0D1C35] border border-white/10 rounded-2xl overflow-hidden">
+            <div className="bg-navy-800 border border-white/10 rounded-2xl overflow-hidden">
               <div className="px-6 py-4 border-b border-white/10">
                 <h2 className="font-playfair font-bold text-white text-lg">Subject Performance</h2>
                 <p className="text-xs text-gray-500 font-montserrat mt-0.5">Sorted weakest to strongest · {subjectStats.length} subjects</p>
@@ -761,7 +761,7 @@ export default function ClassPerformancePage() {
             )}
 
             {/* ── Student rankings table ──────────────────────────────────── */}
-            <div className="bg-[#0D1C35] border border-white/10 rounded-2xl overflow-hidden">
+            <div className="bg-navy-800 border border-white/10 rounded-2xl overflow-hidden">
               <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-4 border-b border-white/10">
                 <div>
                   <h2 className="font-playfair font-bold text-white text-lg">Student Rankings</h2>
@@ -775,7 +775,7 @@ export default function ClassPerformancePage() {
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                     placeholder="Search by name or reg…"
-                    className="bg-white/5 border border-white/10 focus:border-[#C9A84C]/40 focus:outline-none rounded-xl pl-9 pr-4 py-2 text-white font-montserrat text-xs placeholder-gray-600 w-56"
+                    className="bg-white/5 border border-white/10 focus:border-gold/40 focus:outline-none rounded-xl pl-9 pr-4 py-2 text-white font-montserrat text-xs placeholder-gray-600 w-56"
                   />
                 </div>
               </div>
@@ -843,7 +843,7 @@ export default function ClassPerformancePage() {
 
             {/* Print footer */}
             <div className="hidden print:block mt-6 pt-4 border-t border-gray-200 text-[10px] text-gray-400">
-              <p>Generated by Oasis Private College Management System on {today} by {adminName}</p>
+              <p>Generated by {sc.name} Management System on {today} by {adminName}</p>
               <p>Class: {selectedClass} · Term: {selectedTerm} · Total students: {summary.total}</p>
             </div>
 
@@ -853,8 +853,8 @@ export default function ClassPerformancePage() {
         {/* Empty state */}
         {!loaded && !loading && (
           <div className="flex flex-col items-center justify-center py-24 text-center">
-            <div className="w-16 h-16 bg-[#C9A84C]/10 rounded-2xl flex items-center justify-center mb-4">
-              <MdSearch className="text-[#C9A84C] text-3xl" />
+            <div className="w-16 h-16 bg-gold/10 rounded-2xl flex items-center justify-center mb-4">
+              <MdSearch className="text-gold text-3xl" />
             </div>
             <p className="text-gray-400 font-montserrat text-sm font-semibold">Select a class and term, then click Load Results</p>
             <p className="text-gray-600 font-montserrat text-xs mt-1">Rankings, subject analysis and ratings will appear here</p>

@@ -20,17 +20,24 @@ export function useTermDates() {
       .finally(() => setLoaded(true))
   }, [])
 
-  return { termStartDate, termEndDate, loaded }
+  const hasDates = loaded && !!(termStartDate && termEndDate)
+  return { termStartDate, termEndDate, loaded, hasDates }
+}
+
+function parseLocalDate(dateStr) {
+  if (!dateStr) return null
+  return new Date(dateStr.includes('T') ? dateStr : `${dateStr}T00:00:00`)
 }
 
 export function fmtTermDate(dateStr) {
-  if (!dateStr) return ''
-  return new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+  const d = parseLocalDate(dateStr)
+  if (!d) return ''
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 export function getDaysUntilTermEnd(termEndDate) {
-  if (!termEndDate) return null
-  const end   = new Date(termEndDate)
+  const end = parseLocalDate(termEndDate)
+  if (!end) return null
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   end.setHours(0, 0, 0, 0)
@@ -39,7 +46,7 @@ export function getDaysUntilTermEnd(termEndDate) {
 
 export function isTermEnded(termEndDate) {
   if (!termEndDate) return false
-  const end   = new Date(termEndDate)
+  const end   = parseLocalDate(termEndDate)
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   end.setHours(0, 0, 0, 0)

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { collection, getDocs, addDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import { MdAdd, MdDelete } from 'react-icons/md'
@@ -6,7 +6,7 @@ import toast from 'react-hot-toast'
 
 const TEAL  = '#0F6E56'
 const NAVY2 = '#378ADD'
-const CARD  = 'bg-[#0D1C35] border border-white/10 rounded-xl p-6'
+const CARD  = 'bg-navy-800 border border-white/10 rounded-xl p-6'
 
 function fmt(v) { return `$${Number(v || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}` }
 
@@ -195,7 +195,7 @@ export default function BalanceSheet() {
               value={assetForm.name}
               onChange={e => setAssetForm(prev => ({ ...prev, name: e.target.value }))}
               onKeyDown={e => e.key === 'Enter' && addAsset()}
-              className="flex-1 bg-white/5 border border-white/10 text-white placeholder-gray-600 rounded-xl px-4 py-2.5 text-sm font-montserrat focus:outline-none focus:border-[#C9A84C]/50 transition"
+              className="flex-1 bg-white/5 border border-white/10 text-white placeholder-gray-600 rounded-xl px-4 py-2.5 text-sm font-montserrat focus:outline-none focus:border-gold/50 transition"
             />
             <input
               type="number"
@@ -203,13 +203,13 @@ export default function BalanceSheet() {
               value={assetForm.value}
               onChange={e => setAssetForm(prev => ({ ...prev, value: e.target.value }))}
               onKeyDown={e => e.key === 'Enter' && addAsset()}
-              className="w-36 bg-white/5 border border-white/10 text-white placeholder-gray-600 rounded-xl px-4 py-2.5 text-sm font-montserrat focus:outline-none focus:border-[#C9A84C]/50 transition"
+              className="w-36 bg-white/5 border border-white/10 text-white placeholder-gray-600 rounded-xl px-4 py-2.5 text-sm font-montserrat focus:outline-none focus:border-gold/50 transition"
             />
             <button
               onClick={addAsset}
               disabled={saving || !assetForm.name.trim() || !assetForm.value}
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold font-montserrat text-[#0A1628] transition disabled:opacity-50"
-              style={{ backgroundColor: '#C9A84C' }}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold font-montserrat text-navy transition disabled:opacity-50"
+              style={{ backgroundColor: 'var(--color-primary-hex)' }}
             >
               <MdAdd className="text-lg" />
               Add

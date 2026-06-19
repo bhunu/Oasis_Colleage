@@ -1,16 +1,16 @@
-import { getDocs, query, collection, where } from 'firebase/firestore'
+import { runTransaction, doc } from 'firebase/firestore'
 import { db } from '../firebase/config'
 
 export async function generateRegNumber() {
-  const year = String(new Date().getFullYear()).slice(-2)
+  const year       = String(new Date().getFullYear()).slice(-2)
+  const counterRef = doc(db, 'counters', 'regNumber')
 
-  for (let attempt = 0; attempt < 20; attempt++) {
-    const digits = String(Math.floor(Math.random() * 10000)).padStart(4, '0')
-    const regNumber = `R${year}${digits}`
-    const snap = await getDocs(query(collection(db, 'students'), where('reg_number', '==', regNumber)))
-    if (snap.empty) return regNumber
-  }
+  const seq = await runTransaction(db, async (tx) => {
+    const snap = await tx.get(counterRef)
+    const next = snap.exists() ? (snap.data().lastSequence ?? 0) + 1 : 1
+    tx.set(counterRef, { lastSequence: next }, { merge: true })
+    return next
+  })
 
-  // Fallback: use last 3 digits of current timestamp to guarantee uniqueness
-  return `R${year}${String(Date.now()).slice(-3)}`
+  return `R${year}${String(seq).padStart(4, '0')}`
 }

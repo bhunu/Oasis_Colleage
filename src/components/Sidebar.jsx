@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom'
+﻿import { NavLink, useNavigate } from 'react-router-dom'
 import { FaGraduationCap } from 'react-icons/fa'
 import {
   MdDashboard as IconDashboard,
@@ -19,6 +19,7 @@ import {
   MdEventNote as IconExamTimetable,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
+import sc from '../utils/schoolConfig'
 
 const NAV = [
   {
@@ -56,7 +57,7 @@ const NAV = [
   },
 ]
 
-export default function Sidebar() {
+export default function Sidebar({ collapsed }) {
   const navigate = useNavigate()
 
   const handleLogout = () => {
@@ -66,15 +67,15 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="w-60 bg-[#0D1C35] border-r border-white/10 fixed left-0 top-0 h-full flex flex-col z-30 overflow-y-auto">
+    <aside className={`w-60 bg-white border-r border-gray-200 dark:bg-navy-800 dark:border-white/10 fixed left-0 top-0 h-full flex flex-col z-30 overflow-y-auto transition-transform duration-300 ${collapsed ? '-translate-x-full' : 'translate-x-0'}`}>
       {/* Logo */}
-      <div className="flex items-center gap-3 px-5 py-5 border-b border-white/10 shrink-0">
-        <div className="w-9 h-9 bg-[#C9A84C] rounded-lg flex items-center justify-center shrink-0">
-          <FaGraduationCap className="text-[#0A1628] text-lg" />
+      <div className="flex items-center gap-3 px-5 py-5 border-b border-gray-200 dark:border-white/10 shrink-0">
+        <div className="w-9 h-9 bg-gold rounded-lg flex items-center justify-center shrink-0">
+          <FaGraduationCap className="text-navy text-lg" />
         </div>
         <div>
-          <p className="text-sm font-bold text-white leading-tight font-playfair">Oasis College</p>
-          <p className="text-[10px] text-[#C9A84C]/70 uppercase tracking-wider font-montserrat">Student Records</p>
+          <p className="text-sm font-bold text-gray-900 dark:text-white leading-tight font-playfair">{sc.shortName}</p>
+          <p className="text-[10px] text-gold/80 dark:text-gold/70 uppercase tracking-wider font-montserrat">Student Records</p>
         </div>
       </div>
 
@@ -82,7 +83,7 @@ export default function Sidebar() {
       <nav className="flex-1 px-3 py-4">
         {NAV.map((section, idx) => (
           <div key={idx} className="mb-5">
-            <p className="text-[9px] font-semibold text-gray-600 uppercase tracking-widest mb-2 px-3 font-montserrat">
+            <p className="text-[9px] font-semibold text-gray-400 dark:text-gray-600 uppercase tracking-widest mb-2 px-3 font-montserrat">
               {section.section}
             </p>
             <div className="space-y-0.5">
@@ -96,14 +97,14 @@ export default function Sidebar() {
                     className={({ isActive }) =>
                       `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium font-montserrat transition-all border-l-2 pl-[10px] ${
                         isActive
-                          ? 'bg-[#C9A84C]/10 text-[#C9A84C] border-[#C9A84C]'
-                          : 'text-gray-400 hover:bg-white/5 hover:text-gray-200 border-transparent'
+                          ? 'bg-gold/10 text-gold border-gold'
+                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 border-transparent dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-200'
                       }`
                     }
                   >
                     {({ isActive }) => (
                       <>
-                        <Icon className={`text-lg shrink-0 ${isActive ? 'text-[#C9A84C]' : 'text-gray-500'}`} />
+                        <Icon className={`text-lg shrink-0 ${isActive ? 'text-gold' : 'text-gray-400 dark:text-gray-500'}`} />
                         <span className="flex-1">{item.label}</span>
                         {item.badge && (
                           <span className="ml-auto bg-amber-500/20 text-amber-400 text-[9px] font-bold font-montserrat px-1.5 py-0.5 rounded-full">
@@ -121,12 +122,12 @@ export default function Sidebar() {
       </nav>
 
       {/* Logout */}
-      <div className="px-3 pb-5 pt-3 border-t border-white/10 shrink-0">
+      <div className="px-3 pb-5 pt-3 border-t border-gray-200 dark:border-white/10 shrink-0">
         <button
           onClick={handleLogout}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium font-montserrat text-gray-400 hover:bg-red-900/30 hover:text-red-400 transition-all w-full border-l-2 border-transparent pl-[10px]"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium font-montserrat text-gray-500 hover:bg-red-50 hover:text-red-600 dark:text-gray-400 dark:hover:bg-red-900/30 dark:hover:text-red-400 transition-all w-full border-l-2 border-transparent pl-[10px]"
         >
-          <IconLogout className="text-lg text-gray-500 shrink-0" />
+          <IconLogout className="text-lg text-gray-400 dark:text-gray-500 shrink-0" />
           Logout
         </button>
       </div>

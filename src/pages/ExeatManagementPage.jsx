@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import {
   collection, getDocs, getDoc, query, orderBy, doc, updateDoc,
   setDoc, addDoc, serverTimestamp, where, limit,
@@ -65,7 +65,7 @@ const TABS = ['All', 'Pending', 'Approved', 'Rejected']
 
 // ── Shared input styles ───────────────────────────────────────────────────────
 const LBL      = 'block text-[9px] uppercase tracking-widest text-gray-500 font-montserrat mb-1'
-const INP      = 'w-full bg-white/5 border border-white/10 focus:border-[#C9A84C]/40 focus:outline-none rounded-xl px-4 py-2.5 text-white font-montserrat text-sm placeholder-gray-600'
+const INP      = 'w-full bg-white/5 border border-white/10 focus:border-gold/40 focus:outline-none rounded-xl px-4 py-2.5 text-white font-montserrat text-sm placeholder-gray-600'
 const INP_DATE = `${INP} [color-scheme:dark]`
 
 // ── Create Pass Modal (single, admin-initiated) ───────────────────────────────
@@ -215,7 +215,7 @@ function CreatePassModal({ onClose, onCreated }) {
 
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex items-start justify-center p-4 overflow-y-auto">
-      <div className="w-full max-w-2xl bg-[#0D1C35] border border-white/10 rounded-2xl overflow-hidden my-4">
+      <div className="w-full max-w-2xl bg-navy-800 border border-white/10 rounded-2xl overflow-hidden my-4">
 
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
           <div>
@@ -236,7 +236,7 @@ function CreatePassModal({ onClose, onCreated }) {
               </div>
               <button
                 onClick={() => setShowPass(true)}
-                className="flex items-center gap-2 bg-[#C9A84C] hover:bg-yellow-400 text-[#0A1628] font-montserrat font-bold text-xs uppercase tracking-wider px-4 py-2.5 rounded-xl transition shrink-0"
+                className="flex items-center gap-2 bg-gold hover:bg-yellow-400 text-navy font-montserrat font-bold text-xs uppercase tracking-wider px-4 py-2.5 rounded-xl transition shrink-0"
               >
                 <MdPrint className="text-base" /> View & Print Pass
               </button>
@@ -254,7 +254,7 @@ function CreatePassModal({ onClose, onCreated }) {
                       key={r}
                       onClick={() => setReason(r)}
                       className={`px-3 py-2.5 rounded-xl border text-xs font-montserrat font-semibold text-left transition ${
-                        reason === r ? 'bg-[#C9A84C]/15 border-[#C9A84C]/60 text-[#C9A84C]' : 'border-white/10 text-gray-400 hover:bg-white/5'
+                        reason === r ? 'bg-gold/15 border-gold/60 text-gold' : 'border-white/10 text-gray-400 hover:bg-white/5'
                       }`}
                     >
                       {r}
@@ -295,8 +295,8 @@ function CreatePassModal({ onClose, onCreated }) {
                     {student.photoURL ? (
                       <img src={student.photoURL} alt={student.name} className="w-12 h-12 rounded-full object-cover border border-white/10 shrink-0" />
                     ) : (
-                      <div className="w-12 h-12 rounded-full bg-[#C9A84C]/20 border border-white/10 flex items-center justify-center shrink-0">
-                        <span className="text-[#C9A84C] font-bold text-lg font-playfair">{(student.fullName || '?')[0]}</span>
+                      <div className="w-12 h-12 rounded-full bg-gold/20 border border-white/10 flex items-center justify-center shrink-0">
+                        <span className="text-gold font-bold text-lg font-playfair">{(student.fullName || '?')[0]}</span>
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
@@ -392,10 +392,10 @@ function CreatePassModal({ onClose, onCreated }) {
                 <button
                   onClick={handleIssue}
                   disabled={loading || !student}
-                  className="w-full flex items-center justify-center gap-2 bg-[#C9A84C] hover:bg-yellow-400 disabled:opacity-50 text-[#0A1628] font-montserrat font-bold text-xs uppercase tracking-wider py-3.5 rounded-xl transition"
+                  className="w-full flex items-center justify-center gap-2 bg-gold hover:bg-yellow-400 disabled:opacity-50 text-navy font-montserrat font-bold text-xs uppercase tracking-wider py-3.5 rounded-xl transition"
                 >
                   {loading
-                    ? <div className="w-4 h-4 border-2 border-[#0A1628]/30 border-t-[#0A1628] rounded-full animate-spin" />
+                    ? <div className="w-4 h-4 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
                     : <MdBadge className="text-base" />
                   }
                   {loading ? 'Issuing Pass…' : 'Issue Exit Pass'}
@@ -593,7 +593,7 @@ function BulkPassModal({ onClose, onCreatedBulk }) {
 
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex items-start justify-center p-4 overflow-y-auto">
-      <div className="w-full max-w-2xl bg-[#0D1C35] border border-white/10 rounded-2xl overflow-hidden my-4">
+      <div className="w-full max-w-2xl bg-navy-800 border border-white/10 rounded-2xl overflow-hidden my-4">
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
@@ -636,8 +636,8 @@ function BulkPassModal({ onClose, onCreatedBulk }) {
           {/* ── Issuing progress ── */}
           {phase === 'issuing' && (
             <div className="py-8 flex flex-col items-center gap-5">
-              <div className="w-16 h-16 rounded-full bg-[#C9A84C]/10 border border-[#C9A84C]/30 flex items-center justify-center">
-                <div className="w-8 h-8 border-2 border-[#C9A84C]/30 border-t-[#C9A84C] rounded-full animate-spin" />
+              <div className="w-16 h-16 rounded-full bg-gold/10 border border-gold/30 flex items-center justify-center">
+                <div className="w-8 h-8 border-2 border-gold/30 border-t-gold rounded-full animate-spin" />
               </div>
               <div className="text-center">
                 <p className="text-white font-montserrat font-semibold text-sm">Issuing passes…</p>
@@ -645,7 +645,7 @@ function BulkPassModal({ onClose, onCreatedBulk }) {
               </div>
               <div className="w-full bg-white/5 rounded-full h-2 overflow-hidden">
                 <div
-                  className="h-2 bg-[#C9A84C] rounded-full transition-all duration-300"
+                  className="h-2 bg-gold rounded-full transition-all duration-300"
                   style={{ width: `${progress.total ? (progress.done / progress.total) * 100 : 0}%` }}
                 />
               </div>
@@ -658,11 +658,11 @@ function BulkPassModal({ onClose, onCreatedBulk }) {
               <div className="flex items-center justify-between">
                 <p className="text-xs text-gray-400 font-montserrat">
                   <span className="text-white font-semibold">{students.length}</span> students found ·{' '}
-                  <span className="text-[#C9A84C] font-semibold">{selected.size}</span> selected
+                  <span className="text-gold font-semibold">{selected.size}</span> selected
                 </p>
                 <button onClick={toggleAll} className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white font-montserrat transition">
                   {selected.size === students.length
-                    ? <MdCheckBox className="text-[#C9A84C] text-base" />
+                    ? <MdCheckBox className="text-gold text-base" />
                     : <MdCheckBoxOutlineBlank className="text-base" />
                   }
                   {selected.size === students.length ? 'Deselect all' : 'Select all'}
@@ -677,14 +677,14 @@ function BulkPassModal({ onClose, onCreatedBulk }) {
                     className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.03] cursor-pointer transition"
                   >
                     {selected.has(s.regNo)
-                      ? <MdCheckBox className="text-[#C9A84C] text-xl shrink-0" />
+                      ? <MdCheckBox className="text-gold text-xl shrink-0" />
                       : <MdCheckBoxOutlineBlank className="text-gray-600 text-xl shrink-0" />
                     }
                     {s.photoURL
                       ? <img src={s.photoURL} alt={s.studentName} className="w-8 h-8 rounded-full object-cover shrink-0" />
                       : (
-                        <div className="w-8 h-8 rounded-full bg-[#C9A84C]/20 flex items-center justify-center shrink-0">
-                          <span className="text-[#C9A84C] text-xs font-bold font-playfair">{(s.studentName || '?')[0]}</span>
+                        <div className="w-8 h-8 rounded-full bg-gold/20 flex items-center justify-center shrink-0">
+                          <span className="text-gold text-xs font-bold font-playfair">{(s.studentName || '?')[0]}</span>
                         </div>
                       )
                     }
@@ -718,7 +718,7 @@ function BulkPassModal({ onClose, onCreatedBulk }) {
                 <button
                   onClick={handleBulkIssue}
                   disabled={selected.size === 0}
-                  className="flex-1 flex items-center justify-center gap-2 bg-[#C9A84C] hover:bg-yellow-400 disabled:opacity-50 text-[#0A1628] font-montserrat font-bold text-xs uppercase tracking-wider py-3 rounded-xl transition"
+                  className="flex-1 flex items-center justify-center gap-2 bg-gold hover:bg-yellow-400 disabled:opacity-50 text-navy font-montserrat font-bold text-xs uppercase tracking-wider py-3 rounded-xl transition"
                 >
                   <MdBadge className="text-base" />
                   Issue {selected.size} Pass{selected.size !== 1 ? 'es' : ''}
@@ -895,7 +895,7 @@ function ReviewModal({ app, onClose, onApproved, onRejected }) {
 
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex items-start justify-center p-4 overflow-y-auto">
-      <div className="w-full max-w-2xl bg-[#0D1C35] border border-white/10 rounded-2xl overflow-hidden my-4">
+      <div className="w-full max-w-2xl bg-navy-800 border border-white/10 rounded-2xl overflow-hidden my-4">
 
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
           <div>
@@ -923,8 +923,8 @@ function ReviewModal({ app, onClose, onApproved, onRejected }) {
             {photoURL ? (
               <img src={photoURL} alt={app.studentName} className="w-16 h-16 rounded-full object-cover border border-white/10 shrink-0" />
             ) : (
-              <div className="w-16 h-16 rounded-full bg-[#C9A84C]/20 border border-white/10 flex items-center justify-center shrink-0">
-                <span className="text-[#C9A84C] font-bold text-xl font-playfair">{app.studentName?.[0] || '?'}</span>
+              <div className="w-16 h-16 rounded-full bg-gold/20 border border-white/10 flex items-center justify-center shrink-0">
+                <span className="text-gold font-bold text-xl font-playfair">{app.studentName?.[0] || '?'}</span>
               </div>
             )}
             <div>
@@ -970,7 +970,7 @@ function ReviewModal({ app, onClose, onApproved, onRejected }) {
                 <p className="text-[9px] uppercase tracking-widest text-gray-500 font-montserrat">Supporting Document</p>
                 <p className="text-xs text-white font-montserrat truncate mt-0.5">{app.documentName || 'document'}</p>
               </div>
-              <a href={app.documentURL} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs text-[#C9A84C] font-montserrat hover:underline shrink-0">
+              <a href={app.documentURL} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs text-gold font-montserrat hover:underline shrink-0">
                 <MdOpenInNew className="text-sm" /> Open
               </a>
             </div>
@@ -1029,7 +1029,7 @@ function ReviewModal({ app, onClose, onApproved, onRejected }) {
             <div className="border-t border-white/10 pt-5">
               <button
                 onClick={() => setShowPass(true)}
-                className="flex items-center justify-center gap-2 w-full bg-[#C9A84C] hover:bg-yellow-400 text-[#0A1628] font-montserrat font-bold text-xs uppercase tracking-wider py-3 rounded-xl transition"
+                className="flex items-center justify-center gap-2 w-full bg-gold hover:bg-yellow-400 text-navy font-montserrat font-bold text-xs uppercase tracking-wider py-3 rounded-xl transition"
               >
                 <MdPrint className="text-base" /> View & Print Pass
               </button>
@@ -1145,8 +1145,8 @@ export default function ExeatManagementPage() {
       {/* Header */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-[#C9A84C]/15 rounded-lg flex items-center justify-center shrink-0">
-            <MdBadge className="text-[#C9A84C]" />
+          <div className="w-9 h-9 bg-gold/15 rounded-lg flex items-center justify-center shrink-0">
+            <MdBadge className="text-gold" />
           </div>
           <div>
             <h1 className="font-playfair text-2xl font-bold text-white">Exeat Management</h1>
@@ -1171,7 +1171,7 @@ export default function ExeatManagementPage() {
           </button>
           <button
             onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 bg-[#C9A84C] hover:bg-yellow-400 text-[#0A1628] font-montserrat font-bold text-xs uppercase tracking-wider px-4 py-2.5 rounded-xl transition"
+            className="flex items-center gap-2 bg-gold hover:bg-yellow-400 text-navy font-montserrat font-bold text-xs uppercase tracking-wider px-4 py-2.5 rounded-xl transition"
           >
             <MdAdd className="text-base" />
             Issue New Pass
@@ -1179,7 +1179,7 @@ export default function ExeatManagementPage() {
         </div>
       </div>
 
-      <div id="exeat-print-table" className="bg-[#0D1C35] border border-white/10 rounded-2xl overflow-hidden">
+      <div id="exeat-print-table" className="bg-navy-800 border border-white/10 rounded-2xl overflow-hidden">
 
         {/* Filters + search */}
         <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-4 border-b border-white/10">
@@ -1189,11 +1189,11 @@ export default function ExeatManagementPage() {
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold font-montserrat transition ${
-                  activeTab === tab ? 'bg-[#C9A84C] text-[#0A1628]' : 'text-gray-400 hover:bg-white/5'
+                  activeTab === tab ? 'bg-gold text-navy' : 'text-gray-400 hover:bg-white/5'
                 }`}
               >
                 {tab}
-                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === tab ? 'bg-[#0A1628]/20' : 'bg-white/10 text-gray-500'}`}>
+                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === tab ? 'bg-navy/20' : 'bg-white/10 text-gray-500'}`}>
                   {counts[tab]}
                 </span>
               </button>
@@ -1206,7 +1206,7 @@ export default function ExeatManagementPage() {
               placeholder="262681 or name…"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="bg-white/5 border border-white/10 focus:border-[#C9A84C]/40 focus:outline-none rounded-xl pl-9 pr-4 py-2 text-white font-montserrat text-xs placeholder-gray-600 w-52"
+              className="bg-white/5 border border-white/10 focus:border-gold/40 focus:outline-none rounded-xl pl-9 pr-4 py-2 text-white font-montserrat text-xs placeholder-gray-600 w-52"
             />
           </div>
         </div>
@@ -1214,7 +1214,7 @@ export default function ExeatManagementPage() {
         {/* Table */}
         {loading ? (
           <div className="flex items-center justify-center py-16">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#C9A84C]" />
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gold" />
           </div>
         ) : filtered.length === 0 ? (
           <div className="py-14 text-center space-y-3">
@@ -1224,7 +1224,7 @@ export default function ExeatManagementPage() {
             {!search && activeTab === 'All' && (
               <button
                 onClick={() => setShowCreate(true)}
-                className="inline-flex items-center gap-2 text-xs text-[#C9A84C] font-montserrat font-semibold hover:underline"
+                className="inline-flex items-center gap-2 text-xs text-gold font-montserrat font-semibold hover:underline"
               >
                 <MdAdd className="text-base" /> Issue a new exit pass
               </button>

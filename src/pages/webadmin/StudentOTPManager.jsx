@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+﻿import { useState, useEffect, useCallback } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   collection, getDocs, query, where, addDoc, updateDoc,
@@ -7,16 +7,17 @@ import {
 import { db } from '../../firebase/config'
 import { getStudentByRegNumber } from '../../firebase/students'
 import toast from 'react-hot-toast'
+import sc from '../../utils/schoolConfig'
 import {
   MdKey, MdSettings, MdPrint, MdSearch, MdCheckCircle,
   MdRefresh, MdBlock, MdEmail,
 } from 'react-icons/md'
 import { FaFilter } from 'react-icons/fa'
 
-const GOLD  = '#C9A84C'
-const INPUT = 'w-full bg-white/5 border border-white/10 focus:border-[#C9A84C]/50 focus:outline-none rounded-xl px-4 py-3 text-white font-montserrat text-sm placeholder-gray-600 transition-all'
+const GOLD  = 'var(--color-primary-hex)'
+const INPUT = 'w-full bg-white/5 border border-white/10 focus:border-gold/50 focus:outline-none rounded-xl px-4 py-3 text-white font-montserrat text-sm placeholder-gray-600 transition-all'
 const LABEL = 'block text-[10px] font-semibold uppercase tracking-widest text-gray-500 font-montserrat mb-1.5'
-const CARD  = 'bg-[#0D1C35] border border-white/10 rounded-xl p-6'
+const CARD  = 'bg-navy-800 border border-white/10 rounded-xl p-6'
 const TH    = 'text-left py-3 px-4 text-[10px] font-semibold text-gray-500 uppercase tracking-widest font-montserrat'
 const TD    = 'py-3 px-4 text-sm text-gray-300 font-montserrat'
 
@@ -40,7 +41,7 @@ export default function StudentOTPManager() {
 
   return (
     <div className="space-y-5">
-      <div className="flex gap-1 bg-[#0D1C35] border border-white/10 rounded-xl p-1 w-fit">
+      <div className="flex gap-1 bg-navy-800 border border-white/10 rounded-xl p-1 w-fit">
         {[
           { key: 'generate', label: 'Generate OTP',    icon: MdKey },
           { key: 'logs',     label: 'Active OTPs',     icon: FaFilter },
@@ -51,7 +52,7 @@ export default function StudentOTPManager() {
             onClick={() => setTab(key)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold font-montserrat transition-all ${
               tab === key
-                ? 'bg-[#C9A84C]/10 text-[#C9A84C]'
+                ? 'bg-gold/10 text-gold'
                 : 'text-gray-500 hover:text-gray-300'
             }`}
           >
@@ -226,7 +227,7 @@ function GenerateOTP() {
             <button
               onClick={() => handleSearch()}
               disabled={searching}
-              className="px-4 py-3 rounded-xl text-sm font-semibold font-montserrat text-[#0A1628] transition shrink-0 disabled:opacity-50"
+              className="px-4 py-3 rounded-xl text-sm font-semibold font-montserrat text-navy transition shrink-0 disabled:opacity-50"
               style={{ backgroundColor: GOLD }}
             >
               {searching ? '…' : 'Find'}
@@ -235,7 +236,7 @@ function GenerateOTP() {
         </div>
 
         {student && (
-          <div className="mt-4 p-4 rounded-xl border border-[#C9A84C]/30 bg-[#C9A84C]/5 space-y-2">
+          <div className="mt-4 p-4 rounded-xl border border-gold/30 bg-gold/5 space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-gray-400 font-montserrat">Name</span>
               <span className="text-white font-montserrat font-semibold">{student.fullName || student.name}</span>
@@ -264,7 +265,7 @@ function GenerateOTP() {
             <button
               onClick={handleGenerate}
               disabled={generating}
-              className="w-full mt-2 py-3 rounded-xl text-sm font-semibold font-montserrat text-[#0A1628] transition disabled:opacity-50"
+              className="w-full mt-2 py-3 rounded-xl text-sm font-semibold font-montserrat text-navy transition disabled:opacity-50"
               style={{ backgroundColor: GOLD }}
             >
               {generating ? 'Generating…' : 'Generate OTP'}
@@ -290,7 +291,7 @@ function GenerateOTP() {
 
           <div className="border border-white/20 rounded-xl p-6 font-montserrat">
             <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1 text-center">Student Portal Access</p>
-            <p className="text-[11px] text-[#C9A84C]/70 uppercase tracking-widest mb-4 text-center font-playfair font-semibold">Oasis Private College</p>
+            <p className="text-[11px] text-gold/70 uppercase tracking-widest mb-4 text-center font-playfair font-semibold">{sc.name}</p>
 
             <div className="space-y-2 text-sm mb-5">
               <div className="flex justify-between">
@@ -315,14 +316,14 @@ function GenerateOTP() {
               </div>
             </div>
 
-            <div className="bg-[#C9A84C]/10 border border-[#C9A84C]/30 rounded-xl p-4 text-center mb-4">
+            <div className="bg-gold/10 border border-gold/30 rounded-xl p-4 text-center mb-4">
               <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-2">OTP Code</p>
               <p className="font-mono text-3xl font-bold tracking-[0.3em] mb-3" style={{ color: GOLD }}>
                 {otpResult.otp}
               </p>
               <button
                 onClick={copyOtp}
-                className="text-xs font-montserrat text-gray-500 hover:text-[#C9A84C] transition"
+                className="text-xs font-montserrat text-gray-500 hover:text-gold transition"
               >
                 {copied ? '✓ Copied!' : 'Copy to clipboard'}
               </button>
@@ -436,7 +437,7 @@ function ActiveOTPLogs() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="262681 or name…"
-            className="bg-white/5 border border-white/10 focus:border-[#C9A84C]/50 focus:outline-none rounded-xl px-3 py-2 text-white font-montserrat text-xs placeholder-gray-600 w-52 transition-all"
+            className="bg-white/5 border border-white/10 focus:border-gold/50 focus:outline-none rounded-xl px-3 py-2 text-white font-montserrat text-xs placeholder-gray-600 w-52 transition-all"
           />
           <button onClick={load} className="p-2 rounded-lg border border-white/10 text-gray-400 hover:text-white hover:bg-white/5 transition">
             <MdRefresh className="text-base" />
@@ -452,7 +453,7 @@ function ActiveOTPLogs() {
             onClick={() => setFilter(f)}
             className={`px-3 py-1.5 rounded-lg text-[10px] font-semibold uppercase tracking-wider font-montserrat transition-all capitalize ${
               filter === f
-                ? 'bg-[#C9A84C]/10 text-[#C9A84C]'
+                ? 'bg-gold/10 text-gold'
                 : 'text-gray-500 hover:text-gray-300'
             }`}
           >
@@ -480,7 +481,7 @@ function ActiveOTPLogs() {
                 const genTs = row.updatedAt?.toDate   ? row.updatedAt.toDate()   : row.createdAt?.toDate ? row.createdAt.toDate() : null
                 return (
                   <tr key={row.docId} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
-                    <td className="py-3 px-4 font-mono text-xs text-[#C9A84C]">{s?.reg_number || row.studentId}</td>
+                    <td className="py-3 px-4 font-mono text-xs text-gold">{s?.reg_number || row.studentId}</td>
                     <td className="py-3 px-4 text-sm text-white font-montserrat font-medium">{s?.fullName || '—'}</td>
                     <td className={TD}>{s?.class || '—'}</td>
                     <td className={TD}>{genTs ? genTs.toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'}</td>
@@ -566,13 +567,13 @@ function PortalSettingsInline() {
           type="number" min={min} max={max}
           value={settings[field]}
           onChange={e => setSettings(p => ({ ...p, [field]: Number(e.target.value) }))}
-          className="w-20 bg-white/5 border border-white/10 focus:border-[#C9A84C]/50 focus:outline-none rounded-xl px-3 py-2 text-white font-montserrat text-sm text-right"
+          className="w-20 bg-white/5 border border-white/10 focus:border-gold/50 focus:outline-none rounded-xl px-3 py-2 text-white font-montserrat text-sm text-right"
         />
         <span className="text-gray-500 font-montserrat text-sm w-16">{unit}</span>
         <button
           onClick={() => saveSingle(field, settings[field])}
           disabled={saving[field]}
-          className="px-4 py-2 rounded-lg text-xs font-semibold font-montserrat text-[#0A1628] transition disabled:opacity-50 shrink-0"
+          className="px-4 py-2 rounded-lg text-xs font-semibold font-montserrat text-navy transition disabled:opacity-50 shrink-0"
           style={{ backgroundColor: GOLD }}
         >
           {saving[field] ? '…' : 'Save'}
@@ -587,7 +588,7 @@ function PortalSettingsInline() {
         <h3 className="font-playfair font-semibold text-white">Portal Settings</h3>
         <button
           onClick={() => navigate('/admin/portal-settings')}
-          className="text-xs font-montserrat text-[#C9A84C] hover:underline"
+          className="text-xs font-montserrat text-gold hover:underline"
         >
           Full settings page →
         </button>
@@ -601,7 +602,7 @@ function PortalSettingsInline() {
 
       <div className="mt-2 p-3 rounded-xl bg-white/5 border border-white/10">
         <p className="text-[10px] text-gray-500 font-montserrat">
-          The <span className="text-[#C9A84C]">Results access gate</span> threshold is managed in Bursar Settings.
+          The <span className="text-gold">Results access gate</span> threshold is managed in Bursar Settings.
         </p>
       </div>
     </div>

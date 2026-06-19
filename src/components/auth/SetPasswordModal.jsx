@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { FaLock, FaEye, FaEyeSlash, FaGraduationCap, FaShieldAlt } from 'react-icons/fa'
 import { updateDoc, getDoc, getDocs, collection, query, where, limit, serverTimestamp } from 'firebase/firestore'
@@ -7,7 +7,7 @@ import { hashPassword } from '../../utils/hash'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 
-const INPUT = 'w-full bg-white/5 border border-white/10 focus:border-[#C9A84C]/50 focus:outline-none rounded-xl pl-11 pr-12 py-3.5 text-white font-montserrat text-sm placeholder-gray-700 transition-all'
+const INPUT = 'w-full bg-white/5 border border-white/10 focus:border-gold/50 focus:outline-none rounded-xl pl-11 pr-12 py-3.5 text-white font-montserrat text-sm placeholder-gray-700 transition-all'
 
 export default function SetPasswordModal({ regNum, otpDoc, onClose }) {
   const navigate = useNavigate()
@@ -81,7 +81,7 @@ export default function SetPasswordModal({ regNum, otpDoc, onClose }) {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           transition={{ duration: 0.25 }}
-          className="w-full max-w-[400px] bg-[#0D1C35] border border-white/10 rounded-2xl p-8 shadow-2xl"
+          className="w-full max-w-[400px] bg-navy-800 border border-white/10 rounded-2xl p-8 shadow-2xl"
         >
           {/* Header */}
           <div className="flex items-center gap-3 mb-2">
@@ -91,7 +91,7 @@ export default function SetPasswordModal({ regNum, otpDoc, onClose }) {
             <div>
               <h3 className="font-playfair text-xl font-bold text-white leading-tight">OTP Verified!</h3>
               <p className="font-montserrat text-[10px] text-gray-500 uppercase tracking-wider">
-                Student ID: <span className="text-[#C9A84C]">{regNum}</span>
+                Student ID: <span className="text-gold">{regNum}</span>
               </p>
             </div>
           </div>
@@ -184,7 +184,7 @@ export default function SetPasswordModal({ regNum, otpDoc, onClose }) {
               <button
                 type="submit"
                 disabled={saving}
-                className="flex-1 bg-[#C9A84C] hover:bg-yellow-400 disabled:opacity-60 text-[#0A1628] font-montserrat font-bold text-xs uppercase tracking-[0.12em] py-3.5 rounded-xl shadow-lg shadow-[#C9A84C]/20 transition-all flex items-center justify-center gap-2"
+                className="flex-1 bg-gold hover:bg-yellow-400 disabled:opacity-60 text-navy font-montserrat font-bold text-xs uppercase tracking-[0.12em] py-3.5 rounded-xl shadow-lg shadow-gold/20 transition-all flex items-center justify-center gap-2"
               >
                 <FaShieldAlt />
                 {saving ? 'Setting up…' : 'Set Password'}

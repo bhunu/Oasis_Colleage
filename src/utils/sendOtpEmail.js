@@ -1,4 +1,5 @@
 import emailjs from '@emailjs/browser'
+import sc from './schoolConfig'
 
 const SERVICE_ID  = import.meta.env.VITE_EMAILJS_SERVICE_ID
 const TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID
@@ -23,7 +24,7 @@ export async function sendOtpEmail({ studentName, email, regNumber, otpCode, exp
       reg_number:   regNumber,
       otp_code:     otpCode,
       expiry_hours: expiryHours,
-      school_name:  'Oasis Private College',
+      school_name:  sc.name,
     },
     PUBLIC_KEY,
   )

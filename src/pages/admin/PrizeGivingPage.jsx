@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { collection, getDocs, doc, getDoc } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import { getCurrentTerm } from '../../utils/termHelpers'
-import { SCHOOL_ID } from '../../utils/schoolConfig'
+import sc, { SCHOOL_ID } from '../../utils/schoolConfig'
 import { MdEmojiEvents, MdDownload, MdPrint } from 'react-icons/md'
 import { FaTrophy } from 'react-icons/fa'
 import toast from 'react-hot-toast'
@@ -29,12 +29,12 @@ const { number: CURR_NUM, year: CURR_YEAR } = getCurrentTerm()
 
 const GRADE_COLORS = {
   A: 'text-emerald-400', B: 'text-emerald-400',
-  C: 'text-[#C9A84C]',  D: 'text-orange-400',
+  C: 'text-gold',  D: 'text-orange-400',
   U: 'text-red-400',    '—': 'text-gray-500',
 }
 
 const MEDAL_CLS = [
-  'bg-[#C9A84C]/20 text-[#C9A84C] border-[#C9A84C]/40',
+  'bg-gold/20 text-gold border-gold/40',
   'bg-gray-400/15 text-gray-300 border-gray-400/30',
   'bg-orange-700/15 text-orange-400 border-orange-700/30',
 ]
@@ -75,7 +75,7 @@ function generateTermOptions() {
 
 const TERMS = generateTermOptions()
 
-const SEL = 'w-full bg-white/5 border border-white/10 focus:border-[#C9A84C]/40 focus:outline-none rounded-xl px-4 py-2.5 text-white font-montserrat text-sm'
+const SEL = 'w-full bg-white/5 border border-white/10 focus:border-gold/40 focus:outline-none rounded-xl px-4 py-2.5 text-white font-montserrat text-sm'
 
 export default function PrizeGivingPage() {
   const [tab,           setTab]          = useState('olevel')
@@ -256,8 +256,8 @@ export default function PrizeGivingPage() {
         {/* Header */}
         <div className="flex items-center justify-between gap-4 flex-wrap no-print">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-[#C9A84C]/15 rounded-lg flex items-center justify-center shrink-0">
-              <MdEmojiEvents className="text-[#C9A84C] text-xl" />
+            <div className="w-9 h-9 bg-gold/15 rounded-lg flex items-center justify-center shrink-0">
+              <MdEmojiEvents className="text-gold text-xl" />
             </div>
             <div>
               <h1 className="font-playfair text-2xl font-bold text-white">Prize Giving Rankings</h1>
@@ -274,7 +274,7 @@ export default function PrizeGivingPage() {
               </button>
               <button
                 onClick={() => window.print()}
-                className="flex items-center gap-2 bg-[#C9A84C] hover:bg-yellow-400 text-[#0A1628] font-montserrat font-bold text-xs uppercase tracking-wider px-4 py-2.5 rounded-xl transition"
+                className="flex items-center gap-2 bg-gold hover:bg-yellow-400 text-navy font-montserrat font-bold text-xs uppercase tracking-wider px-4 py-2.5 rounded-xl transition"
               >
                 <MdPrint className="text-base" /> Print
               </button>
@@ -283,13 +283,13 @@ export default function PrizeGivingPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 bg-[#0D1C35] border border-white/10 rounded-xl p-1 w-fit no-print">
+        <div className="flex gap-1 bg-navy-800 border border-white/10 rounded-xl p-1 w-fit no-print">
           {[['olevel', 'O Level (Forms 1–4)'], ['alevel', 'A Level']].map(([key, label]) => (
             <button
               key={key}
               onClick={() => { setTab(key); setLoaded(false) }}
               className={`px-5 py-2 rounded-lg text-sm font-montserrat font-semibold transition-all ${
-                tab === key ? 'bg-[#C9A84C] text-[#0D1C35]' : 'text-gray-400 hover:text-white'
+                tab === key ? 'bg-gold text-navy-800' : 'text-gray-400 hover:text-white'
               }`}
             >
               {label}
@@ -298,7 +298,7 @@ export default function PrizeGivingPage() {
         </div>
 
         {/* Filters */}
-        <div className="bg-[#0D1C35] border border-white/10 rounded-2xl p-5 no-print">
+        <div className="bg-navy-800 border border-white/10 rounded-2xl p-5 no-print">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
 
             {/* Form / A Level filter */}
@@ -308,17 +308,17 @@ export default function PrizeGivingPage() {
               </label>
               {isALevel ? (
                 <select value={aFilter} onChange={e => { setAFilter(e.target.value); setLoaded(false) }} className={SEL}>
-                  <option value="all"    className="bg-[#0D1C35]">All A Level</option>
-                  <option value="lower6" className="bg-[#0D1C35]">Lower 6 Only</option>
-                  <option value="upper6" className="bg-[#0D1C35]">Upper 6 Only</option>
-                  {aClasses.map(c => <option key={c} value={c} className="bg-[#0D1C35]">{c}</option>)}
+                  <option value="all"    className="bg-navy-800">All A Level</option>
+                  <option value="lower6" className="bg-navy-800">Lower 6 Only</option>
+                  <option value="upper6" className="bg-navy-800">Upper 6 Only</option>
+                  {aClasses.map(c => <option key={c} value={c} className="bg-navy-800">{c}</option>)}
                 </select>
               ) : (
                 <select value={selectedForm} onChange={e => { setSelectedForm(e.target.value); setLoaded(false) }} className={SEL}>
-                  <option value="1" className="bg-[#0D1C35]">Form 1</option>
-                  <option value="2" className="bg-[#0D1C35]">Form 2</option>
-                  <option value="3" className="bg-[#0D1C35]">Form 3</option>
-                  <option value="4" className="bg-[#0D1C35]">Form 4</option>
+                  <option value="1" className="bg-navy-800">Form 1</option>
+                  <option value="2" className="bg-navy-800">Form 2</option>
+                  <option value="3" className="bg-navy-800">Form 3</option>
+                  <option value="4" className="bg-navy-800">Form 4</option>
                 </select>
               )}
             </div>
@@ -327,7 +327,7 @@ export default function PrizeGivingPage() {
             <div>
               <label className="block text-[10px] uppercase tracking-widest text-gray-500 font-montserrat mb-1.5">Term</label>
               <select value={selectedTerm} onChange={e => { setSelectedTerm(e.target.value); setLoaded(false) }} className={SEL}>
-                {TERMS.map(t => <option key={t} value={t} className="bg-[#0D1C35]">{t}</option>)}
+                {TERMS.map(t => <option key={t} value={t} className="bg-navy-800">{t}</option>)}
               </select>
             </div>
 
@@ -341,13 +341,13 @@ export default function PrizeGivingPage() {
                     if (e.target.value === 'custom') { setUseCustom(true); setCustomN('') }
                     else { setUseCustom(false); setTopN(Number(e.target.value)) }
                   }}
-                  className={useCustom ? 'w-28 bg-white/5 border border-white/10 focus:border-[#C9A84C]/40 focus:outline-none rounded-xl px-3 py-2.5 text-white font-montserrat text-sm' : SEL}
+                  className={useCustom ? 'w-28 bg-white/5 border border-white/10 focus:border-gold/40 focus:outline-none rounded-xl px-3 py-2.5 text-white font-montserrat text-sm' : SEL}
                 >
-                  <option value="5"      className="bg-[#0D1C35]">Top 5</option>
-                  <option value="10"     className="bg-[#0D1C35]">Top 10</option>
-                  <option value="15"     className="bg-[#0D1C35]">Top 15</option>
-                  <option value="20"     className="bg-[#0D1C35]">Top 20</option>
-                  <option value="custom" className="bg-[#0D1C35]">Custom…</option>
+                  <option value="5"      className="bg-navy-800">Top 5</option>
+                  <option value="10"     className="bg-navy-800">Top 10</option>
+                  <option value="15"     className="bg-navy-800">Top 15</option>
+                  <option value="20"     className="bg-navy-800">Top 20</option>
+                  <option value="custom" className="bg-navy-800">Custom…</option>
                 </select>
                 {useCustom && (
                   <input
@@ -356,7 +356,7 @@ export default function PrizeGivingPage() {
                     placeholder="N"
                     value={customN}
                     onChange={e => setCustomN(e.target.value)}
-                    className="flex-1 bg-white/5 border border-white/10 focus:border-[#C9A84C]/40 focus:outline-none rounded-xl px-3 py-2.5 text-white font-montserrat text-sm text-center"
+                    className="flex-1 bg-white/5 border border-white/10 focus:border-gold/40 focus:outline-none rounded-xl px-3 py-2.5 text-white font-montserrat text-sm text-center"
                   />
                 )}
               </div>
@@ -367,9 +367,9 @@ export default function PrizeGivingPage() {
               <button
                 onClick={handleLoad}
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-2 bg-[#C9A84C] hover:bg-yellow-400 disabled:opacity-50 text-[#0A1628] font-montserrat font-bold text-xs uppercase tracking-wider py-3 rounded-xl transition"
+                className="w-full flex items-center justify-center gap-2 bg-gold hover:bg-yellow-400 disabled:opacity-50 text-navy font-montserrat font-bold text-xs uppercase tracking-wider py-3 rounded-xl transition"
               >
-                {loading && <div className="w-4 h-4 border-2 border-[#0A1628]/30 border-t-[#0A1628] rounded-full animate-spin" />}
+                {loading && <div className="w-4 h-4 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />}
                 {loading ? 'Loading…' : 'Load Rankings'}
               </button>
             </div>
@@ -382,7 +382,7 @@ export default function PrizeGivingPage() {
 
             {/* Print header */}
             <div className="hidden print:block mb-4">
-              <p className="font-bold text-xl">Oasis Private College — Prize Giving Rankings</p>
+              <p className="font-bold text-xl">{sc.name} — Prize Giving Rankings</p>
               <p className="text-sm">
                 {levelLabel} · {selectedTerm}
                 {termStartDate && termEndDate ? ` · ${fmtTermDate(termStartDate)} – ${fmtTermDate(termEndDate)}` : ''}
@@ -392,7 +392,7 @@ export default function PrizeGivingPage() {
             </div>
 
             {/* Overall Top N */}
-            <div className="bg-[#0D1C35] border border-white/10 rounded-2xl overflow-hidden">
+            <div className="bg-navy-800 border border-white/10 rounded-2xl overflow-hidden">
               <div className="px-6 py-4 border-b border-white/10">
                 <h2 className="font-playfair font-bold text-white text-lg">
                   Top {topRankings.length} — {levelLabel}
@@ -425,7 +425,7 @@ export default function PrizeGivingPage() {
                     ) : topRankings.map((s, idx) => {
                       const isMedal = idx < 3
                       return (
-                        <tr key={s.regNo} className={`border-b border-white/5 ${isMedal ? 'bg-[#C9A84C]/5' : ''}`}>
+                        <tr key={s.regNo} className={`border-b border-white/5 ${isMedal ? 'bg-gold/5' : ''}`}>
                           <td className="py-3 px-4">
                             {isMedal ? (
                               <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border font-montserrat ${MEDAL_CLS[idx]}`}>
@@ -438,7 +438,7 @@ export default function PrizeGivingPage() {
                           <td className="py-3 px-4 text-sm text-white font-montserrat font-medium">{s.name}</td>
                           <td className="py-3 px-4 text-sm text-gray-400 font-montserrat">{s.class}</td>
                           <td className="py-3 px-4 text-center">
-                            <span className={`text-sm font-bold font-montserrat ${isMedal ? 'text-[#C9A84C]' : 'text-white'}`}>
+                            <span className={`text-sm font-bold font-montserrat ${isMedal ? 'text-gold' : 'text-white'}`}>
                               {isALevel ? `${s.totalPoints} pts` : `${s.avg}%`}
                             </span>
                           </td>
@@ -458,7 +458,7 @@ export default function PrizeGivingPage() {
             {champions.length > 0 && (
               <div>
                 <div className="flex items-center gap-3 mb-4">
-                  <FaTrophy className="text-[#C9A84C] text-lg" />
+                  <FaTrophy className="text-gold text-lg" />
                   <div>
                     <h2 className="font-playfair font-bold text-white text-lg">Subject Champions — {levelLabel}</h2>
                     <p className="text-xs text-gray-500 font-montserrat">Best student per subject · {champions.length} subjects</p>
@@ -468,7 +468,7 @@ export default function PrizeGivingPage() {
                   {champions.map(c => (
                     <div
                       key={c.subject}
-                      className="bg-[#0D1C35] border border-white/10 hover:border-[#C9A84C]/30 rounded-2xl p-4 transition-colors"
+                      className="bg-navy-800 border border-white/10 hover:border-gold/30 rounded-2xl p-4 transition-colors"
                     >
                       <div className="flex items-center justify-between mb-2">
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-500 font-montserrat">
@@ -476,7 +476,7 @@ export default function PrizeGivingPage() {
                         </p>
                         <div className="flex items-center gap-1.5">
                           {isALevel && c.points !== null && (
-                            <span className="text-[10px] font-bold font-montserrat text-[#C9A84C] bg-[#C9A84C]/10 px-2 py-0.5 rounded-full">
+                            <span className="text-[10px] font-bold font-montserrat text-gold bg-gold/10 px-2 py-0.5 rounded-full">
                               {c.points} pts
                             </span>
                           )}
@@ -487,7 +487,7 @@ export default function PrizeGivingPage() {
                       </div>
 
                       <p className="font-playfair font-bold text-white text-base mb-0.5">{c.subject}</p>
-                      <p className="text-[#C9A84C] font-bold font-montserrat text-xl mb-3">{c.mark}%</p>
+                      <p className="text-gold font-bold font-montserrat text-xl mb-3">{c.mark}%</p>
 
                       <div className="space-y-1.5 border-t border-white/10 pt-3">
                         {c.winners.map((w, i) => (
@@ -514,8 +514,8 @@ export default function PrizeGivingPage() {
         {/* Empty state */}
         {!loaded && !loading && (
           <div className="flex flex-col items-center justify-center py-24 text-center">
-            <div className="w-16 h-16 bg-[#C9A84C]/10 rounded-2xl flex items-center justify-center mb-4">
-              <MdEmojiEvents className="text-[#C9A84C] text-3xl" />
+            <div className="w-16 h-16 bg-gold/10 rounded-2xl flex items-center justify-center mb-4">
+              <MdEmojiEvents className="text-gold text-3xl" />
             </div>
             <p className="text-gray-400 font-montserrat text-sm font-semibold">
               Select a form/level, term and top N, then click Load Rankings

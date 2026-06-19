@@ -1,17 +1,14 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import {
-  collection, getDocs, addDoc, query, where, serverTimestamp,
+  collection, getDocs, addDoc, query, where, serverTimestamp, getDoc, doc,
 } from 'firebase/firestore'
 import { db } from '../../firebase/config'
-import { getCurrentTerm } from '../../utils/termHelpers'
-
-const { number: CURR_TERM_NUM, year: CURR_TERM_YEAR } = getCurrentTerm()
-const CURR_TERM = `Term ${CURR_TERM_NUM}`
+import { parseTermNumber } from '../../utils/termHelpers'
 import { MdFactCheck, MdCheckCircle, MdCancel, MdAccessTime, MdChevronLeft } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
 const DAYS   = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-const CARD   = 'bg-[#0D1C35] border border-white/10 rounded-xl'
+const CARD   = 'bg-navy-800 border border-white/10 rounded-xl'
 const VIOLET = '#7C3AED'
 
 const STATUS_CFG = {
@@ -25,6 +22,8 @@ const todayStr = () => new Date().toISOString().slice(0, 10) // YYYY-MM-DD
 export default function TeacherAttendance() {
   const session = JSON.parse(sessionStorage.getItem('teacherSession') || '{}')
 
+  const [termNum,       setTermNum]       = useState(null)
+  const [termYear,      setTermYear]      = useState(null)
   const [assignments,   setAssignments]   = useState([])
   const [selClass,      setSelClass]      = useState('')
   const [periods,       setPeriods]       = useState([])   // today's timetable periods
@@ -38,6 +37,16 @@ export default function TeacherAttendance() {
 
   const today     = DAYS[new Date().getDay()]
   const dateToday = todayStr()
+
+  // Load current term from portalSettings (source of truth set by admin)
+  useEffect(() => {
+    getDoc(doc(db, 'portalSettings', 'main')).then(snap => {
+      if (!snap.exists()) return
+      const { currentTerm, currentYear } = snap.data()
+      setTermNum(parseTermNumber(currentTerm))
+      setTermYear(Number(currentYear))
+    }).catch(() => {})
+  }, [])
 
   // Load assignments + today's timetable on class change
   useEffect(() => {
@@ -54,7 +63,7 @@ export default function TeacherAttendance() {
 
   // When class changes: load today's periods + already marked
   useEffect(() => {
-    if (!selClass) return
+    if (!selClass || !termNum || !termYear) return
     setPeriods([])
     setSelPeriod(null)
     setMarkedPeriods([])
@@ -63,8 +72,8 @@ export default function TeacherAttendance() {
     getDocs(query(
       collection(db, 'timetables'),
       where('className', '==', selClass),
-      where('term', '==', CURR_TERM),
-      where('year', '==', CURR_TERM_YEAR),
+      where('term', '==', `Term ${termNum}`),
+      where('year', '==', termYear),
     )).then(snap => {
         if (snap.empty) return
         const schedule = snap.docs[0].data().schedule || {}
@@ -81,7 +90,7 @@ export default function TeacherAttendance() {
     )).then(snap => {
       setMarkedPeriods(snap.docs.map(d => d.data().subject + '::' + d.data().time))
     }).catch(() => {})
-  }, [selClass, today, dateToday])
+  }, [selClass, today, dateToday, termNum, termYear])
 
   // When period selected: load students
   useEffect(() => {
@@ -183,7 +192,7 @@ export default function TeacherAttendance() {
 
         {loadingBase ? (
           <div className="flex items-center justify-center py-16">
-            <div className="w-7 h-7 border-2 border-[#C9A84C] border-t-transparent rounded-full animate-spin" />
+            <div className="w-7 h-7 border-2 border-gold border-t-transparent rounded-full animate-spin" />
           </div>
         ) : uniqueClasses.length === 0 ? (
           <div className={`${CARD} p-12 text-center`}>
@@ -283,7 +292,7 @@ export default function TeacherAttendance() {
       {/* Students list */}
       {loadingStudents ? (
         <div className="flex items-center justify-center py-12">
-          <div className="w-7 h-7 border-2 border-[#C9A84C] border-t-transparent rounded-full animate-spin" />
+          <div className="w-7 h-7 border-2 border-gold border-t-transparent rounded-full animate-spin" />
         </div>
       ) : students.length === 0 ? (
         <div className={`${CARD} p-10 text-center`}>

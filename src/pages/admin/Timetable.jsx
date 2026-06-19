@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import {
   collection, getDocs, query, where, setDoc, doc, serverTimestamp,
 } from 'firebase/firestore'
@@ -10,8 +10,8 @@ import { MdAdd, MdDelete, MdSave, MdClose, MdTableChart } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
 const DAYS    = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
-const CARD    = 'bg-[#0D1C35] border border-white/10 rounded-xl'
-const inputCls = 'w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-[#C9A84C]/50 font-montserrat'
+const CARD    = 'bg-navy-800 border border-white/10 rounded-xl'
+const inputCls = 'w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-gold/50 font-montserrat'
 
 const EMPTY_SCHEDULE = Object.fromEntries(DAYS.map(d => [d, []]))
 
@@ -105,7 +105,7 @@ export default function AdminTimetable() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <div className="w-7 h-7 border-2 border-[#C9A84C] border-t-transparent rounded-full animate-spin" />
+        <div className="w-7 h-7 border-2 border-gold border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }
@@ -122,7 +122,7 @@ export default function AdminTimetable() {
         <button
           onClick={handleSave}
           disabled={saving || !selClass}
-          className="flex items-center gap-2 bg-[#C9A84C] hover:bg-yellow-400 disabled:opacity-50 text-[#0A1628] font-montserrat font-bold text-sm px-5 py-2.5 rounded-xl transition"
+          className="flex items-center gap-2 bg-gold hover:bg-yellow-400 disabled:opacity-50 text-navy font-montserrat font-bold text-sm px-5 py-2.5 rounded-xl transition"
         >
           <MdSave className="text-lg" />
           {saving ? 'Saving…' : 'Save Timetable'}
@@ -168,7 +168,7 @@ export default function AdminTimetable() {
                 <h3 className="font-playfair font-semibold text-white text-sm">{day}</h3>
                 <button
                   onClick={() => { setAddModal(day); setPeriodForm({ timeStart: '', timeEnd: '', subject: '', teacher: '' }) }}
-                  className="p-1 rounded-lg text-[#C9A84C] hover:bg-[#C9A84C]/10 transition"
+                  className="p-1 rounded-lg text-gold hover:bg-gold/10 transition"
                 >
                   <MdAdd className="text-lg" />
                 </button>
@@ -207,7 +207,7 @@ export default function AdminTimetable() {
       {/* Add period modal */}
       {addModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0D1C35] border border-white/10 rounded-2xl w-full max-w-sm p-6">
+          <div className="bg-navy-800 border border-white/10 rounded-2xl w-full max-w-sm p-6">
             <div className="flex items-center justify-between mb-5">
               <h2 className="font-playfair text-lg font-bold text-white">Add Period — {addModal}</h2>
               <button onClick={() => setAddModal(null)} className="text-gray-400 hover:text-white"><MdClose className="text-xl" /></button>
@@ -253,7 +253,7 @@ export default function AdminTimetable() {
                   Cancel
                 </button>
                 <button onClick={addPeriod}
-                  className="flex-1 py-2.5 rounded-xl bg-[#C9A84C] text-[#0A1628] font-montserrat font-bold text-sm transition">
+                  className="flex-1 py-2.5 rounded-xl bg-gold text-navy font-montserrat font-bold text-sm transition">
                   Add
                 </button>
               </div>

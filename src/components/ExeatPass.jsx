@@ -1,5 +1,6 @@
-import { QRCodeSVG } from 'qrcode.react'
+﻿import { QRCodeSVG } from 'qrcode.react'
 import { MdPrint } from 'react-icons/md'
+import sc from '../utils/schoolConfig'
 
 const REASON_COLORS = {
   'Weekend Visit':        '#3b82f6',
@@ -60,7 +61,7 @@ export default function ExeatPass({ passData, allowPrint = false, onPrint }) {
         <div className="flex justify-end print:hidden">
           <button
             onClick={onPrint}
-            className="flex items-center gap-2 bg-[#C9A84C] hover:bg-yellow-400 text-[#0A1628] font-montserrat text-xs font-bold uppercase tracking-wider px-6 py-3 rounded-xl shadow-lg shadow-[#C9A84C]/20 transition-all"
+            className="flex items-center gap-2 bg-gold hover:bg-yellow-400 text-navy font-montserrat text-xs font-bold uppercase tracking-wider px-6 py-3 rounded-xl shadow-lg shadow-gold/20 transition-all"
           >
             <MdPrint className="text-base" />
             Print Pass
@@ -97,7 +98,7 @@ export default function ExeatPass({ passData, allowPrint = false, onPrint }) {
             letterSpacing: '0.1em',
             userSelect: 'none',
           }}>
-            OASIS PRIVATE COLLEGE — OFFICIAL
+            {sc.name.toUpperCase()} — OFFICIAL
           </span>
         </div>
 
@@ -114,9 +115,9 @@ export default function ExeatPass({ passData, allowPrint = false, onPrint }) {
               />
             </div>
             <h1 className="font-bold text-sm tracking-widest text-gray-900 uppercase" style={{ fontFamily: 'Georgia, serif' }}>
-              Oasis Private College
+              {sc.name}
             </h1>
-            <p className="text-[10px] text-gray-500 tracking-wider">Checheche, Zimbabwe</p>
+            <p className="text-[10px] text-gray-500 tracking-wider">{sc.address}</p>
             <div className="mt-2 inline-block px-4 py-0.5 border border-gray-400">
               <p className="text-[11px] font-bold tracking-[0.15em] uppercase text-gray-700">Student Exit Pass (Exeat)</p>
             </div>
@@ -241,7 +242,7 @@ export default function ExeatPass({ passData, allowPrint = false, onPrint }) {
             </div>
             <div className="text-right">
               <p className="text-[7px] text-gray-400 font-mono">{passData.passSerial}</p>
-              <p className="text-[7px] text-gray-400">Oasis Private College | Checheche, Zimbabwe</p>
+              <p className="text-[7px] text-gray-400">{sc.name} | {sc.address}</p>
             </div>
           </div>
 

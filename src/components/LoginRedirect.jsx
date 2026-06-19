@@ -1,8 +1,15 @@
 import { useAuthState } from 'react-firebase-hooks/auth'
 import { auth } from '../firebase/config'
 import { Navigate } from 'react-router-dom'
-import { useEffect } from 'react'
 import Login from '../pages/Login'
+
+function getPortalRedirect() {
+  if (sessionStorage.getItem('teacherSession'))       return '/teacher'
+  if (sessionStorage.getItem('bursarSession'))        return '/bursar/dashboard'
+  if (sessionStorage.getItem('studentSession'))       return '/student/dashboard'
+  if (sessionStorage.getItem('studentsAdminSession')) return '/dashboard'
+  return null
+}
 
 export default function LoginRedirect() {
   const [user, loading] = useAuthState(auth)
@@ -19,7 +26,8 @@ export default function LoginRedirect() {
   }
 
   if (user) {
-    return <Navigate to="/dashboard" replace />
+    const redirect = getPortalRedirect()
+    return <Navigate to={redirect ?? '/login'} replace />
   }
 
   return <Login />

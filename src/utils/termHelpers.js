@@ -20,3 +20,19 @@ export function getNextTerm(currentTerm) {
   }
   return { number: currentTerm.number + 1, year: currentTerm.year }
 }
+
+// Accepts "Term 2", "2", 2 — always returns the numeric term number.
+export function parseTermNumber(value) {
+  if (typeof value === 'number') return value
+  return parseInt(String(value).replace(/^Term\s*/i, ''), 10)
+}
+
+// Returns the canonical Firestore termId used in feeAccounts: "2-2025"
+export function formatTermId(termNumber, year) {
+  return `${parseTermNumber(termNumber)}-${year}`
+}
+
+// Returns the display label used in receipts collection: "Term 2"
+export function formatTermLabel(termNumber) {
+  return `Term ${parseTermNumber(termNumber)}`
+}

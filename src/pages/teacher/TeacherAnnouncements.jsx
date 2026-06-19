@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import {
   collection, getDocs, addDoc, query, where, serverTimestamp, orderBy, limit,
 } from 'firebase/firestore'
@@ -6,7 +6,7 @@ import { db } from '../../firebase/config'
 import { MdCampaign, MdSend } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
-const CARD   = 'bg-[#0D1C35] border border-white/10 rounded-xl'
+const CARD   = 'bg-navy-800 border border-white/10 rounded-xl'
 const VIOLET = '#7C3AED'
 const inputCls = 'w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-violet-500/50 font-montserrat'
 
@@ -122,7 +122,7 @@ export default function TeacherAnnouncements() {
 
       {loadingBase ? (
         <div className="flex items-center justify-center py-16">
-          <div className="w-7 h-7 border-2 border-[#C9A84C] border-t-transparent rounded-full animate-spin" />
+          <div className="w-7 h-7 border-2 border-gold border-t-transparent rounded-full animate-spin" />
         </div>
       ) : uniqueClasses.length === 0 ? (
         <div className={`${CARD} p-12 text-center`}>

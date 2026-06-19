@@ -122,15 +122,15 @@ function OasisIllustration() {
       />
 
       {/* ── Oasis pool ── */}
-      <ellipse cx="108" cy="179"   rx="32" ry="10"  fill="#0A1628"/>
-      <ellipse cx="108" cy="178.5" rx="26" ry="7.5" fill="#132140"/>
-      <path d="M 90,177.5 Q 108,174 126,177.5"   stroke="#C9A84C" strokeWidth="0.8" fill="none" opacity="0.5"/>
+      <ellipse cx="108" cy="179"   rx="32" ry="10"  style={{ fill: 'var(--color-navy-hex)' }}/>
+      <ellipse cx="108" cy="178.5" rx="26" ry="7.5" style={{ fill: 'var(--color-navy-light-hex)' }}/>
+      <path d="M 90,177.5 Q 108,174 126,177.5"   style={{ stroke: 'var(--color-primary-hex)' }} strokeWidth="0.8" fill="none" opacity="0.5"/>
       <path d="M 95,181   Q 108,179 121,181"      stroke="#5B8FA8" strokeWidth="0.7" fill="none" opacity="0.35"/>
 
       {/* ── Front sand dune ── */}
       <path
         d="M 0,190 C 38,177 82,170 118,173 C 148,176 188,183 220,178 L 220,200 L 0,200 Z"
-        fill="#C9A84C"
+        style={{ fill: 'var(--color-primary-hex)' }}
       />
 
       {/* ── Trunk shadow on sand ── */}

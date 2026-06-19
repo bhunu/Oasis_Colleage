@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { collection, getDocs, query, where } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import { useNavigate } from 'react-router-dom'
 import { MdCalendarToday, MdFactCheck, MdCampaign, MdBarChart, MdPeople } from 'react-icons/md'
 
-const CARD   = 'bg-[#0D1C35] border border-white/10 rounded-xl p-5'
+const CARD   = 'bg-navy-800 border border-white/10 rounded-xl p-5'
 const VIOLET = '#7C3AED'
 const DAYS   = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -38,7 +38,7 @@ export default function TeacherDashboard() {
           const data = d.data()
           const dayPeriods = data.schedule?.[today] || []
           dayPeriods.forEach(p => {
-            if (!p.teacher || p.teacher === session.name) {
+            if (!p.teacher || p.teacher === session.uid || p.teacher === session.name) {
               periods.push({ ...p, className: data.className })
             }
           })
@@ -86,7 +86,7 @@ export default function TeacherDashboard() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {QUICK.map(({ label, icon: Icon, path, color }) => (
           <button key={path} onClick={() => navigate(path)}
-            className="bg-[#0D1C35] border border-white/10 hover:border-violet-500/30 rounded-xl p-4 text-left transition-all group">
+            className="bg-navy-800 border border-white/10 hover:border-violet-500/30 rounded-xl p-4 text-left transition-all group">
             <div className="p-2.5 rounded-lg w-fit mb-2" style={{ backgroundColor: `${color}22` }}>
               <Icon className="text-lg" style={{ color }} />
             </div>
@@ -98,7 +98,7 @@ export default function TeacherDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         {/* Today's schedule */}
-        <div className="bg-[#0D1C35] border border-white/10 rounded-xl p-5">
+        <div className="bg-navy-800 border border-white/10 rounded-xl p-5">
           <h3 className="font-playfair font-semibold text-white mb-4">Today's Schedule</h3>
           {loading ? (
             <p className="text-sm text-gray-500 font-montserrat py-4 text-center">Loading…</p>
@@ -120,7 +120,7 @@ export default function TeacherDashboard() {
         </div>
 
         {/* Assigned classes */}
-        <div className="bg-[#0D1C35] border border-white/10 rounded-xl p-5">
+        <div className="bg-navy-800 border border-white/10 rounded-xl p-5">
           <h3 className="font-playfair font-semibold text-white mb-4">Your Classes</h3>
           {loading ? (
             <p className="text-sm text-gray-500 font-montserrat py-4 text-center">Loading…</p>

@@ -8,6 +8,7 @@ import { db } from '../firebase/config'
 export async function logSecurityEvent(data) {
   try {
     await addDoc(collection(db, 'securityLogs'), {
+      ...data,
       uid:        data.uid        ?? null,
       identifier: data.identifier ?? null,
       action:     data.action,
@@ -16,7 +17,6 @@ export async function logSecurityEvent(data) {
       url:        window.location.pathname,
       userAgent:  navigator.userAgent,
       timestamp:  serverTimestamp(),
-      ...data,
     })
   } catch {
     // intentionally silent

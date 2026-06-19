@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import {
   collection, getDocs, query, where, doc, setDoc, serverTimestamp,
 } from 'firebase/firestore'
@@ -7,8 +7,8 @@ import { MdAdd, MdDelete, MdSave, MdClose, MdEventNote } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import { getCurrentTerm } from '../../utils/termHelpers'
 
-const CARD    = 'bg-[#0D1C35] border border-white/10 rounded-xl'
-const inputCls = 'w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-[#C9A84C]/50 font-montserrat'
+const CARD    = 'bg-navy-800 border border-white/10 rounded-xl'
+const inputCls = 'w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-gold/50 font-montserrat'
 
 const { number: CURR_NUM, year: CURR_YEAR } = getCurrentTerm()
 const EMPTY = { date: '', timeStart: '', timeEnd: '', subject: '', className: '', venue: '', invigilator: '' }
@@ -89,7 +89,7 @@ export default function AdminExamTimetable() {
 
   if (loading) return (
     <div className="flex items-center justify-center py-24">
-      <div className="w-7 h-7 border-2 border-[#C9A84C] border-t-transparent rounded-full animate-spin" />
+      <div className="w-7 h-7 border-2 border-gold border-t-transparent rounded-full animate-spin" />
     </div>
   )
 
@@ -112,7 +112,7 @@ export default function AdminExamTimetable() {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center gap-2 bg-[#C9A84C] hover:bg-yellow-400 disabled:opacity-50 text-[#0A1628] font-montserrat font-bold text-sm px-5 py-2.5 rounded-xl transition"
+            className="flex items-center gap-2 bg-gold hover:bg-yellow-400 disabled:opacity-50 text-navy font-montserrat font-bold text-sm px-5 py-2.5 rounded-xl transition"
           >
             <MdSave className="text-lg" /> {saving ? 'Saving…' : 'Save Timetable'}
           </button>
@@ -176,7 +176,7 @@ export default function AdminExamTimetable() {
       {/* Add Exam Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0D1C35] border border-white/10 rounded-2xl w-full max-w-md p-6 space-y-4">
+          <div className="bg-navy-800 border border-white/10 rounded-2xl w-full max-w-md p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="font-playfair text-lg font-bold text-white">Add Exam</h2>
               <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-white">
@@ -238,7 +238,7 @@ export default function AdminExamTimetable() {
                 Cancel
               </button>
               <button onClick={addEntry}
-                className="flex-1 py-2.5 rounded-xl bg-[#C9A84C] text-[#0A1628] font-montserrat font-bold text-sm transition">
+                className="flex-1 py-2.5 rounded-xl bg-gold text-navy font-montserrat font-bold text-sm transition">
                 Add
               </button>
             </div>

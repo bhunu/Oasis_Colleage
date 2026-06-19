@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import Tesseract from 'tesseract.js'
 import * as pdfjsLib from 'pdfjs-dist'
 import { collection, addDoc, getDocs, query, where, orderBy, serverTimestamp } from 'firebase/firestore'
@@ -13,10 +13,10 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   import.meta.url
 ).href
 
-const INPUT    = 'w-full bg-white/5 border border-white/10 focus:border-[#C9A84C]/50 focus:outline-none rounded-xl px-4 py-3 text-white font-montserrat text-sm placeholder-gray-600 transition-all'
+const INPUT    = 'w-full bg-white/5 border border-white/10 focus:border-gold/50 focus:outline-none rounded-xl px-4 py-3 text-white font-montserrat text-sm placeholder-gray-600 transition-all'
 const INPUT_RO = 'w-full bg-white/3 border border-white/10 rounded-xl px-4 py-3 text-white font-montserrat text-sm transition-all cursor-not-allowed opacity-70'
 const LABEL    = 'block text-[10px] font-semibold uppercase tracking-widest text-gray-500 font-montserrat mb-1.5'
-const CARD     = 'bg-[#0D1C35] border border-white/10 rounded-xl p-6'
+const CARD     = 'bg-navy-800 border border-white/10 rounded-xl p-6'
 
 function extractAmount(text) {
   const patterns = [
@@ -154,7 +154,7 @@ export default function StudentUploadPOP() {
         </p>
         <button
           onClick={() => setDone(false)}
-          className="bg-[#C9A84C] hover:bg-yellow-400 text-[#0A1628] font-montserrat font-bold text-sm px-6 py-3 rounded-xl transition"
+          className="bg-gold hover:bg-yellow-400 text-navy font-montserrat font-bold text-sm px-6 py-3 rounded-xl transition"
         >
           Upload another
         </button>
@@ -173,11 +173,11 @@ export default function StudentUploadPOP() {
         {/* File drop area */}
         <div
           className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition mb-4 ${
-            file ? 'border-[#C9A84C]/50 bg-[#C9A84C]/5' : 'border-white/10 hover:border-white/20'
+            file ? 'border-gold/50 bg-gold/5' : 'border-white/10 hover:border-white/20'
           }`}
           onClick={() => document.getElementById('pop-file').click()}
         >
-          <MdCloudUpload className={`text-4xl mx-auto mb-2 ${file ? 'text-[#C9A84C]' : 'text-gray-600'}`} />
+          <MdCloudUpload className={`text-4xl mx-auto mb-2 ${file ? 'text-gold' : 'text-gray-600'}`} />
           <p className="text-sm font-montserrat text-gray-400">
             {file ? file.name : 'Click to select file'}
           </p>
@@ -193,7 +193,7 @@ export default function StudentUploadPOP() {
             <label className={LABEL}>Amount Paid ($)</label>
             {extracting ? (
               <div className={`${INPUT_RO} flex items-center gap-2`}>
-                <span className="w-3.5 h-3.5 border-2 border-[#C9A84C] border-t-transparent rounded-full animate-spin shrink-0" />
+                <span className="w-3.5 h-3.5 border-2 border-gold border-t-transparent rounded-full animate-spin shrink-0" />
                 <span className="text-gray-500 text-xs">Reading receipt…</span>
               </div>
             ) : (
@@ -250,7 +250,7 @@ export default function StudentUploadPOP() {
         <button
           type="submit"
           disabled={uploading || !file || extracting}
-          className="w-full mt-5 py-3 rounded-xl text-sm font-semibold font-montserrat text-[#0A1628] bg-[#C9A84C] hover:bg-yellow-400 transition disabled:opacity-50"
+          className="w-full mt-5 py-3 rounded-xl text-sm font-semibold font-montserrat text-navy bg-gold hover:bg-yellow-400 transition disabled:opacity-50"
         >
           {uploading ? 'Uploading…' : extracting ? 'Reading receipt…' : 'Submit Proof of Payment'}
         </button>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { collection, getCountFromServer, getDocs, getDoc, updateDoc, setDoc, doc, query, where, orderBy, serverTimestamp } from 'firebase/firestore'
 import { db } from '../firebase/config'
@@ -16,8 +16,8 @@ const CHART_GRID   = { stroke: 'rgba(255,255,255,0.06)', strokeDasharray: '3 3' 
 const AXIS_TICK    = { fill: '#6b7280', fontSize: 11 }
 const AXIS_LINE    = { stroke: 'rgba(255,255,255,0.08)' }
 const TOOLTIP_STYLE = {
-  contentStyle: { backgroundColor: '#0D1C35', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, color: '#fff', fontSize: 12 },
-  labelStyle:   { color: '#C9A84C' },
+  contentStyle: { backgroundColor: 'var(--color-navy-800-hex)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, color: '#fff', fontSize: 12 },
+  labelStyle:   { color: 'var(--color-primary-hex)' },
   cursor:       { fill: 'rgba(255,255,255,0.04)' },
 }
 
@@ -39,7 +39,7 @@ function isMale(g = '') {
 }
 
 
-const CARD_CLASS = 'bg-[#0D1C35] border border-white/10 rounded-xl p-6'
+const CARD_CLASS = 'bg-navy-800 border border-white/10 rounded-xl p-6'
 const HEADING    = 'font-semibold text-white font-playfair'
 const TH_CLASS   = 'text-left py-3 px-4 text-[10px] font-semibold text-gray-500 uppercase tracking-widest font-montserrat'
 const TD_CLASS   = 'py-3 px-4 text-sm text-gray-300 font-montserrat'
@@ -192,9 +192,9 @@ export default function Dashboard() {
           <button
             key={path}
             onClick={() => navigate(path)}
-            className="bg-[#0D1C35] border border-white/10 hover:border-[#C9A84C]/40 hover:bg-[#C9A84C]/5 rounded-xl p-4 text-left transition-all group"
+            className="bg-navy-800 border border-white/10 hover:border-gold/40 hover:bg-gold/5 rounded-xl p-4 text-left transition-all group"
           >
-            <p className="font-semibold text-white font-montserrat text-sm group-hover:text-[#C9A84C] transition-colors">{label}</p>
+            <p className="font-semibold text-white font-montserrat text-sm group-hover:text-gold transition-colors">{label}</p>
             <p className="text-xs text-gray-500 font-montserrat mt-0.5">{sub}</p>
           </button>
         ))}
@@ -220,7 +220,7 @@ export default function Dashboard() {
           </div>
           {!chartLoaded ? (
             <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#C9A84C]" />
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gold" />
             </div>
           ) : demographics.length === 0 ? (
             <div className="flex items-center justify-center h-64 text-gray-500 font-montserrat text-sm">No student data</div>
@@ -259,7 +259,7 @@ export default function Dashboard() {
           </div>
           {!chartLoaded ? (
             <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#C9A84C]" />
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gold" />
             </div>
           ) : boardingDemo.length === 0 ? (
             <div className="flex items-center justify-center h-64 text-gray-500 font-montserrat text-sm">No student data</div>
@@ -304,7 +304,7 @@ export default function Dashboard() {
       <div className={CARD_CLASS}>
         <div className="flex justify-between items-center mb-4">
           <h3 className={HEADING}>Recent Enrolments</h3>
-          <button onClick={() => navigate('/enrol')} className="text-xs text-[#C9A84C] hover:text-yellow-300 font-montserrat transition-colors">
+          <button onClick={() => navigate('/enrol')} className="text-xs text-gold hover:text-yellow-300 font-montserrat transition-colors">
             Enrol new
           </button>
         </div>

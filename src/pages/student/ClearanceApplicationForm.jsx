@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { collection, addDoc, getDocs, query, where, limit, serverTimestamp } from 'firebase/firestore'
+﻿import { useState, useEffect } from 'react'
+import { collection, addDoc, updateDoc, getDocs, doc, query, where, limit, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import { useStudent } from '../../context/StudentContext'
 import { MdCheckCircle, MdSend, MdInfo, MdSchedule } from 'react-icons/md'
@@ -30,16 +30,15 @@ export default function ClearanceApplicationForm() {
     guardianPhone: firestoreStudent?.guardianPhone || studentData?.guardianPhone || '',
     declaration: false,
   })
-  const [loading, setLoading] = useState(false)
-  const [done, setDone]       = useState(false)
-  const [feeError, setFeeError] = useState(null)
+  const [loading, setLoading]       = useState(false)
+  const [existingApp, setExistingApp] = useState(undefined) // undefined=loading, null=none, obj=found
+  const [feeError, setFeeError]     = useState(null)
 
-  // Block resubmission if a Pending or Approved application already exists
   useEffect(() => {
-    if (!regNo) return
+    if (!regNo) { setExistingApp(null); return }
     getDocs(query(collection(db, 'clearanceApplications'), where('reg_number', '==', regNo), limit(1)))
-      .then(snap => { if (!snap.empty) setDone(true) })
-      .catch(() => {})
+      .then(snap => setExistingApp(snap.empty ? null : { id: snap.docs[0].id, ...snap.docs[0].data() }))
+      .catch(() => setExistingApp(null))
   }, [regNo])
 
   /* Not a gated student — no clearance form needed */
@@ -55,16 +54,61 @@ export default function ClearanceApplicationForm() {
     )
   }
 
-  if (done) {
+  if (existingApp === undefined) return null // still loading
+
+  const appStatus = existingApp?.status?.toLowerCase()
+
+  if (appStatus === 'pending') {
     return (
       <div className="max-w-lg mx-auto py-12 text-center">
         <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-8">
           <MdCheckCircle className="text-emerald-400 text-5xl mx-auto mb-4" />
           <h2 className="font-playfair text-2xl font-bold text-white mb-3">Application Submitted</h2>
           <p className="font-montserrat text-sm text-gray-400 leading-relaxed">
-            Your clearance application has been submitted successfully. You will be notified once your
-            clearance letter is ready.
+            Your clearance application has been submitted and is awaiting review. You will be notified
+            once your clearance letter is ready.
           </p>
+        </div>
+      </div>
+    )
+  }
+
+  if (appStatus === 'approved') {
+    return (
+      <div className="max-w-lg mx-auto py-12 text-center">
+        <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-8">
+          <MdCheckCircle className="text-emerald-400 text-5xl mx-auto mb-4" />
+          <h2 className="font-playfair text-2xl font-bold text-white mb-3">Clearance Approved</h2>
+          <p className="font-montserrat text-sm text-gray-400 leading-relaxed">
+            Your clearance application has been approved. Please visit the admin office to collect your
+            clearance letter.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  if (appStatus === 'rejected') {
+    return (
+      <div className="max-w-lg mx-auto py-12 text-center space-y-4">
+        <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-8">
+          <MdInfo className="text-red-400 text-5xl mx-auto mb-4" />
+          <h2 className="font-playfair text-2xl font-bold text-white mb-3">Application Rejected</h2>
+          <p className="font-montserrat text-sm text-gray-400 leading-relaxed mb-4">
+            Your clearance application was not approved.
+          </p>
+          {existingApp.rejectionReason && (
+            <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 mb-4 text-left">
+              <p className="font-montserrat text-[10px] uppercase tracking-widest text-gray-500 mb-1">Reason</p>
+              <p className="font-montserrat text-sm text-gray-300">{existingApp.rejectionReason}</p>
+            </div>
+          )}
+          <button
+            onClick={() => setExistingApp(null)}
+            className="mt-2 bg-gold hover:bg-yellow-400 text-navy font-montserrat font-bold text-xs uppercase tracking-widest py-3 px-6 rounded-xl transition"
+          >
+            Reapply
+          </button>
         </div>
       </div>
     )
@@ -85,11 +129,10 @@ export default function ClearanceApplicationForm() {
       )
       let totalOwed = 0
       if (!feeSnap.empty) {
-        const fee    = feeSnap.docs[0].data()
-        const termFees   = fee.termFees   || 0
-        const totalPaid  = fee.totalPaid  || 0
-        const arrears    = fee.arrears    || 0
-        totalOwed = Math.max(0, termFees - totalPaid) + arrears
+        const fee = feeSnap.docs[0].data()
+        // Use balance/balanceType — maintained by both runEndOfTermProcedure (balanceBD)
+        // and ReceivePayment. The old 'arrears' field was never written anywhere.
+        totalOwed = fee.balanceType === 'debit' ? (fee.balance || 0) : 0
       }
 
       if (totalOwed > 0) {
@@ -111,7 +154,7 @@ export default function ClearanceApplicationForm() {
         }
       }
 
-      await addDoc(collection(db, 'clearanceApplications'), {
+      const payload = {
         reg_number:        regNo,
         studentName:       fullName,
         class:             studentClass,
@@ -129,9 +172,18 @@ export default function ClearanceApplicationForm() {
         clearanceSerial:   null,
         rejectionReason:   null,
         feesVerifiedAt:    null,
-      })
+      }
 
-      setDone(true)
+      let savedId = existingApp?.id
+      if (existingApp?.id) {
+        // Reapply over a previously rejected application
+        await updateDoc(doc(db, 'clearanceApplications', existingApp.id), payload)
+      } else {
+        const ref = await addDoc(collection(db, 'clearanceApplications'), payload)
+        savedId = ref.id
+      }
+
+      setExistingApp({ id: savedId, ...payload, status: 'Pending' })
     } catch (err) {
       console.error(err)
       toast.error('Failed to submit application. Please try again.')
@@ -172,7 +224,7 @@ export default function ClearanceApplicationForm() {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-[#0D1C35] border border-white/10 rounded-2xl p-6 space-y-5">
+      <form onSubmit={handleSubmit} className="bg-navy-800 border border-white/10 rounded-2xl p-6 space-y-5">
 
         {/* Read-only fields */}
         <ReadRow label="Exit Type"     value={EXIT_LABELS[exitType] || exitType} />
@@ -209,7 +261,7 @@ export default function ClearanceApplicationForm() {
               type="checkbox"
               checked={form.declaration}
               onChange={e => setForm(f => ({ ...f, declaration: e.target.checked }))}
-              className="mt-1 accent-[#C9A84C] w-4 h-4"
+              className="mt-1 accent-gold w-4 h-4"
             />
             <span className="font-montserrat text-xs text-gray-400 leading-relaxed">
               I confirm that I have returned all school property including library books, sports equipment,
@@ -227,7 +279,7 @@ export default function ClearanceApplicationForm() {
         <button
           type="submit"
           disabled={loading || (termEndDate ? !termHasEnded : false)}
-          className="w-full flex items-center justify-center gap-2 bg-[#C9A84C] hover:bg-yellow-400 disabled:opacity-60 disabled:cursor-not-allowed text-[#0A1628] font-montserrat font-bold text-sm py-3 rounded-xl transition"
+          className="w-full flex items-center justify-center gap-2 bg-gold hover:bg-yellow-400 disabled:opacity-60 disabled:cursor-not-allowed text-navy font-montserrat font-bold text-sm py-3 rounded-xl transition"
         >
           <MdSend className="text-base" />
           {loading
@@ -251,7 +303,7 @@ export default function ClearanceApplicationForm() {
           outline: none;
           transition: border-color 0.2s;
         }
-        .inp:focus { border-color: rgba(201,168,76,0.4); }
+        .inp:focus { border-color: rgb(var(--color-primary) / 0.4); }
         .inp::placeholder { color: #4b5563; }
       `}</style>
     </div>

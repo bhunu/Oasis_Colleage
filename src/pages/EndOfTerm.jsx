@@ -6,6 +6,7 @@ import StepTracker from '../components/StepTracker'
 import ProgressModal from '../components/ProgressModal'
 import ConfirmModal from '../components/ConfirmModal'
 import { runEndOfTermProcedure } from '../utils/runEndOfTermProcedure'
+import { parseTermNumber } from '../utils/termHelpers'
 import toast from 'react-hot-toast'
 
 const fmt = v => `$${Number(v || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
@@ -13,6 +14,13 @@ const fmt = v => `$${Number(v || 0).toLocaleString(undefined, { minimumFractionD
 function nextTerm(closing) {
   if (closing.number < 3) return { number: closing.number + 1, year: closing.year }
   return { number: 1, year: closing.year + 1 }
+}
+
+function getAdminEmail() {
+  try {
+    const s = JSON.parse(sessionStorage.getItem('studentsAdminSession') || '{}')
+    return s.email || s.name || 'unknown'
+  } catch { return 'unknown' }
 }
 
 export default function EndOfTerm() {
@@ -40,7 +48,7 @@ export default function EndOfTerm() {
       if (!settingsSnap.exists()) throw new Error('Portal settings not configured')
 
       const { currentTerm, currentYear } = settingsSnap.data()
-      const closing = { number: Number(currentTerm), year: Number(currentYear) }
+      const closing = { number: parseTermNumber(currentTerm), year: Number(currentYear) }
       const opening = nextTerm(closing)
       setClosingTerm(closing)
       setOpeningTerm(opening)
@@ -88,8 +96,12 @@ export default function EndOfTerm() {
     setShowConfirm(false)
     setIsRunning(true)
     try {
-      await runEndOfTermProcedure(closingTerm, openingTerm, 'admin@oasis.edu', handleProgressUpdate)
-      setResult(summary)
+      const procedureResult = await runEndOfTermProcedure(closingTerm, openingTerm, getAdminEmail(), handleProgressUpdate)
+      setResult({
+        totalAccounts: procedureResult.accountsClosed,
+        arrearsTotal:  procedureResult.arrearsTotal,
+        creditsTotal:  procedureResult.creditsTotal,
+      })
       setCompleted(true)
       toast.success('End of term procedure completed!')
     } catch (error) {
@@ -109,7 +121,7 @@ export default function EndOfTerm() {
             Term {closingTerm?.number} — {closingTerm?.year} has been successfully closed
           </p>
 
-          <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-3 gap-4 mb-6">
             <div className="bg-white rounded p-4">
               <p className="text-gray-600 text-sm mb-1">Accounts Processed</p>
               <p className="text-3xl font-bold text-gray-900">{result?.totalAccounts ?? '—'}</p>
@@ -118,11 +130,23 @@ export default function EndOfTerm() {
               <p className="text-gray-600 text-sm mb-1">Arrears Carried Forward</p>
               <p className="text-3xl font-bold text-red-600">{result ? fmt(result.arrearsTotal) : '—'}</p>
             </div>
+            <div className="bg-white rounded p-4">
+              <p className="text-gray-600 text-sm mb-1">Credits Carried Forward</p>
+              <p className="text-3xl font-bold text-purple-600">{result ? fmt(result.creditsTotal) : '—'}</p>
+            </div>
           </div>
 
           <div className="flex gap-3 justify-center">
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => {
+                setCompleted(false)
+                setResult(null)
+                setProgressLog('')
+                setProgress(0)
+                setCurrentStep(0)
+                setShowConfirm(false)
+                runPreflight()
+              }}
               className="bg-blue-600 text-white px-6 py-2 rounded font-medium hover:bg-blue-700 transition"
             >
               Return to End of Term
@@ -193,14 +217,6 @@ export default function EndOfTerm() {
           <label className="flex items-center">
             <input type="checkbox" defaultChecked disabled className="mr-2" />
             <span className="text-sm text-gray-700">Carry forward credits as advance payments (locked)</span>
-          </label>
-          <label className="flex items-center">
-            <input type="checkbox" defaultChecked className="mr-2" />
-            <span className="text-sm text-gray-700">Generate closing statements for all students</span>
-          </label>
-          <label className="flex items-center">
-            <input type="checkbox" defaultChecked className="mr-2" />
-            <span className="text-sm text-gray-700">Notify student portal of updated balances</span>
           </label>
         </div>
       </div>

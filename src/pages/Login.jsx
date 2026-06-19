@@ -1,4 +1,4 @@
-import { Link, useNavigate, useLocation } from 'react-router-dom'
+﻿import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useState, useEffect } from 'react'
 import {
@@ -10,6 +10,8 @@ import { getDocs, getDoc, doc, collection, query, where, limit } from 'firebase/
 import { db } from '../firebase/config'
 import { hashPassword, hashPasswordLegacy } from '../utils/hash'
 import { checkLockStatus, recordFailedAttempt, resetAttempts } from '../utils/loginSecurity'
+import { initStudentSession } from '../hooks/useStudentSessionGuard'
+import sc from '../utils/schoolConfig'
 
 const fadeLeft  = { initial: { opacity: 0, x: -40 }, animate: { opacity: 1, x: 0 } }
 const fadeRight = { initial: { opacity: 0, x:  40 }, animate: { opacity: 1, x: 0 } }
@@ -195,6 +197,7 @@ export default function Login() {
       }))
 
       await resetAttempts(regNum, 'student-portal').catch(() => {})
+      await initStudentSession(userDoc.id).catch(() => {})
       clearForm()
       navigate('/student/dashboard')
     } catch {
@@ -239,7 +242,7 @@ export default function Login() {
       <motion.div
         {...fadeLeft}
         transition={{ duration: 0.55 }}
-        className="hidden lg:flex lg:w-[45%] relative bg-gradient-to-br from-[#2a1e05] via-[#1e1905] to-[#0A1628] flex-col justify-between p-14 overflow-hidden"
+        className="hidden lg:flex lg:w-[45%] relative bg-gradient-to-br from-[#2a1e05] via-[#1e1905] to-navy flex-col justify-between p-14 overflow-hidden"
       >
         <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-gold opacity-[0.07] blur-3xl" />
         <div className="absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-yellow-600 opacity-[0.07] blur-3xl" />
@@ -251,8 +254,8 @@ export default function Login() {
               <FaGraduationCap className="text-navy text-xl" />
             </div>
             <div>
-              <div className="font-playfair font-bold text-white text-xl leading-tight">Oasis Private College</div>
-              <div className="font-montserrat text-gold text-[10px] uppercase tracking-[0.2em]">Checheche, Zimbabwe</div>
+              <div className="font-playfair font-bold text-white text-xl leading-tight">{sc.name}</div>
+              <div className="font-montserrat text-gold text-[10px] uppercase tracking-[0.2em]">{sc.address}</div>
             </div>
           </Link>
 
@@ -296,7 +299,7 @@ export default function Login() {
             <div className="w-10 h-10 bg-gold rounded-full flex items-center justify-center shadow-md shadow-gold/30">
               <FaGraduationCap className="text-navy" />
             </div>
-            <div className="font-playfair font-bold text-white text-lg leading-tight">Oasis Private College</div>
+            <div className="font-playfair font-bold text-white text-lg leading-tight">{sc.name}</div>
           </Link>
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-xs font-montserrat font-semibold uppercase tracking-wider bg-gold/20 text-gold border-gold/30">
             <FaUserGraduate className="text-sm" />
@@ -333,7 +336,7 @@ export default function Login() {
                 type="button"
                 onClick={() => { setUseOTP(value); setAuthError(''); clearForm() }}
                 className={`flex-1 py-2 rounded-lg text-xs font-semibold font-montserrat transition-all ${
-                  useOTP === value ? 'bg-[#C9A84C]/15 text-[#C9A84C]' : 'text-gray-500 hover:text-gray-300'
+                  useOTP === value ? 'bg-gold/15 text-gold' : 'text-gray-500 hover:text-gray-300'
                 }`}
               >
                 {label}

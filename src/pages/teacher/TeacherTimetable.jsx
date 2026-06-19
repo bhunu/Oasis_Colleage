@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { collection, getDocs, query, where } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import { MdCalendarToday, MdEventNote } from 'react-icons/md'
@@ -7,7 +7,7 @@ import { getCurrentTerm } from '../../utils/termHelpers'
 const { number: CURR_NUM, year: CURR_YEAR } = getCurrentTerm()
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
-const CARD = 'bg-[#0D1C35] border border-white/10 rounded-xl'
+const CARD = 'bg-navy-800 border border-white/10 rounded-xl'
 
 function fmtDate(str) {
   if (!str) return ''
@@ -130,7 +130,7 @@ export default function TeacherTimetable() {
 
       {loading ? (
         <div className="flex items-center justify-center py-16">
-          <div className="w-7 h-7 border-2 border-[#C9A84C] border-t-transparent rounded-full animate-spin" />
+          <div className="w-7 h-7 border-2 border-gold border-t-transparent rounded-full animate-spin" />
         </div>
       ) : tab === 'weekly' ? (
         classes.length === 0 ? (

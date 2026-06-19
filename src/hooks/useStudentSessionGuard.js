@@ -56,7 +56,7 @@ export async function initStudentSession(uid) {
   })
 
   if (evictedId) {
-    logSecurityEvent({ uid, action: 'CONCURRENT_SESSION_KILLED' }).catch(() => {})
+    logSecurityEvent({ uid, action: 'CONCURRENT_SESSION_DETECTED' }).catch(() => {})
   }
 
   return sessionId
@@ -99,6 +99,7 @@ export default function useStudentSessionGuard(uid) {
     if (!sessionId) return
 
     const ref = registryRef(uid)
+    let mounted = true
 
     readyRef.current = false
     graceRef.current = setTimeout(() => { readyRef.current = true }, MOUNT_GRACE_MS)
@@ -106,10 +107,10 @@ export default function useStudentSessionGuard(uid) {
     const unsubscribe = onSnapshot(ref, (snap) => {
       // During the grace window, ignore snapshots — the session write may not
       // have propagated yet (especially after a retry in Login.jsx).
-      if (!readyRef.current) return
+      if (!readyRef.current || !mounted) return
 
       if (!snap.exists() || !(sessionId in (snap.data() ?? {}))) {
-        logSecurityEvent({ uid, action: 'CONCURRENT_SESSION_KILLED' })
+        logSecurityEvent({ uid, action: 'SESSION_EVICTED' })
         logout()
         navigate('/login?portal=student-portal', {
           replace: true,
@@ -123,6 +124,7 @@ export default function useStudentSessionGuard(uid) {
     }, PING_INTERVAL_MS)
 
     return () => {
+      mounted = false
       clearTimeout(graceRef.current)
       unsubscribe()
       clearInterval(pingRef.current)

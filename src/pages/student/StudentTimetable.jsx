@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { collection, getDocs, query, where } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import { useStudent } from '../../context/StudentContext'
@@ -6,7 +6,7 @@ import { getCurrentTerm } from '../../utils/termHelpers'
 import { MdCalendarToday, MdEventNote } from 'react-icons/md'
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
-const CARD = 'bg-[#0D1C35] border border-white/10 rounded-xl'
+const CARD = 'bg-navy-800 border border-white/10 rounded-xl'
 const { number: CURR_NUM, year: CURR_YEAR } = getCurrentTerm()
 
 function fmtDate(str) {
@@ -84,7 +84,7 @@ export default function StudentTimetable() {
             onClick={() => setTab(key)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold font-montserrat transition-all ${
               tab === key
-                ? 'bg-[#C9A84C] text-[#0A1628]'
+                ? 'bg-gold text-navy'
                 : 'text-gray-400 hover:text-gray-200'
             }`}
           >
@@ -111,7 +111,7 @@ export default function StudentTimetable() {
 
       {loading ? (
         <div className="flex items-center justify-center py-16">
-          <div className="w-7 h-7 border-2 border-[#C9A84C] border-t-transparent rounded-full animate-spin" />
+          <div className="w-7 h-7 border-2 border-gold border-t-transparent rounded-full animate-spin" />
         </div>
       ) : tab === 'weekly' ? (
         !timetable ? (

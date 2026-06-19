@@ -1,8 +1,8 @@
-import { useNavigate } from 'react-router-dom'
+﻿import { useNavigate } from 'react-router-dom'
 import { MdPrint, MdAttachMoney, MdBalance, MdTableChart, MdPieChart } from 'react-icons/md'
 
 const TEAL = '#0F6E56'
-const CARD = 'bg-[#0D1C35] border border-white/10 rounded-xl p-6'
+const CARD = 'bg-navy-800 border border-white/10 rounded-xl p-6'
 
 const REPORTS = [
   {

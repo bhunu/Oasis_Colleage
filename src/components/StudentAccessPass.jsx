@@ -1,13 +1,11 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { collection, getDocs, doc, getDoc, query, where, limit, setDoc } from 'firebase/firestore'
 import { db } from '../firebase/config'
 import { QRCodeSVG } from 'qrcode.react'
-import { getCurrentTerm } from '../utils/termHelpers'
+import { parseTermNumber } from '../utils/termHelpers'
 import toast from 'react-hot-toast'
 import { MdPrint, MdWarning, MdBlock } from 'react-icons/md'
-
-const { number: TERM_NUM, year: TERM_YEAR } = getCurrentTerm()
-const TERM_LABEL = `Term ${TERM_NUM}`
+import sc from '../utils/schoolConfig'
 
 function randomStr(n = 4) {
   const c     = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -16,8 +14,8 @@ function randomStr(n = 4) {
   return Array.from(bytes, b => c[b % c.length]).join('')
 }
 
-function buildSerial(regNo) {
-  return `OA-${String(TERM_YEAR).slice(2)}-T${TERM_NUM}-${regNo}-${randomStr(4)}`
+function buildSerial(regNo, termNum, termYear) {
+  return `OA-${String(termYear).slice(2)}-T${termNum}-${regNo}-${randomStr(4)}`
 }
 
 function fmtDateTime(d) {
@@ -63,15 +61,18 @@ export default function StudentAccessPass({ regNo }) {
   const [serial, setSerial]     = useState('')
   const [issuedAt]              = useState(() => new Date())
   const [saving, setSaving]     = useState(false)
+  const [termNum,  setTermNum]  = useState(null)
+  const [termYear, setTermYear] = useState(null)
   const adminName               = getAdminName()
 
   useEffect(() => {
     setPhase('loading')
     async function load() {
       try {
-        const [sSnap, cfgSnap] = await Promise.all([
+        const [sSnap, cfgSnap, settingsSnap] = await Promise.all([
           getDocs(query(collection(db, 'students'), where('reg_number', '==', regNo), limit(1))),
           getDoc(doc(db, 'settings', 'portalConfig')),
+          getDoc(doc(db, 'portalSettings', 'main')),
         ])
 
         if (sSnap.empty) { setPhase('error'); return }
@@ -80,6 +81,15 @@ export default function StudentAccessPass({ regNo }) {
 
         const thresh = cfgSnap.exists() ? (cfgSnap.data().feeThreshold ?? 75) : 75
         setThreshold(thresh)
+
+        // Load current term from portalSettings (source of truth set by admin)
+        let loadedTermNum = null, loadedTermYear = null
+        if (settingsSnap.exists()) {
+          loadedTermNum  = parseTermNumber(settingsSnap.data().currentTerm)
+          loadedTermYear = Number(settingsSnap.data().currentYear)
+          setTermNum(loadedTermNum)
+          setTermYear(loadedTermYear)
+        }
 
         const fSnap = await getDocs(
           query(collection(db, 'feeAccounts'), where('reg_number', '==', regNo), limit(1))
@@ -94,7 +104,7 @@ export default function StudentAccessPass({ regNo }) {
         if (pct < thresh) {
           setPhase('denied')
         } else {
-          setSerial(buildSerial(regNo))
+          setSerial(buildSerial(regNo, loadedTermNum, loadedTermYear))
           setPhase('ready')
         }
       } catch (e) {
@@ -111,11 +121,12 @@ export default function StudentAccessPass({ regNo }) {
   const fullyPaid  = payPct >= 100
   const accentColor = fullyPaid ? '#22c55e' : '#f59e0b'
 
-  const qrData = `OPC Pass | ${serial} | ${regNo} | ${TERM_LABEL} ${TERM_YEAR}`
+  const termLabel = termNum ? `Term ${termNum}` : 'Current Term'
+  const qrData = `OPC Pass | ${serial} | ${regNo} | ${termLabel} ${termYear ?? ''}`
 
   const passage = fullyPaid
-    ? `This is to certify that ${student?.fullName}, Registration Number ${regNo}, of ${student?.class}, has paid school fees in full for ${TERM_LABEL} ${TERM_YEAR}. The student is hereby authorized to attend classes, access all school facilities, and sit for examinations for the current term.`
-    : `This is to certify that ${student?.fullName}, Registration Number ${regNo}, of ${student?.class}, has paid the required minimum amount towards the ${TERM_LABEL} ${TERM_YEAR} school fees. The student is hereby authorized to attend classes, access school facilities, and sit for examinations for the current term.`
+    ? `This is to certify that ${student?.fullName}, Registration Number ${regNo}, of ${student?.class}, has paid school fees in full for ${termLabel} ${termYear ?? ''}. The student is hereby authorized to attend classes, access all school facilities, and sit for examinations for the current term.`
+    : `This is to certify that ${student?.fullName}, Registration Number ${regNo}, of ${student?.class}, has paid the required minimum amount towards the ${termLabel} ${termYear ?? ''} school fees. The student is hereby authorized to attend classes, access school facilities, and sit for examinations for the current term.`
 
   const handlePrint = async () => {
     setSaving(true)
@@ -124,8 +135,8 @@ export default function StudentAccessPass({ regNo }) {
         regNo,
         generatedBy: adminName,
         generatedAt: issuedAt,
-        term:        TERM_LABEL,
-        year:        TERM_YEAR,
+        term:        termLabel,
+        year:        termYear,
         valid:       true,
       })
       setTimeout(() => window.print(), 150)
@@ -139,8 +150,8 @@ export default function StudentAccessPass({ regNo }) {
   // ── Loading ───────────────────────────────────────────────────────────────
   if (phase === 'loading') {
     return (
-      <div className="bg-[#0D1C35] border border-white/10 rounded-2xl p-10 text-center">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#C9A84C] mb-3" />
+      <div className="bg-navy-800 border border-white/10 rounded-2xl p-10 text-center">
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gold mb-3" />
         <p className="font-montserrat text-sm text-gray-400">Verifying student fee status…</p>
       </div>
     )
@@ -149,7 +160,7 @@ export default function StudentAccessPass({ regNo }) {
   // ── Not Found ─────────────────────────────────────────────────────────────
   if (phase === 'error') {
     return (
-      <div className="bg-[#0D1C35] border border-red-500/30 rounded-2xl p-8 text-center">
+      <div className="bg-navy-800 border border-red-500/30 rounded-2xl p-8 text-center">
         <MdBlock className="text-red-400 text-4xl mx-auto mb-3" />
         <p className="font-montserrat text-sm font-semibold text-red-400">Student not found</p>
         <p className="font-montserrat text-xs text-gray-500 mt-1">
@@ -163,7 +174,7 @@ export default function StudentAccessPass({ regNo }) {
   if (phase === 'denied') {
     const balance = fee ? Number(fee.totalCharged) - Number(fee.totalPaid) : 0
     return (
-      <div className="bg-[#0D1C35] border-2 border-red-500/40 rounded-2xl p-7">
+      <div className="bg-navy-800 border-2 border-red-500/40 rounded-2xl p-7">
         <div className="flex items-center gap-3 mb-5">
           <div className="w-10 h-10 bg-red-500/15 rounded-xl flex items-center justify-center shrink-0">
             <MdWarning className="text-red-400 text-xl" />
@@ -196,7 +207,7 @@ export default function StudentAccessPass({ regNo }) {
         <button
           onClick={handlePrint}
           disabled={saving}
-          className="flex items-center gap-2 bg-[#C9A84C] hover:bg-yellow-400 disabled:opacity-60 text-[#0A1628] font-montserrat text-xs font-bold uppercase tracking-wider px-6 py-3 rounded-xl shadow-lg shadow-[#C9A84C]/20 transition-all"
+          className="flex items-center gap-2 bg-gold hover:bg-yellow-400 disabled:opacity-60 text-navy font-montserrat text-xs font-bold uppercase tracking-wider px-6 py-3 rounded-xl shadow-lg shadow-gold/20 transition-all"
         >
           <MdPrint className="text-base" />
           {saving ? 'Saving record…' : 'Print Pass'}
@@ -209,7 +220,7 @@ export default function StudentAccessPass({ regNo }) {
         {/* Watermark — hidden on screen, visible on print */}
         <div className="hidden print:flex absolute inset-0 items-center justify-center pointer-events-none select-none overflow-hidden" style={{ zIndex: 0 }} aria-hidden="true">
           <span style={{ fontSize: 72, fontWeight: 900, color: '#000', opacity: 0.06, transform: 'rotate(-45deg)', whiteSpace: 'nowrap', letterSpacing: '0.1em', userSelect: 'none' }}>
-            OASIS PRIVATE COLLEGE
+            {sc.name.toUpperCase()}
           </span>
         </div>
 
@@ -221,13 +232,13 @@ export default function StudentAccessPass({ regNo }) {
               <img src="/assets/logo.png" alt="OPC" className="w-12 h-12 object-contain" onError={e => { e.currentTarget.parentElement.innerHTML = '<span style="font-size:1.5rem;font-weight:900;color:#1a3a5c">OPC</span>' }} />
             </div>
             <h1 className="font-bold text-base tracking-widest text-gray-900 uppercase" style={{ fontFamily: 'Georgia, serif' }}>
-              Oasis Private College
+              {sc.name}
             </h1>
-            <p className="text-xs text-gray-500 tracking-wider">Checheche, Zimbabwe</p>
+            <p className="text-xs text-gray-500 tracking-wider">{sc.address}</p>
             <div className="mt-2 inline-block px-5 py-1 border border-gray-400">
               <p className="text-xs font-bold tracking-[0.18em] uppercase text-gray-700">Student Facility Access Pass</p>
             </div>
-            <p className="text-[10px] text-gray-500 mt-1">{TERM_LABEL} — {TERM_YEAR}</p>
+            <p className="text-[10px] text-gray-500 mt-1">{termLabel} — {termYear ?? ''}</p>
           </div>
 
           {/* Serial & Status row */}

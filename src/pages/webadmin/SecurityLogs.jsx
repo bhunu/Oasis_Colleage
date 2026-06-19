@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import {
   collection, onSnapshot, query, orderBy, limit,
   getDocs, doc, setDoc,
@@ -63,7 +63,7 @@ export default function SecurityLogs() {
   return (
     <div className="space-y-5">
       {/* Top-level tab switcher */}
-      <div className="flex gap-1 bg-[#0D1C35] border border-white/10 rounded-xl p-1 w-fit">
+      <div className="flex gap-1 bg-navy-800 border border-white/10 rounded-xl p-1 w-fit">
         <TabBtn active={view === 'events'} onClick={() => setView('events')} icon={MdShield} label="Security Events" />
         <TabBtn active={view === 'locked'} onClick={() => setView('locked')} icon={MdLock}   label="Locked Accounts" />
       </div>
@@ -80,7 +80,7 @@ function TabBtn({ active, onClick, icon: Icon, label }) {
       onClick={onClick}
       className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold font-montserrat transition-all ${
         active
-          ? 'bg-[#C9A84C]/10 text-[#C9A84C]'
+          ? 'bg-gold/10 text-gold'
           : 'text-gray-500 hover:text-gray-300'
       }`}
     >
@@ -155,7 +155,7 @@ function EventsTab() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search UID, email, URL…"
-            className="bg-white/5 border border-white/10 focus:border-[#C9A84C]/50 focus:outline-none rounded-xl px-3 py-2 text-white font-montserrat text-xs placeholder-gray-600 w-52 transition-all"
+            className="bg-white/5 border border-white/10 focus:border-gold/50 focus:outline-none rounded-xl px-3 py-2 text-white font-montserrat text-xs placeholder-gray-600 w-52 transition-all"
           />
           <button
             onClick={exportCsv}
@@ -175,7 +175,7 @@ function EventsTab() {
             onClick={() => setActionFilter(a)}
             className={`px-3 py-1.5 rounded-lg text-[10px] font-semibold uppercase tracking-wider font-montserrat transition-all ${
               actionFilter === a
-                ? 'bg-[#C9A84C]/10 text-[#C9A84C]'
+                ? 'bg-gold/10 text-gold'
                 : 'text-gray-500 hover:text-gray-300'
             }`}
           >
@@ -185,7 +185,7 @@ function EventsTab() {
       </div>
 
       {/* Table */}
-      <div className="bg-[#0D1C35] border border-white/10 rounded-xl overflow-hidden">
+      <div className="bg-navy-800 border border-white/10 rounded-xl overflow-hidden">
         {loading ? (
           <div className="py-16 text-center font-montserrat text-gray-500 text-sm">Loading security logs…</div>
         ) : filtered.length === 0 ? (
@@ -195,7 +195,7 @@ function EventsTab() {
         ) : (
           <div className="overflow-x-auto max-h-[65vh]">
             <table className="w-full text-xs font-montserrat">
-              <thead className="sticky top-0 bg-[#0D1C35] border-b border-white/10">
+              <thead className="sticky top-0 bg-navy-800 border-b border-white/10">
                 <tr>
                   {['Timestamp', 'Action', 'User / ID', 'Attempted Role', 'URL', 'Agent'].map(h => (
                     <th key={h} className="text-left py-3 px-4 text-[10px] font-semibold text-gray-500 uppercase tracking-widest">{h}</th>
@@ -303,7 +303,7 @@ function LockedAccountsTab() {
 
   if (loading) {
     return (
-      <div className="bg-[#0D1C35] border border-white/10 rounded-xl py-16 text-center font-montserrat text-gray-500 text-sm">
+      <div className="bg-navy-800 border border-white/10 rounded-xl py-16 text-center font-montserrat text-gray-500 text-sm">
         Loading locked accounts…
       </div>
     )
@@ -335,8 +335,8 @@ function LockedAccountsTab() {
           {accounts.length > 1 && (
             <button
               onClick={handleUnlockAll}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold font-montserrat text-[#0A1628] transition hover:opacity-90"
-              style={{ backgroundColor: '#C9A84C' }}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold font-montserrat text-navy transition hover:opacity-90"
+              style={{ backgroundColor: 'var(--color-primary-hex)' }}
             >
               <MdLockOpen className="text-base" />
               Unlock All
@@ -346,7 +346,7 @@ function LockedAccountsTab() {
       </div>
 
       {/* Table */}
-      <div className="bg-[#0D1C35] border border-white/10 rounded-xl overflow-hidden">
+      <div className="bg-navy-800 border border-white/10 rounded-xl overflow-hidden">
         {accounts.length === 0 ? (
           <div className="py-16 text-center font-montserrat text-gray-500 text-sm">
             No accounts are currently locked.

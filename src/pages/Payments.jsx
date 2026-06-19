@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { collection, getDocs, query, where, orderBy, doc, getDoc } from 'firebase/firestore'
 import { db } from '../firebase/config'
-import { MdSearch as IconSearch, MdReceipt as IconReceipt, MdDownload as IconDownload } from 'react-icons/md'
+import { MdSearch as IconSearch, MdReceipt as IconReceipt, MdDownload as IconDownload, MdWarning as IconWarning } from 'react-icons/md'
+import { parseTermNumber, formatTermLabel } from '../utils/termHelpers'
 
 export default function Payments() {
   const [receipts,     setReceipts]     = useState([])
@@ -15,11 +16,11 @@ export default function Payments() {
       try {
         const settingsSnap = await getDoc(doc(db, 'portalSettings', 'main'))
         const term = settingsSnap.exists()
-          ? `Term ${settingsSnap.data().currentTerm}`
+          ? formatTermLabel(settingsSnap.data().currentTerm)
           : ''
         setCurrentTerm(term)
 
-        if (!term) { setLoading(false); return }
+        if (!term) { setLoading(false); return } // term missing — warning shown in render
 
         const snap = await getDocs(
           query(
@@ -82,6 +83,20 @@ export default function Payments() {
     a.download = `payments_${currentTerm.replace(' ', '_')}.csv`
     a.click()
     URL.revokeObjectURL(url)
+  }
+
+  if (!loading && !currentTerm) {
+    return (
+      <div className="flex items-start gap-3 bg-amber-50 border border-amber-300 rounded-lg px-5 py-4 max-w-xl">
+        <IconWarning size={20} className="text-amber-500 shrink-0 mt-0.5" />
+        <div>
+          <p className="font-semibold text-amber-900 text-sm mb-1">Current term not configured</p>
+          <p className="text-amber-800 text-sm">
+            Go to <strong>Settings → Portal Settings</strong> and set the current term before viewing payments.
+          </p>
+        </div>
+      </div>
+    )
   }
 
   return (

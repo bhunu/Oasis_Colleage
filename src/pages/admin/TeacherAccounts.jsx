@@ -1,23 +1,18 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import {
   collection, getDocs, addDoc, deleteDoc, doc,
   query, where, serverTimestamp, setDoc,
 } from 'firebase/firestore'
-import { initializeApp, getApps, getApp } from 'firebase/app'
+import { initializeApp, getApps, getApp, deleteApp } from 'firebase/app'
 import { getAuth, createUserWithEmailAndPassword, signOut as authSignOut } from 'firebase/auth'
 import { db } from '../../firebase/config'
 import { MdAdd, MdDelete, MdEdit, MdClose, MdPeople, MdBook } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
-const CARD    = 'bg-[#0D1C35] border border-white/10 rounded-xl'
-const inputCls = 'w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-[#C9A84C]/50 font-montserrat'
+const CARD    = 'bg-navy-800 border border-white/10 rounded-xl'
+const inputCls = 'w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-gold/50 font-montserrat'
 const labelCls = 'text-[10px] font-semibold uppercase tracking-wider text-gray-400 font-montserrat block mb-1'
 
-function getSecondaryAuth() {
-  const existing = getApps().find(a => a.name === 'teacher-create')
-  if (existing) return getAuth(existing)
-  return getAuth(initializeApp(getApp().options, 'teacher-create'))
-}
 
 export default function TeacherAccounts() {
   const [teachers,     setTeachers]     = useState([])
@@ -58,8 +53,14 @@ export default function TeacherAccounts() {
       return toast.error('Name, email and a password of at least 6 characters are required.')
     }
     setCreating(true)
+
+    // Always start with a fresh secondary app — kills any stale auth state from a previous failed attempt
+    const stale = getApps().find(a => a.name === 'teacher-create')
+    if (stale) await deleteApp(stale)
+    const secondaryApp = initializeApp(getApp().options, 'teacher-create')
+
     try {
-      const secondaryAuth = getSecondaryAuth()
+      const secondaryAuth = getAuth(secondaryApp)
       const cred = await createUserWithEmailAndPassword(secondaryAuth, createForm.email.trim(), createForm.password)
       await authSignOut(secondaryAuth)
 
@@ -83,6 +84,8 @@ export default function TeacherAccounts() {
         toast.error('Failed to create account. Please try again.')
       }
     } finally {
+      // Always tear down the secondary app — even on failure — so no ghost auth state lingers
+      await deleteApp(secondaryApp).catch(() => {})
       setCreating(false)
     }
   }
@@ -143,7 +146,7 @@ export default function TeacherAccounts() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <div className="w-7 h-7 border-2 border-[#C9A84C] border-t-transparent rounded-full animate-spin" />
+        <div className="w-7 h-7 border-2 border-gold border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }
@@ -159,7 +162,7 @@ export default function TeacherAccounts() {
         </div>
         <button
           onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 bg-[#C9A84C] hover:bg-yellow-400 text-[#0A1628] font-montserrat font-bold text-sm px-4 py-2.5 rounded-xl transition"
+          className="flex items-center gap-2 bg-gold hover:bg-yellow-400 text-navy font-montserrat font-bold text-sm px-4 py-2.5 rounded-xl transition"
         >
           <MdAdd className="text-lg" />
           Add Teacher
@@ -169,7 +172,7 @@ export default function TeacherAccounts() {
       {/* Create modal */}
       {showCreate && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0D1C35] border border-white/10 rounded-2xl w-full max-w-md p-6">
+          <div className="bg-navy-800 border border-white/10 rounded-2xl w-full max-w-md p-6">
             <div className="flex items-center justify-between mb-5">
               <h2 className="font-playfair text-lg font-bold text-white">Create Teacher Account</h2>
               <button onClick={() => setShowCreate(false)} className="text-gray-400 hover:text-white"><MdClose className="text-xl" /></button>
@@ -196,7 +199,7 @@ export default function TeacherAccounts() {
                   Cancel
                 </button>
                 <button type="submit" disabled={creating}
-                  className="flex-1 py-2.5 rounded-xl bg-[#C9A84C] text-[#0A1628] font-montserrat font-bold text-sm disabled:opacity-50 transition">
+                  className="flex-1 py-2.5 rounded-xl bg-gold text-navy font-montserrat font-bold text-sm disabled:opacity-50 transition">
                   {creating ? 'Creating…' : 'Create Account'}
                 </button>
               </div>
@@ -261,7 +264,7 @@ export default function TeacherAccounts() {
       {/* Assign modal */}
       {showAssign && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0D1C35] border border-white/10 rounded-2xl w-full max-w-md p-6">
+          <div className="bg-navy-800 border border-white/10 rounded-2xl w-full max-w-md p-6">
             <div className="flex items-center justify-between mb-5">
               <h2 className="font-playfair text-lg font-bold text-white">Assign Class &amp; Subjects</h2>
               <button onClick={() => setShowAssign(null)} className="text-gray-400 hover:text-white"><MdClose className="text-xl" /></button>
@@ -284,7 +287,7 @@ export default function TeacherAccounts() {
                         onClick={() => toggleSubject(s)}
                         className={`px-3 py-1.5 rounded-lg text-xs font-montserrat font-semibold border transition ${
                           assignForm.subjects.includes(s)
-                            ? 'bg-[#C9A84C]/20 border-[#C9A84C]/50 text-[#C9A84C]'
+                            ? 'bg-gold/20 border-gold/50 text-gold'
                             : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20'
                         }`}>
                         {s}
@@ -302,7 +305,7 @@ export default function TeacherAccounts() {
                   Cancel
                 </button>
                 <button type="submit" disabled={assigning}
-                  className="flex-1 py-2.5 rounded-xl bg-[#C9A84C] text-[#0A1628] font-montserrat font-bold text-sm disabled:opacity-50 transition">
+                  className="flex-1 py-2.5 rounded-xl bg-gold text-navy font-montserrat font-bold text-sm disabled:opacity-50 transition">
                   {assigning ? 'Saving…' : 'Assign'}
                 </button>
               </div>

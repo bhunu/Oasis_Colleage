@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { db } from '../firebase/config'
 import toast from 'react-hot-toast'
@@ -24,7 +24,7 @@ function gradeChip(grade) {
   const g = grade.toUpperCase()
   if (g.startsWith('A')) return 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
   if (g.startsWith('B')) return 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
-  if (g.startsWith('C')) return 'bg-yellow-500/15 text-[#C9A84C] border-yellow-500/30'
+  if (g.startsWith('C')) return 'bg-yellow-500/15 text-gold border-yellow-500/30'
   if (g.startsWith('D')) return 'bg-orange-500/15 text-orange-400 border-orange-500/30'
   return 'bg-red-500/15 text-red-400 border-red-500/30'
 }
@@ -38,7 +38,7 @@ function NumCell({ value, onChange }) {
       max={100}
       value={value}
       onChange={e => onChange(Number(e.target.value))}
-      className="w-16 bg-white/5 border border-white/15 rounded-lg px-2 py-1.5 text-sm text-white font-montserrat text-center focus:outline-none focus:border-[#C9A84C]/60 focus:ring-1 focus:ring-[#C9A84C]/30 transition"
+      className="w-16 bg-white/5 border border-white/15 rounded-lg px-2 py-1.5 text-sm text-white font-montserrat text-center focus:outline-none focus:border-gold/60 focus:ring-1 focus:ring-gold/30 transition"
     />
   )
 }
@@ -86,7 +86,7 @@ export default function GradeSettings() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <div className="w-7 h-7 border-2 border-[#C9A84C] border-t-transparent rounded-full animate-spin" />
+        <div className="w-7 h-7 border-2 border-gold border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }
@@ -125,7 +125,7 @@ export default function GradeSettings() {
             onClick={() => setTab(t.key)}
             className={`px-5 py-2 rounded-lg text-sm font-semibold font-montserrat transition ${
               tab === t.key
-                ? 'bg-[#C9A84C] text-[#0A1628]'
+                ? 'bg-gold text-navy'
                 : 'text-gray-400 hover:text-white'
             }`}
           >
@@ -136,9 +136,9 @@ export default function GradeSettings() {
 
       {/* O Level table */}
       {tab === 'o' && (
-        <div className="bg-[#0D1C35] border border-white/10 rounded-xl overflow-hidden">
+        <div className="bg-navy-800 border border-white/10 rounded-xl overflow-hidden">
           <div className="px-5 py-3.5 border-b border-white/10 flex items-center gap-2">
-            <MdSchool className="text-[#C9A84C]" />
+            <MdSchool className="text-gold" />
             <span className="font-playfair font-semibold text-white">O Level Grade Ranges</span>
           </div>
           <table className="w-full">
@@ -174,9 +174,9 @@ export default function GradeSettings() {
 
       {/* A Level table */}
       {tab === 'a' && (
-        <div className="bg-[#0D1C35] border border-white/10 rounded-xl overflow-hidden">
+        <div className="bg-navy-800 border border-white/10 rounded-xl overflow-hidden">
           <div className="px-5 py-3.5 border-b border-white/10 flex items-center gap-2">
-            <MdSchool className="text-[#C9A84C]" />
+            <MdSchool className="text-gold" />
             <span className="font-playfair font-semibold text-white">A Level Grade Ranges & Points</span>
           </div>
           <table className="w-full">
@@ -217,7 +217,7 @@ export default function GradeSettings() {
       <button
         onClick={save}
         disabled={saving}
-        className="flex items-center gap-2 bg-[#C9A84C] hover:bg-yellow-400 disabled:opacity-60 text-[#0A1628] font-montserrat font-bold text-sm px-6 py-3 rounded-xl transition"
+        className="flex items-center gap-2 bg-gold hover:bg-yellow-400 disabled:opacity-60 text-navy font-montserrat font-bold text-sm px-6 py-3 rounded-xl transition"
       >
         <MdSave className="text-lg" />
         {saving ? 'Saving…' : 'Save Changes'}

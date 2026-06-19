@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { Navigate } from 'react-router-dom'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { auth } from '../../firebase/config'
@@ -7,8 +7,8 @@ import { logSecurityEvent } from '../../utils/logSecurityEvent'
 
 function Spinner() {
   return (
-    <div className="fixed inset-0 bg-[#0A1628] flex items-center justify-center z-50">
-      <div className="w-10 h-10 border-2 border-[#C9A84C] border-t-transparent rounded-full animate-spin" />
+    <div className="fixed inset-0 bg-navy flex items-center justify-center z-50">
+      <div className="w-10 h-10 border-2 border-gold border-t-transparent rounded-full animate-spin" />
     </div>
   )
 }

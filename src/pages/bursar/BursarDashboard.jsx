@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+﻿import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
@@ -18,7 +18,7 @@ const GRID    = { stroke: 'rgba(255,255,255,0.06)', strokeDasharray: '3 3' }
 const TICK    = { fill: '#6b7280', fontSize: 11 }
 const AXLINE  = { stroke: 'rgba(255,255,255,0.08)' }
 const TIP     = {
-  contentStyle: { backgroundColor: '#0D1C35', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, color: '#fff', fontSize: 12 },
+  contentStyle: { backgroundColor: 'var(--color-navy-800-hex)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, color: '#fff', fontSize: 12 },
   labelStyle:   { color: '#0F6E56' },
   cursor:       { fill: 'rgba(255,255,255,0.04)' },
 }
@@ -33,7 +33,7 @@ const NAVY2 = '#378ADD'
 const EXP_PIE_CATS = ['Salaries', 'Utilities', 'Maintenance', 'Supplies & Stationery', 'Transport', 'Events', 'Other']
 const PIE_COLORS   = [BLUE, GOLD, TEAL, PURP, PINK, RED, '#9ca3af']
 
-const CARD  = 'bg-[#0D1C35] border border-white/10 rounded-xl p-6'
+const CARD  = 'bg-navy-800 border border-white/10 rounded-xl p-6'
 const HEAD  = 'font-semibold text-white font-playfair'
 const TH    = 'text-left py-3 px-4 text-[10px] font-semibold text-gray-500 uppercase tracking-widest font-montserrat'
 const TD    = 'py-3 px-4 text-sm text-gray-300 font-montserrat'
@@ -41,7 +41,7 @@ const TD_W  = 'py-3 px-4 text-sm text-white font-montserrat'
 
 function StatCard({ label, value, icon: Icon, color }) {
   return (
-    <div className="bg-[#0D1C35] border border-white/10 rounded-xl p-5">
+    <div className="bg-navy-800 border border-white/10 rounded-xl p-5">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest font-montserrat mb-1">{label}</p>
@@ -258,7 +258,7 @@ export default function BursarDashboard() {
           <button
             key={path}
             onClick={() => navigate(path)}
-            className="bg-[#0D1C35] border border-white/10 hover:border-[#0F6E56]/40 hover:bg-[#0F6E56]/5 rounded-xl p-4 text-left transition-all group"
+            className="bg-navy-800 border border-white/10 hover:border-[#0F6E56]/40 hover:bg-[#0F6E56]/5 rounded-xl p-4 text-left transition-all group"
           >
             <p className="font-semibold text-white font-montserrat text-xs group-hover:text-[#1D9E75] transition-colors">{label}</p>
             <p className="text-[10px] text-gray-500 font-montserrat mt-0.5">{sub}</p>

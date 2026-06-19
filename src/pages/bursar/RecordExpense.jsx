@@ -1,14 +1,15 @@
-import { useState } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
+import { collection, addDoc, serverTimestamp, getDoc, doc } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { db, storage } from '../../firebase/config'
+import { formatTermLabel } from '../../utils/termHelpers'
 import toast from 'react-hot-toast'
 
 const TEAL  = '#0F6E56'
 const INPUT = 'w-full bg-white/5 border border-white/10 focus:border-[#0F6E56]/50 focus:outline-none rounded-xl px-4 py-3 text-white font-montserrat text-sm placeholder-gray-600 transition-all'
 const LABEL = 'block text-[10px] font-semibold uppercase tracking-widest text-gray-500 font-montserrat mb-1.5'
-const CARD  = 'bg-[#0D1C35] border border-white/10 rounded-xl p-6'
+const CARD  = 'bg-navy-800 border border-white/10 rounded-xl p-6'
 
 const CATEGORIES = ['Salaries', 'Utilities', 'Maintenance', 'Supplies & Stationery', 'Transport', 'Events', 'Other']
 
@@ -20,6 +21,16 @@ export default function RecordExpense() {
   const navigate = useNavigate()
   const session  = getBursarSession()
   const today    = new Date().toISOString().split('T')[0]
+
+  const [currentTerm, setCurrentTerm] = useState('')
+
+  useEffect(() => {
+    getDoc(doc(db, 'portalSettings', 'main')).then(snap => {
+      if (snap.exists() && snap.data().currentTerm) {
+        setCurrentTerm(formatTermLabel(snap.data().currentTerm))
+      }
+    })
+  }, [])
 
   const [form, setForm] = useState({
     description: '', category: 'Utilities', amount: '',
@@ -53,7 +64,7 @@ export default function RecordExpense() {
         paymentMethod: form.paymentMethod,
         reference:     form.reference,
         receiptImageUrl,
-        term:          'Term 2',
+        term:          currentTerm,
         notes:         form.notes,
         recordedAt:    serverTimestamp(),
         recordedBy:    session.name || 'Bursar',
@@ -69,7 +80,7 @@ export default function RecordExpense() {
         paymentMethod: form.paymentMethod,
         reference:     form.reference,
         date:          form.date,
-        term:          'Term 2',
+        term:          currentTerm,
         notes:         form.notes,
         hasReceipt:    !!file,
       })

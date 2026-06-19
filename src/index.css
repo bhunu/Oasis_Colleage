@@ -2,6 +2,106 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── Brand CSS Variables (defaults = Classic Gold + Navy) ──────────────────
+   Override at runtime via BrandContext. All Tailwind gold/navy classes and
+   the arbitrary-value overrides below read from these variables.
+   Values are R G B triplets (no commas) so Tailwind opacity modifiers work.
+─────────────────────────────────────────────────────────────────────────── */
+:root {
+  --color-primary:       201 168 76;   /* #C9A84C */
+  --color-primary-light: 212 185 106;  /* #D4B96A */
+  --color-primary-dark:  184 150 46;   /* #B8962E */
+  --color-primary-50:    253 248 236;  /* #FDF8EC */
+  --color-primary-100:   247 237 204;  /* #F7EDCC */
+  --color-primary-hex:   #C9A84C;      /* for inline styles */
+
+  --color-navy:          10 22 40;   /* #0A1628 */
+  --color-navy-light:    19 33 64;   /* #132140 */
+  --color-navy-dark:      6 15 28;   /* #060F1C */
+  --color-navy-800:      13 28 53;   /* #0D1C35 */
+  --color-navy-hex:      #0A1628;    /* for inline styles */
+  --color-navy-800-hex:  #0D1C35;    /* for inline styles */
+  --color-navy-light-hex:#132140;    /* for inline styles */
+}
+
+/* ─── Arbitrary-value class overrides ───────────────────────────────────────
+   Tailwind bakes hex values into the generated class names, so when the theme
+   changes the class NAMES stay the same but these rules redirect them to the
+   live CSS variables.  All rules use !important so they beat the Tailwind rule.
+─────────────────────────────────────────────────────────────────────────── */
+
+/* Primary / brand color (was #C9A84C) ─ solid */
+.text-\[\#C9A84C\]   { color: rgb(var(--color-primary)) !important; }
+.bg-\[\#C9A84C\]     { background-color: rgb(var(--color-primary)) !important; }
+.border-\[\#C9A84C\] { border-color: rgb(var(--color-primary)) !important; }
+.border-t-\[\#C9A84C\] { border-top-color: rgb(var(--color-primary)) !important; }
+.ring-\[\#C9A84C\]   { --tw-ring-color: rgb(var(--color-primary)) !important; }
+.accent-\[\#C9A84C\] { accent-color: rgb(var(--color-primary)) !important; }
+.shadow-\[\#C9A84C\] { --tw-shadow-color: rgb(var(--color-primary)) !important; }
+.from-\[\#C9A84C\]   { --tw-gradient-from: rgb(var(--color-primary)) !important; }
+.to-\[\#C9A84C\]     { --tw-gradient-to:   rgb(var(--color-primary)) !important; }
+
+/* Primary ─ opacity variants */
+.text-\[\#C9A84C\]\/5   { color: rgb(var(--color-primary) / 0.05) !important; }
+.text-\[\#C9A84C\]\/8   { color: rgb(var(--color-primary) / 0.08) !important; }
+.text-\[\#C9A84C\]\/10  { color: rgb(var(--color-primary) / 0.10) !important; }
+.text-\[\#C9A84C\]\/15  { color: rgb(var(--color-primary) / 0.15) !important; }
+.text-\[\#C9A84C\]\/20  { color: rgb(var(--color-primary) / 0.20) !important; }
+.text-\[\#C9A84C\]\/25  { color: rgb(var(--color-primary) / 0.25) !important; }
+.text-\[\#C9A84C\]\/30  { color: rgb(var(--color-primary) / 0.30) !important; }
+.text-\[\#C9A84C\]\/40  { color: rgb(var(--color-primary) / 0.40) !important; }
+.text-\[\#C9A84C\]\/50  { color: rgb(var(--color-primary) / 0.50) !important; }
+.text-\[\#C9A84C\]\/60  { color: rgb(var(--color-primary) / 0.60) !important; }
+.text-\[\#C9A84C\]\/70  { color: rgb(var(--color-primary) / 0.70) !important; }
+.text-\[\#C9A84C\]\/80  { color: rgb(var(--color-primary) / 0.80) !important; }
+.text-\[\#C9A84C\]\/90  { color: rgb(var(--color-primary) / 0.90) !important; }
+
+.bg-\[\#C9A84C\]\/5   { background-color: rgb(var(--color-primary) / 0.05) !important; }
+.bg-\[\#C9A84C\]\/8   { background-color: rgb(var(--color-primary) / 0.08) !important; }
+.bg-\[\#C9A84C\]\/10  { background-color: rgb(var(--color-primary) / 0.10) !important; }
+.bg-\[\#C9A84C\]\/15  { background-color: rgb(var(--color-primary) / 0.15) !important; }
+.bg-\[\#C9A84C\]\/20  { background-color: rgb(var(--color-primary) / 0.20) !important; }
+.bg-\[\#C9A84C\]\/25  { background-color: rgb(var(--color-primary) / 0.25) !important; }
+.bg-\[\#C9A84C\]\/30  { background-color: rgb(var(--color-primary) / 0.30) !important; }
+.bg-\[\#C9A84C\]\/40  { background-color: rgb(var(--color-primary) / 0.40) !important; }
+.bg-\[\#C9A84C\]\/50  { background-color: rgb(var(--color-primary) / 0.50) !important; }
+.bg-\[\#C9A84C\]\/60  { background-color: rgb(var(--color-primary) / 0.60) !important; }
+.bg-\[\#C9A84C\]\/70  { background-color: rgb(var(--color-primary) / 0.70) !important; }
+.bg-\[\#C9A84C\]\/80  { background-color: rgb(var(--color-primary) / 0.80) !important; }
+.bg-\[\#C9A84C\]\/90  { background-color: rgb(var(--color-primary) / 0.90) !important; }
+
+.border-\[\#C9A84C\]\/5   { border-color: rgb(var(--color-primary) / 0.05) !important; }
+.border-\[\#C9A84C\]\/8   { border-color: rgb(var(--color-primary) / 0.08) !important; }
+.border-\[\#C9A84C\]\/10  { border-color: rgb(var(--color-primary) / 0.10) !important; }
+.border-\[\#C9A84C\]\/15  { border-color: rgb(var(--color-primary) / 0.15) !important; }
+.border-\[\#C9A84C\]\/20  { border-color: rgb(var(--color-primary) / 0.20) !important; }
+.border-\[\#C9A84C\]\/25  { border-color: rgb(var(--color-primary) / 0.25) !important; }
+.border-\[\#C9A84C\]\/30  { border-color: rgb(var(--color-primary) / 0.30) !important; }
+.border-\[\#C9A84C\]\/40  { border-color: rgb(var(--color-primary) / 0.40) !important; }
+.border-\[\#C9A84C\]\/50  { border-color: rgb(var(--color-primary) / 0.50) !important; }
+.border-\[\#C9A84C\]\/60  { border-color: rgb(var(--color-primary) / 0.60) !important; }
+.border-\[\#C9A84C\]\/70  { border-color: rgb(var(--color-primary) / 0.70) !important; }
+
+.ring-\[\#C9A84C\]\/20  { --tw-ring-color: rgb(var(--color-primary) / 0.20) !important; }
+.ring-\[\#C9A84C\]\/30  { --tw-ring-color: rgb(var(--color-primary) / 0.30) !important; }
+.ring-\[\#C9A84C\]\/40  { --tw-ring-color: rgb(var(--color-primary) / 0.40) !important; }
+
+.shadow-\[\#C9A84C\]\/10 { --tw-shadow-color: rgb(var(--color-primary) / 0.10) !important; }
+.shadow-\[\#C9A84C\]\/20 { --tw-shadow-color: rgb(var(--color-primary) / 0.20) !important; }
+.shadow-\[\#C9A84C\]\/30 { --tw-shadow-color: rgb(var(--color-primary) / 0.30) !important; }
+
+/* Navy / dark background (was #0A1628 / #132140 / #0D1C35 / #060F1C) */
+.bg-\[\#0A1628\]   { background-color: rgb(var(--color-navy)) !important; }
+.bg-\[\#132140\]   { background-color: rgb(var(--color-navy-light)) !important; }
+.bg-\[\#0D1C35\]   { background-color: rgb(var(--color-navy-800)) !important; }
+.bg-\[\#060F1C\]   { background-color: rgb(var(--color-navy-dark)) !important; }
+.text-\[\#0A1628\] { color: rgb(var(--color-navy)) !important; }
+.border-\[\#0A1628\] { border-color: rgb(var(--color-navy)) !important; }
+
+/* Scrollbar uses primary color */
+::-webkit-scrollbar-thumb        { background: rgb(var(--color-primary)); }
+::-webkit-scrollbar-thumb:hover  { background: rgb(var(--color-primary-light)); }
+
 @layer base {
   * {
     box-sizing: border-box;
@@ -16,6 +116,16 @@
     margin: 0;
   }
 
+  /* Light mode body for public pages */
+  html:not(.dark) body {
+    @apply bg-cream text-slate;
+  }
+
+  /* Dark mode body */
+  html.dark body {
+    @apply bg-[#0A1628] text-gray-100;
+  }
+
   #root {
     width: 100%;
     min-height: 100vh;
@@ -27,19 +137,23 @@
     @apply font-playfair;
   }
 
+  /* Dark mode scrollbar */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
   ::-webkit-scrollbar-track {
+    background: #e5e7eb;
+  }
+  html.dark ::-webkit-scrollbar-track {
     background: #0A1628;
   }
   ::-webkit-scrollbar-thumb {
-    background: #C9A84C;
+    background: rgb(var(--color-primary));
     border-radius: 3px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #D4B96A;
+    background: rgb(var(--color-primary-light));
   }
 }
 
@@ -48,7 +162,7 @@
     display: block;
     width: 4rem;
     height: 4px;
-    background-color: #C9A84C;
+    background-color: rgb(var(--color-primary));
     border-radius: 2px;
     margin: 1rem auto 0;
   }
@@ -57,7 +171,7 @@
     display: block;
     width: 4rem;
     height: 4px;
-    background-color: #C9A84C;
+    background-color: rgb(var(--color-primary));
     border-radius: 2px;
     margin-top: 1rem;
   }
@@ -75,7 +189,7 @@
   }
 
   .text-gradient-gold {
-    background: linear-gradient(135deg, #C9A84C 0%, #D4B96A 100%);
+    background: linear-gradient(135deg, rgb(var(--color-primary)) 0%, rgb(var(--color-primary-light)) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -84,13 +198,21 @@
   .overlay-navy {
     position: absolute;
     inset: 0;
-    background-color: rgba(10, 22, 40, 0.75);
+    background-color: rgb(var(--color-navy) / 0.75);
+  }
+
+  html:not(.dark) .overlay-navy {
+    background-color: rgb(var(--color-navy) / 0.55);
   }
 
   .overlay-navy-dark {
     position: absolute;
     inset: 0;
-    background-color: rgba(10, 22, 40, 0.85);
+    background-color: rgb(var(--color-navy) / 0.85);
+  }
+
+  html:not(.dark) .overlay-navy-dark {
+    background-color: rgb(var(--color-navy) / 0.65);
   }
 
   .label-tag {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { collection, getDocs, query, where, limit, deleteDoc, doc, updateDoc, deleteField, writeBatch } from 'firebase/firestore'
 import { db } from '../../firebase/config'
@@ -45,7 +45,7 @@ export default function MyClearanceStatus() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <div className="w-8 h-8 border-2 border-[#C9A84C] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }
@@ -57,12 +57,12 @@ export default function MyClearanceStatus() {
           <h2 className="font-playfair text-2xl font-bold text-white">My Clearance Status</h2>
           <p className="font-montserrat text-sm text-gray-500 mt-1">Track your clearance application.</p>
         </div>
-        <div className="bg-[#0D1C35] border border-white/10 rounded-2xl p-10 text-center">
+        <div className="bg-navy-800 border border-white/10 rounded-2xl p-10 text-center">
           <MdHourglassEmpty className="text-gray-600 text-4xl mx-auto mb-3" />
           <p className="font-montserrat text-sm text-gray-500 mb-5">No clearance application found.</p>
           <button
             onClick={() => navigate('/student/clearance/apply')}
-            className="bg-[#C9A84C] hover:bg-yellow-400 text-[#0A1628] font-montserrat font-bold text-xs px-5 py-2.5 rounded-xl transition"
+            className="bg-gold hover:bg-yellow-400 text-navy font-montserrat font-bold text-xs px-5 py-2.5 rounded-xl transition"
           >
             Apply Now
           </button>
@@ -158,7 +158,7 @@ export default function MyClearanceStatus() {
       </div>
 
       {/* Application details */}
-      <div className="bg-[#0D1C35] border border-white/10 rounded-2xl p-6 space-y-3">
+      <div className="bg-navy-800 border border-white/10 rounded-2xl p-6 space-y-3">
         <p className="font-montserrat text-[10px] uppercase tracking-widest text-gray-600 mb-3">
           Application Details
         </p>
@@ -230,7 +230,7 @@ export default function MyClearanceStatus() {
       {(application.status === 'Rejected' || application.status === 'Pending') && (
         <button
           onClick={() => navigate('/student/clearance/apply')}
-          className="font-montserrat text-xs text-[#C9A84C] hover:underline"
+          className="font-montserrat text-xs text-gold hover:underline"
         >
           {application.status === 'Rejected' ? 'Reapply for Clearance' : 'Edit / Resubmit Application'}
         </button>

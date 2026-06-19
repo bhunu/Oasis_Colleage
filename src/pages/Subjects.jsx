@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import {
   collection, addDoc, getDocs, deleteDoc,
   doc, serverTimestamp,
 } from 'firebase/firestore'
 import { db } from '../firebase/config'
 import toast from 'react-hot-toast'
+import sc from '../utils/schoolConfig'
 import {
   MdAdd, MdDelete, MdClose, MdBook,
   MdSearch, MdExpandMore,
@@ -27,7 +28,7 @@ const CATEGORY_COLORS = {
   Other:      'bg-gray-500/15 text-gray-400 border-gray-500/25',
 }
 
-const sInput = 'w-full bg-white/5 border border-white/10 focus:border-[#C9A84C]/50 focus:outline-none rounded-xl px-4 py-2.5 text-white font-montserrat text-sm placeholder-gray-600 transition-all'
+const sInput = 'w-full bg-white/5 border border-white/10 focus:border-gold/50 focus:outline-none rounded-xl px-4 py-2.5 text-white font-montserrat text-sm placeholder-gray-600 transition-all'
 const sLabel = 'block text-[11px] font-semibold text-gray-500 uppercase tracking-widest font-montserrat mb-1.5'
 
 export default function Subjects() {
@@ -176,12 +177,12 @@ export default function Subjects() {
         <div>
           <h1 className="font-playfair text-2xl font-bold text-white">Subjects</h1>
           <p className="font-montserrat text-xs text-gray-500 mt-0.5">
-            {subjects.length} subject{subjects.length !== 1 ? 's' : ''} offered at Oasis Private College
+            {subjects.length} subject{subjects.length !== 1 ? 's' : ''} offered at {sc.name}
           </p>
         </div>
         <button
           onClick={() => { setShowForm(true); setFormErr({}) }}
-          className="flex items-center gap-2 bg-[#C9A84C] hover:bg-yellow-400 text-[#0A1628] font-montserrat text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all"
+          className="flex items-center gap-2 bg-gold hover:bg-yellow-400 text-navy font-montserrat text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all"
         >
           <MdAdd className="text-base" />
           Add Subject
@@ -190,10 +191,10 @@ export default function Subjects() {
 
       {/* Add subject form */}
       {showForm && (
-        <div className="bg-[#0D1C35] border border-[#C9A84C]/30 rounded-2xl p-6">
+        <div className="bg-navy-800 border border-gold/30 rounded-2xl p-6">
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-2">
-              <MdBook className="text-[#C9A84C]" />
+              <MdBook className="text-gold" />
               <h3 className="font-montserrat text-sm font-bold text-white uppercase tracking-wider">New Subject</h3>
             </div>
             <button onClick={() => { setShowForm(false); setFormErr({}) }} className="text-gray-600 hover:text-gray-300 transition-colors">
@@ -234,7 +235,7 @@ export default function Subjects() {
                   className={sInput}
                 >
                   <option value="">Select category…</option>
-                  {CATEGORIES.map(c => <option key={c} value={c} className="bg-[#0D1C35]">{c}</option>)}
+                  {CATEGORIES.map(c => <option key={c} value={c} className="bg-navy-800">{c}</option>)}
                 </select>
                 {formErr.category && <p className="font-montserrat text-[10px] text-red-400 mt-1">{formErr.category}</p>}
               </div>
@@ -250,7 +251,7 @@ export default function Subjects() {
               <button
                 type="button"
                 onClick={() => setShowClassDrop(v => !v)}
-                className={`w-full flex items-center justify-between bg-white/5 border ${showClassDrop ? 'border-[#C9A84C]/50' : 'border-white/10 hover:border-white/20'} rounded-xl px-4 py-2.5 text-left transition-all`}
+                className={`w-full flex items-center justify-between bg-white/5 border ${showClassDrop ? 'border-gold/50' : 'border-white/10 hover:border-white/20'} rounded-xl px-4 py-2.5 text-left transition-all`}
               >
                 <span className="font-montserrat text-sm text-gray-400">
                   {form.classes.length === 0
@@ -262,17 +263,17 @@ export default function Subjects() {
 
               {/* Dropdown panel */}
               {showClassDrop && (
-                <div className="mt-1 bg-[#0A1628] border border-white/10 rounded-xl overflow-hidden shadow-2xl z-20 relative">
+                <div className="mt-1 bg-navy border border-white/10 rounded-xl overflow-hidden shadow-2xl z-20 relative">
                   <div className="grid grid-cols-2 divide-x divide-white/5">
 
                     {/* O Level */}
                     <div className="p-3">
                       <div className="flex items-center justify-between mb-2 pb-2 border-b border-white/5">
-                        <span className="font-montserrat text-[9px] font-bold uppercase tracking-widest text-[#C9A84C]">O Level</span>
+                        <span className="font-montserrat text-[9px] font-bold uppercase tracking-widest text-gold">O Level</span>
                         <button
                           type="button"
                           onClick={() => toggleGroup('olevel')}
-                          className="font-montserrat text-[9px] text-gray-500 hover:text-[#C9A84C] transition-colors uppercase tracking-wider"
+                          className="font-montserrat text-[9px] text-gray-500 hover:text-gold transition-colors uppercase tracking-wider"
                         >
                           {oLevelClasses.length > 0 && oLevelClasses.every(c => form.classes.includes(c)) ? 'Deselect All' : 'Select All'}
                         </button>
@@ -286,7 +287,7 @@ export default function Subjects() {
                               type="checkbox"
                               checked={form.classes.includes(cls)}
                               onChange={() => toggleClass(cls)}
-                              className="accent-[#C9A84C] w-3 h-3 rounded"
+                              className="accent-gold w-3 h-3 rounded"
                             />
                             <span className="font-montserrat text-[11px] text-gray-400 group-hover:text-white transition-colors">{cls}</span>
                           </label>
@@ -313,7 +314,7 @@ export default function Subjects() {
                               type="checkbox"
                               checked={form.classes.includes(cls)}
                               onChange={() => toggleClass(cls)}
-                              className="accent-[#C9A84C] w-3 h-3 rounded"
+                              className="accent-gold w-3 h-3 rounded"
                             />
                             <span className="font-montserrat text-[11px] text-gray-400 group-hover:text-white transition-colors">{cls}</span>
                           </label>
@@ -330,7 +331,7 @@ export default function Subjects() {
                   {form.classes.map(cls => (
                     <span
                       key={cls}
-                      className="inline-flex items-center gap-1 bg-[#C9A84C]/10 border border-[#C9A84C]/25 text-[#C9A84C] font-montserrat text-[10px] font-semibold px-2.5 py-0.5 rounded-full"
+                      className="inline-flex items-center gap-1 bg-gold/10 border border-gold/25 text-gold font-montserrat text-[10px] font-semibold px-2.5 py-0.5 rounded-full"
                     >
                       {cls}
                       <button type="button" onClick={() => toggleClass(cls)} className="hover:text-white transition-colors leading-none">
@@ -353,7 +354,7 @@ export default function Subjects() {
               <button
                 type="submit"
                 disabled={saving}
-                className="bg-[#C9A84C] hover:bg-yellow-400 disabled:opacity-60 text-[#0A1628] font-montserrat text-xs font-bold uppercase tracking-wider px-6 py-2.5 rounded-xl transition-all"
+                className="bg-gold hover:bg-yellow-400 disabled:opacity-60 text-navy font-montserrat text-xs font-bold uppercase tracking-wider px-6 py-2.5 rounded-xl transition-all"
               >
                 {saving ? 'Saving…' : 'Save Subject'}
               </button>
@@ -371,7 +372,7 @@ export default function Subjects() {
             placeholder="Search subjects…"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2.5 bg-white/5 border border-white/10 focus:border-[#C9A84C]/40 focus:outline-none rounded-xl text-white font-montserrat text-sm placeholder-gray-600 transition-all"
+            className="w-full pl-9 pr-4 py-2.5 bg-white/5 border border-white/10 focus:border-gold/40 focus:outline-none rounded-xl text-white font-montserrat text-sm placeholder-gray-600 transition-all"
           />
         </div>
         <div className="flex gap-1.5 flex-wrap">
@@ -381,7 +382,7 @@ export default function Subjects() {
               onClick={() => setCatFilter(cat)}
               className={`font-montserrat text-[10px] font-semibold uppercase tracking-wider px-3 py-1.5 rounded-lg border transition-all ${
                 catFilter === cat
-                  ? 'bg-[#C9A84C]/15 text-[#C9A84C] border-[#C9A84C]/40'
+                  ? 'bg-gold/15 text-gold border-gold/40'
                   : 'bg-white/5 text-gray-500 border-white/10 hover:text-gray-300'
               }`}
             >
@@ -392,10 +393,10 @@ export default function Subjects() {
       </div>
 
       {/* Subject list */}
-      <div className="bg-[#0D1C35] border border-white/10 rounded-2xl overflow-hidden">
+      <div className="bg-navy-800 border border-white/10 rounded-2xl overflow-hidden">
         {loading ? (
           <div className="py-16 text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#C9A84C] mb-3" />
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gold mb-3" />
             <p className="font-montserrat text-sm text-gray-500">Loading subjects…</p>
           </div>
         ) : filtered.length === 0 ? (
@@ -407,7 +408,7 @@ export default function Subjects() {
             {!search && catFilter === 'All' && (
               <button
                 onClick={() => setShowForm(true)}
-                className="mt-4 font-montserrat text-xs text-[#C9A84C] hover:text-yellow-300 transition-colors"
+                className="mt-4 font-montserrat text-xs text-gold hover:text-yellow-300 transition-colors"
               >
                 + Add your first subject
               </button>

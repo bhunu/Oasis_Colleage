@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+﻿import { useState, useEffect, useMemo } from 'react'
 import { collection, getDocs, orderBy, query } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import {
@@ -6,7 +6,7 @@ import {
   MdAccountBalance, MdFilterAlt,
 } from 'react-icons/md'
 
-const CARD = 'bg-[#0D1C35] border border-white/10 rounded-xl'
+const CARD = 'bg-navy-800 border border-white/10 rounded-xl'
 
 function fmt(v) {
   return `$${Number(v || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
@@ -229,7 +229,7 @@ export default function FinancialLogs() {
                 onClick={() => setTypeFilter(t)}
                 className={`px-3 py-1.5 rounded-lg text-[10px] font-semibold uppercase tracking-wider font-montserrat transition-all ${
                   typeFilter === t
-                    ? 'bg-[#C9A84C]/10 text-[#C9A84C]'
+                    ? 'bg-gold/10 text-gold'
                     : 'text-gray-500 hover:text-gray-300'
                 }`}
               >
@@ -260,20 +260,20 @@ export default function FinancialLogs() {
             type="date"
             value={dateFrom}
             onChange={e => setDateFrom(e.target.value)}
-            className="bg-white/5 border border-white/10 focus:border-[#C9A84C]/50 focus:outline-none rounded-xl px-3 py-2 text-gray-300 font-montserrat text-xs transition-all [color-scheme:dark]"
+            className="bg-white/5 border border-white/10 focus:border-gold/50 focus:outline-none rounded-xl px-3 py-2 text-gray-300 font-montserrat text-xs transition-all [color-scheme:dark]"
           />
           <span className="text-gray-600 text-xs">to</span>
           <input
             type="date"
             value={dateTo}
             onChange={e => setDateTo(e.target.value)}
-            className="bg-white/5 border border-white/10 focus:border-[#C9A84C]/50 focus:outline-none rounded-xl px-3 py-2 text-gray-300 font-montserrat text-xs transition-all [color-scheme:dark]"
+            className="bg-white/5 border border-white/10 focus:border-gold/50 focus:outline-none rounded-xl px-3 py-2 text-gray-300 font-montserrat text-xs transition-all [color-scheme:dark]"
           />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search name, reg, receipt no, description…"
-            className="bg-white/5 border border-white/10 focus:border-[#C9A84C]/50 focus:outline-none rounded-xl px-3 py-2 text-white font-montserrat text-xs placeholder-gray-600 w-64 transition-all"
+            className="bg-white/5 border border-white/10 focus:border-gold/50 focus:outline-none rounded-xl px-3 py-2 text-white font-montserrat text-xs placeholder-gray-600 w-64 transition-all"
           />
         </div>
       </div>
@@ -282,7 +282,7 @@ export default function FinancialLogs() {
       <div className={`${CARD} overflow-hidden`}>
         {loading ? (
           <div className="py-16 text-center">
-            <div className="w-6 h-6 border-2 border-[#C9A84C] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+            <div className="w-6 h-6 border-2 border-gold border-t-transparent rounded-full animate-spin mx-auto mb-3" />
             <p className="font-montserrat text-gray-500 text-sm">Loading financial logs…</p>
           </div>
         ) : loadError ? (
@@ -298,7 +298,7 @@ export default function FinancialLogs() {
         ) : (
           <div className="overflow-x-auto max-h-[60vh]">
             <table className="w-full text-xs font-montserrat">
-              <thead className="sticky top-0 bg-[#0D1C35] border-b border-white/10 z-10">
+              <thead className="sticky top-0 bg-navy-800 border-b border-white/10 z-10">
                 <tr>
                   {[
                     'Timestamp', 'Type', 'Performed By',
@@ -363,7 +363,7 @@ export default function FinancialLogs() {
 
                       <td className="py-3 px-4 max-w-[160px]">
                         {log.receiptNumber && (
-                          <p className="text-[#C9A84C] font-semibold">{log.receiptNumber}</p>
+                          <p className="text-gold font-semibold">{log.receiptNumber}</p>
                         )}
                         {log.reference && (
                           <p className="text-gray-500 text-[10px] truncate" title={log.reference}>

@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react'
-import { collection, getDocs, doc, updateDoc, serverTimestamp, orderBy, query } from 'firebase/firestore'
+﻿import { useState, useEffect } from 'react'
+import { collection, getDocs, addDoc, doc, updateDoc, serverTimestamp, query, where, orderBy, limit } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import toast from 'react-hot-toast'
 import { MdCheckCircle, MdCancel, MdOpenInNew, MdHourglassEmpty } from 'react-icons/md'
+import { getNextReceiptNumber } from '../../utils/receiptCounter'
 
-const CARD  = 'bg-[#0D1C35] border border-white/10 rounded-xl p-6'
+const CARD  = 'bg-navy-800 border border-white/10 rounded-xl p-6'
 const TEAL  = '#0F6E56'
 
 const STATUS_BADGE = {
@@ -16,6 +17,7 @@ const STATUS_BADGE = {
 function getBursarSession() {
   try { return JSON.parse(sessionStorage.getItem('bursarSession') || '{}') } catch { return {} }
 }
+
 
 function fmt(v) {
   return `$${Number(v || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
@@ -47,13 +49,67 @@ export default function ReviewPOP() {
   const handleApprove = async (pop) => {
     setSubmitting(true)
     try {
-      await updateDoc(doc(db, 'proofOfPayments', pop.id), {
-        status:     'approved',
-        reviewedBy: session.name || 'Bursar',
-        reviewedAt: serverTimestamp(),
+      const receiptNum = await getNextReceiptNumber()
+
+      // Find and credit the student's active fee account
+      const accSnap = await getDocs(query(
+        collection(db, 'feeAccounts'),
+        where('reg_number', '==', pop.reg_number),
+        limit(1)
+      ))
+
+      if (!accSnap.empty) {
+        const acctDoc  = accSnap.docs[0]
+        const acctData = acctDoc.data()
+        const paymentEntry = {
+          amount:        pop.amount,
+          date:          new Date().toISOString().split('T')[0],
+          method:        pop.method || 'online',
+          reference:     pop.reference || '',
+          receiptNumber: receiptNum,
+          recordedAt:    new Date().toISOString(),
+        }
+        const payments   = [...(acctData.payments || []), paymentEntry]
+        const totalPaid  = payments.reduce((s, p) => s + Number(p.amount), 0)
+        const balance    = Math.abs((acctData.termFees || 0) - totalPaid)
+        const balanceType = totalPaid >= (acctData.termFees || 0)
+          ? (totalPaid > (acctData.termFees || 0) ? 'credit' : 'nil')
+          : 'debit'
+
+        await updateDoc(doc(db, 'feeAccounts', acctDoc.id), {
+          payments, totalPaid, balance, balanceType,
+          updatedBy: session.name || 'Bursar',
+          updatedAt: serverTimestamp(),
+        })
+      }
+
+      // Create an official receipt
+      await addDoc(collection(db, 'receipts'), {
+        receiptNumber: receiptNum,
+        studentName:   pop.studentName || '',
+        reg_number:    pop.reg_number  || '',
+        class:         pop.class       || '',
+        amount:        pop.amount,
+        paymentMethod: pop.method      || 'online',
+        reference:     pop.reference   || '',
+        notes:         'Auto-generated from approved proof of payment',
+        term:          pop.term        || '',
+        issuedAt:      serverTimestamp(),
+        issuedBy:      session.name    || 'Bursar',
       })
-      setPops(prev => prev.map(p => p.id === pop.id ? { ...p, status: 'approved' } : p))
-      toast.success('POP approved')
+
+      // Mark POP approved with receipt number
+      await updateDoc(doc(db, 'proofOfPayments', pop.id), {
+        status:        'approved',
+        receiptNumber: receiptNum,
+        reviewedBy:    session.name || 'Bursar',
+        reviewedAt:    serverTimestamp(),
+      })
+
+      setPops(prev => prev.map(p =>
+        p.id === pop.id ? { ...p, status: 'approved', receiptNumber: receiptNum } : p
+      ))
+      toast.success(`POP approved — Receipt ${receiptNum} issued`)
     } catch {
       toast.error('Failed to approve')
     } finally {
@@ -225,6 +281,9 @@ export default function ReviewPOP() {
               {pop.status !== 'pending' && pop.reviewedBy && (
                 <p className="font-montserrat text-[10px] text-gray-600 mt-3">
                   Reviewed by {pop.reviewedBy} · {fmtDate(pop.reviewedAt)}
+                  {pop.receiptNumber && (
+                    <span className="ml-2 text-emerald-500">· Receipt {pop.receiptNumber}</span>
+                  )}
                 </p>
               )}
             </div>

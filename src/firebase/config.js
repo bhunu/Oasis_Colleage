@@ -4,15 +4,13 @@ import { getAuth, browserSessionPersistence, setPersistence } from 'firebase/aut
 import { getStorage } from 'firebase/storage'
 import { getFunctions } from 'firebase/functions'
 
-// Replace these values with your Firebase project config
-// from: https://console.firebase.google.com → Project Settings → Your apps
 const firebaseConfig = {
-  apiKey:            "AIzaSyD0XU3EbtEvTBnQW88-DJfDR9pDGF7wNJU",
-  authDomain:        "oasis-818f2.firebaseapp.com",
-  projectId:         "oasis-818f2",
-  storageBucket:     "oasis-818f2.firebasestorage.app",
-  messagingSenderId: "511056970675",
-  appId:             "1:511056970675:web:314d38c980c99335d901c6",
+  apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId:         import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket:     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId:             import.meta.env.VITE_FIREBASE_APP_ID,
 }
 
 const app = initializeApp(firebaseConfig)

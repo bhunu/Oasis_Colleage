@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+﻿import { useState, useEffect, useMemo } from 'react'
 import { collection, getDocs, query, where, updateDoc, doc, increment } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import { useStudent } from '../../context/StudentContext'
@@ -6,7 +6,7 @@ import {
   MdMenuBook, MdAssignment, MdDownload, MdSearch, MdFilterList,
 } from 'react-icons/md'
 
-const GOLD = '#C9A84C'
+const GOLD = 'var(--color-primary-hex)'
 
 function fmtDate(ts) {
   if (!ts) return ''
@@ -37,7 +37,7 @@ function TypeBadge({ type }) {
 
 function MaterialCard({ item, onDownload }) {
   return (
-    <div className="bg-[#0D1C35] border border-white/10 rounded-xl p-5 flex flex-col gap-3 hover:border-white/20 transition">
+    <div className="bg-navy-800 border border-white/10 rounded-xl p-5 flex flex-col gap-3 hover:border-white/20 transition">
       {/* Icon + type */}
       <div className="flex items-start justify-between gap-2">
         <span className="text-3xl">{typeIcon(item.fileName)}</span>
@@ -55,7 +55,7 @@ function MaterialCard({ item, onDownload }) {
       {/* Meta */}
       <div className="space-y-1 text-xs text-gray-500 font-montserrat">
         <div className="flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#C9A84C] shrink-0" />
+          <span className="w-1.5 h-1.5 rounded-full bg-gold shrink-0" />
           <span className="font-medium text-gray-400">{item.subject}</span>
         </div>
         <p>{item.term === 'all' ? 'All Terms' : item.term} · {item.year}</p>
@@ -69,10 +69,7 @@ function MaterialCard({ item, onDownload }) {
         target="_blank"
         rel="noopener noreferrer"
         onClick={() => onDownload(item)}
-        className="flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold font-montserrat transition"
-        style={{ background: `${GOLD}18`, color: GOLD, border: `1px solid ${GOLD}44` }}
-        onMouseEnter={e => { e.currentTarget.style.background = `${GOLD}30` }}
-        onMouseLeave={e => { e.currentTarget.style.background = `${GOLD}18` }}
+        className="flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold font-montserrat transition bg-gold/10 text-gold border border-gold/25 hover:bg-gold/20"
       >
         <MdDownload className="text-base" />
         Download
@@ -158,7 +155,7 @@ export default function StudentMaterials() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-48">
-        <div className="w-8 h-8 rounded-full border-2 border-[#C9A84C]/20 border-t-[#C9A84C] animate-spin" />
+        <div className="w-8 h-8 rounded-full border-2 border-gold/20 border-t-gold animate-spin" />
       </div>
     )
   }
@@ -170,12 +167,12 @@ export default function StudentMaterials() {
         <h1 className="text-2xl font-bold text-white font-playfair">Study Materials</h1>
         <p className="text-sm text-gray-500 font-montserrat mt-0.5">
           Notes and past exam papers from your teachers
-          {studentClass && <span className="text-[#C9A84C]"> · {studentClass}</span>}
+          {studentClass && <span className="text-gold"> · {studentClass}</span>}
         </p>
       </div>
 
       {/* Filters */}
-      <div className="bg-[#0D1C35] border border-white/10 rounded-xl p-4 space-y-3">
+      <div className="bg-navy-800 border border-white/10 rounded-xl p-4 space-y-3">
         {/* Search */}
         <div className="relative">
           <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-lg" />
@@ -184,7 +181,7 @@ export default function StudentMaterials() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search by title or subject…"
-            className="w-full bg-black/30 border border-white/10 rounded-lg pl-10 pr-4 py-2.5 text-white text-sm font-montserrat outline-none focus:border-[#C9A84C]/40 placeholder-gray-700"
+            className="w-full bg-black/30 border border-white/10 rounded-lg pl-10 pr-4 py-2.5 text-white text-sm font-montserrat outline-none focus:border-gold/40 placeholder-gray-700"
           />
         </div>
 
@@ -198,7 +195,7 @@ export default function StudentMaterials() {
               key={v}
               onClick={() => setTypeFilter(v)}
               className={`px-3 py-1 rounded-full text-xs font-medium font-montserrat transition ${
-                typeFilter === v ? 'text-[#0A1628]' : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                typeFilter === v ? 'text-navy' : 'bg-white/5 text-gray-400 hover:bg-white/10'
               }`}
               style={typeFilter === v ? { background: GOLD } : {}}
             >

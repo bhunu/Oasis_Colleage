@@ -1,13 +1,13 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import { MdAccessTime, MdKey, MdSave } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
-const GOLD = '#C9A84C'
+const GOLD = 'var(--color-primary-hex)'
 
 const DEFAULTS = {
-  sessionTimeoutMinutes: 4,
+  sessionTimeoutMinutes: 20,
   otpExpiryHours:        24,
 }
 
@@ -19,10 +19,10 @@ function fmtTs(ts) {
 
 function SettingsCard({ icon: Icon, title, children }) {
   return (
-    <div className="bg-[#0D1C35] border border-white/10 rounded-xl p-6">
+    <div className="bg-navy-800 border border-white/10 rounded-xl p-6">
       <div className="flex items-center gap-3 mb-5">
-        <div className="w-9 h-9 bg-[#C9A84C]/10 rounded-lg flex items-center justify-center shrink-0">
-          <Icon className="text-[#C9A84C] text-lg" />
+        <div className="w-9 h-9 bg-gold/10 rounded-lg flex items-center justify-center shrink-0">
+          <Icon className="text-gold text-lg" />
         </div>
         <h3 className="font-playfair font-semibold text-white text-lg">{title}</h3>
       </div>
@@ -51,12 +51,14 @@ export default function PortalSettings() {
   }, [])
 
   const save = async (key, value) => {
+    const num = Number(value)
+    if (isNaN(num) || num < 1) return toast.error('Value must be at least 1')
     setSaving(p => ({ ...p, [key]: true }))
     try {
       const adminName = JSON.parse(sessionStorage.getItem('adminSession') || '{}').name || 'Admin'
       const now       = serverTimestamp()
       await setDoc(doc(db, 'portalSettings', 'main'), {
-        [key]: Number(value),
+        [key]: num,
         updatedAt: now,
         updatedBy: adminName,
       }, { merge: true })
@@ -84,13 +86,13 @@ export default function PortalSettings() {
           type="number" min={min} max={max}
           value={values[field]}
           onChange={e => setValues(p => ({ ...p, [field]: Number(e.target.value) }))}
-          className="w-28 bg-white/5 border border-white/10 focus:border-[#C9A84C]/50 focus:outline-none rounded-xl px-4 py-2.5 text-white font-montserrat text-sm text-right"
+          className="w-28 bg-white/5 border border-white/10 focus:border-gold/50 focus:outline-none rounded-xl px-4 py-2.5 text-white font-montserrat text-sm text-right"
         />
         <span className="text-gray-400 font-montserrat text-sm">{unit}</span>
         <button
           onClick={() => save(field, values[field])}
           disabled={saving[field] || !loaded}
-          className="ml-auto flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold font-montserrat text-[#0A1628] transition disabled:opacity-50"
+          className="ml-auto flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold font-montserrat text-navy transition disabled:opacity-50"
           style={{ backgroundColor: GOLD }}
         >
           <MdSave className="text-base" />
@@ -104,7 +106,7 @@ export default function PortalSettings() {
     return (
       <div className="space-y-4">
         {[1, 2, 3].map(i => (
-          <div key={i} className="bg-[#0D1C35] border border-white/10 rounded-xl p-6 h-40 animate-pulse" />
+          <div key={i} className="bg-navy-800 border border-white/10 rounded-xl p-6 h-40 animate-pulse" />
         ))}
       </div>
     )

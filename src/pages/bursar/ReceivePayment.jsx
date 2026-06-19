@@ -1,17 +1,19 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   collection, getDocs, getDoc, query, where, doc,
-  updateDoc, addDoc, serverTimestamp, orderBy, limit,
+  updateDoc, addDoc, serverTimestamp,
 } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import toast from 'react-hot-toast'
 import { QRCodeSVG } from 'qrcode.react'
+import { getNextReceiptNumber } from '../../utils/receiptCounter'
+import sc from '../../utils/schoolConfig'
 
 const TEAL  = '#0F6E56'
 const INPUT = 'w-full bg-white/5 border border-white/10 focus:border-[#0F6E56]/50 focus:outline-none rounded-xl px-4 py-3 text-white font-montserrat text-sm placeholder-gray-600 transition-all'
 const LABEL = 'block text-[10px] font-semibold uppercase tracking-widest text-gray-500 font-montserrat mb-1.5'
-const CARD  = 'bg-[#0D1C35] border border-white/10 rounded-xl p-6'
+const CARD  = 'bg-navy-800 border border-white/10 rounded-xl p-6'
 
 const METHOD_LABEL = { cash: 'Cash', bank: 'Bank Transfer', mobile: 'Mobile Money' }
 
@@ -27,14 +29,6 @@ function formatDate(ts) {
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })
 }
 
-async function getNextReceiptNumber() {
-  const snap = await getDocs(query(collection(db, 'receipts'), orderBy('issuedAt', 'desc'), limit(1)))
-  if (snap.empty) return `RCP-${new Date().getFullYear()}-0001`
-  const last  = snap.docs[0].data().receiptNumber || ''
-  const parts = last.split('-')
-  const num   = parseInt(parts[parts.length - 1] || '0', 10) + 1
-  return `RCP-${new Date().getFullYear()}-${String(num).padStart(4, '0')}`
-}
 
 export default function ReceivePayment() {
   const navigate      = useNavigate()
@@ -82,7 +76,7 @@ export default function ReceivePayment() {
       setSearching(false)
     }
     autoSelect()
-  }, [])
+  }, [searchParams])
 
   const handleSearch = async () => {
     const term = search.trim()
@@ -283,8 +277,8 @@ export default function ReceivePayment() {
                 <div className="w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-3" style={{ backgroundColor: TEAL }}>
                   <span className="text-white font-bold text-xl">O</span>
                 </div>
-                <h2 className="font-playfair text-xl font-bold text-white tracking-wide">OASIS PRIVATE COLLEGE</h2>
-                <p className="text-xs text-gray-400 uppercase tracking-[0.2em] mt-0.5">Checheche, Zimbabwe</p>
+                <h2 className="font-playfair text-xl font-bold text-white tracking-wide">{sc.name.toUpperCase()}</h2>
+                <p className="text-xs text-gray-400 uppercase tracking-[0.2em] mt-0.5">{sc.address}</p>
                 <div className="mt-3 inline-flex px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest" style={{ backgroundColor: `${TEAL}22`, color: TEAL }}>
                   Official Receipt
                 </div>
@@ -369,7 +363,7 @@ export default function ReceivePayment() {
               {/* Footer */}
               <div className="border-t border-white/10 mt-4 pt-4 text-xs text-gray-500 text-center">
                 Issued by: <span className="text-gray-400">{receiptData.issuedBy}</span>
-                <br />This is an official receipt of Oasis Private College.
+                <br />This is an official receipt of {sc.name}.
               </div>
             </div>
 

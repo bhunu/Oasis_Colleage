@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { collection, getDocs, doc, getDoc, setDoc, query, where, limit, serverTimestamp } from 'firebase/firestore'
 import { db } from '../firebase/config'
 import { MdArrowBack, MdPerson, MdReceipt, MdEdit, MdSave, MdClose, MdSettings } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
-const CARD = 'bg-[#0D1C35] border border-white/10 rounded-2xl'
+const CARD = 'bg-navy-800 border border-white/10 rounded-2xl'
 const TH   = 'text-left py-3 px-4 text-[10px] font-semibold text-gray-500 uppercase tracking-widest font-montserrat'
 const TD   = 'py-3 px-4 text-sm text-gray-400 font-montserrat'
 const TD_W = 'py-3 px-4 text-sm text-white font-montserrat'
@@ -144,13 +144,13 @@ export default function Fees() {
         <div className={`${CARD} p-6`}>
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-2">
-              <MdSettings size={18} className="text-[#C9A84C]" />
+              <MdSettings size={18} className="text-gold" />
               <h3 className="font-playfair font-semibold text-white">Fees Per Term</h3>
             </div>
             {!feesEditing && (
               <button
                 onClick={() => setFeesEditing(true)}
-                className="flex items-center gap-1.5 text-xs font-montserrat text-[#C9A84C] hover:text-white border border-[#C9A84C]/30 hover:border-[#C9A84C]/60 px-3 py-1.5 rounded-lg transition-colors"
+                className="flex items-center gap-1.5 text-xs font-montserrat text-gold hover:text-white border border-gold/30 hover:border-gold/60 px-3 py-1.5 rounded-lg transition-colors"
               >
                 <MdEdit size={13} />
                 Edit
@@ -160,7 +160,7 @@ export default function Fees() {
 
           {feesLoading ? (
             <div className="flex justify-center py-6">
-              <div className="w-6 h-6 border-2 border-[#C9A84C] border-t-transparent rounded-full animate-spin" />
+              <div className="w-6 h-6 border-2 border-gold border-t-transparent rounded-full animate-spin" />
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-4">
@@ -172,7 +172,7 @@ export default function Fees() {
                     min="0"
                     value={feesDraft.oLevelFeesPerTerm}
                     onChange={e => setFeesDraft(p => ({ ...p, oLevelFeesPerTerm: e.target.value }))}
-                    className="w-full bg-white/5 border border-white/15 focus:border-[#C9A84C]/50 rounded-lg px-3 py-2 text-white text-sm font-montserrat outline-none"
+                    className="w-full bg-white/5 border border-white/15 focus:border-gold/50 rounded-lg px-3 py-2 text-white text-sm font-montserrat outline-none"
                   />
                 ) : (
                   <p className="font-playfair font-bold text-2xl text-white">
@@ -188,7 +188,7 @@ export default function Fees() {
                     min="0"
                     value={feesDraft.aLevelFeesPerTerm}
                     onChange={e => setFeesDraft(p => ({ ...p, aLevelFeesPerTerm: e.target.value }))}
-                    className="w-full bg-white/5 border border-white/15 focus:border-[#C9A84C]/50 rounded-lg px-3 py-2 text-white text-sm font-montserrat outline-none"
+                    className="w-full bg-white/5 border border-white/15 focus:border-gold/50 rounded-lg px-3 py-2 text-white text-sm font-montserrat outline-none"
                   />
                 ) : (
                   <p className="font-playfair font-bold text-2xl text-white">
@@ -204,7 +204,7 @@ export default function Fees() {
               <button
                 onClick={handleFeesSave}
                 disabled={feesSaving}
-                className="flex items-center gap-1.5 bg-[#C9A84C] hover:bg-[#b8963d] text-[#0D1C35] font-montserrat font-semibold text-sm px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+                className="flex items-center gap-1.5 bg-gold hover:bg-[#b8963d] text-navy-800 font-montserrat font-semibold text-sm px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
               >
                 <MdSave size={15} />
                 {feesSaving ? 'Saving…' : 'Save Changes'}
@@ -224,7 +224,7 @@ export default function Fees() {
         <div className={`${CARD} p-8 text-center`}>
           <p className="font-montserrat text-sm text-gray-500">
             Select a student from the{' '}
-            <button onClick={() => navigate('/students')} className="text-[#C9A84C] hover:underline">
+            <button onClick={() => navigate('/students')} className="text-gold hover:underline">
               Students page
             </button>{' '}
             to view their fee account.
@@ -237,7 +237,7 @@ export default function Fees() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <div className="w-8 h-8 border-2 border-[#C9A84C] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }
@@ -267,16 +267,16 @@ export default function Fees() {
       <div className={`${CARD} p-6`}>
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-[#C9A84C]/15 rounded-full flex items-center justify-center shrink-0">
-              <MdPerson size={26} className="text-[#C9A84C]" />
+            <div className="w-12 h-12 bg-gold/15 rounded-full flex items-center justify-center shrink-0">
+              <MdPerson size={26} className="text-gold" />
             </div>
             <div>
               <h2 className="font-playfair text-xl font-bold text-white leading-tight">
                 {student?.fullName || '—'}
               </h2>
-              <p className="font-mono text-[#C9A84C] text-sm font-semibold">{student?.reg_number}</p>
+              <p className="font-mono text-gold text-sm font-semibold">{student?.reg_number}</p>
               {student?.class && (
-                <span className="inline-block mt-1 bg-[#C9A84C]/10 border border-[#C9A84C]/20 text-[#C9A84C] text-[10px] font-montserrat font-semibold px-2.5 py-0.5 rounded-full">
+                <span className="inline-block mt-1 bg-gold/10 border border-gold/20 text-gold text-[10px] font-montserrat font-semibold px-2.5 py-0.5 rounded-full">
                   {student.class}
                 </span>
               )}
@@ -324,7 +324,7 @@ export default function Fees() {
       {account ? (
         <div className={`${CARD} overflow-hidden`}>
           <div className="flex items-center gap-2 px-6 py-4 border-b border-white/10">
-            <MdReceipt className="text-[#C9A84C]" />
+            <MdReceipt className="text-gold" />
             <h3 className="font-playfair font-semibold text-white">Payment History</h3>
             {term && <span className="font-montserrat text-xs text-gray-500 ml-auto">{term}</span>}
           </div>

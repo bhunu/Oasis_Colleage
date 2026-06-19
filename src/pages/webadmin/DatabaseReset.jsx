@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+﻿import { useState, useRef, useEffect } from 'react'
 import { collection, getDocs, deleteDoc, writeBatch } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import {
@@ -183,6 +183,11 @@ function ProgressRow({ item }) {
   )
 }
 
+function getAdminRole() {
+  try { return JSON.parse(sessionStorage.getItem('adminSession') || '{}').role ?? null }
+  catch { return null }
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function DatabaseReset() {
@@ -191,6 +196,21 @@ export default function DatabaseReset() {
   const [phrase,   setPhrase]   = useState('')
   const [progress, setProgress] = useState([])
   const [totalDeleted, setTotalDeleted] = useState(0)
+
+  if (getAdminRole() !== 'admin') {
+    return (
+      <div className="max-w-lg mx-auto px-4 py-16 text-center">
+        <div className="bg-navy-800 border border-red-800/40 rounded-2xl p-10 space-y-4">
+          <MdBlock className="text-red-500 text-5xl mx-auto" />
+          <h2 className="font-playfair text-2xl font-bold text-white">Access Denied</h2>
+          <p className="font-montserrat text-sm text-gray-400 leading-relaxed">
+            The database reset tool is restricted to the <span className="text-white font-semibold">Admin</span> role only.
+            Contact the system administrator if you need access.
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   // ── Selection helpers ───────────────────────────────────────────────────────
 
@@ -280,7 +300,7 @@ export default function DatabaseReset() {
         </div>
 
         {/* Global controls */}
-        <div className="bg-[#0D1C35] border border-white/10 rounded-xl px-5 py-3 flex items-center justify-between gap-4">
+        <div className="bg-navy-800 border border-white/10 rounded-xl px-5 py-3 flex items-center justify-between gap-4">
           <p className="text-sm text-gray-400 font-montserrat">
             <span className="font-bold text-white">{selectedCount}</span> of {ALL_NAMES.length} tables selected
           </p>
@@ -309,7 +329,7 @@ export default function DatabaseReset() {
             const someOn    = numOn > 0 && !allOn
 
             return (
-              <div key={group.key} className="bg-[#0D1C35] border border-white/10 rounded-xl overflow-hidden">
+              <div key={group.key} className="bg-navy-800 border border-white/10 rounded-xl overflow-hidden">
                 {/* Group header */}
                 <label className="flex items-center gap-3 px-5 py-3 cursor-pointer hover:bg-white/5 transition border-b border-white/5">
                   <IndeterminateCheckbox
@@ -343,7 +363,7 @@ export default function DatabaseReset() {
           })}
 
           {/* Users — special */}
-          <div className="bg-[#0D1C35] border border-amber-900/40 rounded-xl overflow-hidden">
+          <div className="bg-navy-800 border border-amber-900/40 rounded-xl overflow-hidden">
             <label className="flex items-start gap-3 px-5 py-3.5 cursor-pointer hover:bg-white/5 transition">
               <input
                 type="checkbox"
@@ -361,7 +381,7 @@ export default function DatabaseReset() {
         </div>
 
         {/* Action bar */}
-        <div className="sticky bottom-0 bg-[#0A1628] border-t border-white/10 -mx-4 px-4 py-4 flex items-center gap-3">
+        <div className="sticky bottom-0 bg-navy border-t border-white/10 -mx-4 px-4 py-4 flex items-center gap-3">
           <button
             onClick={() => window.history.back()}
             className="px-5 py-2.5 rounded-lg border border-white/10 text-gray-400 text-sm font-montserrat hover:bg-white/5 transition"
@@ -397,7 +417,7 @@ export default function DatabaseReset() {
 
     return (
       <div className="max-w-2xl mx-auto px-4 py-10">
-        <div className="bg-[#0D1C35] border border-red-800/40 rounded-2xl p-8 space-y-6">
+        <div className="bg-navy-800 border border-red-800/40 rounded-2xl p-8 space-y-6">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-full bg-red-700/20 flex items-center justify-center shrink-0">
               <MdDeleteForever className="text-red-400 text-xl" />
@@ -472,7 +492,7 @@ export default function DatabaseReset() {
 
     return (
       <div className="max-w-2xl mx-auto px-4 py-10">
-        <div className="bg-[#0D1C35] border border-white/10 rounded-2xl p-8">
+        <div className="bg-navy-800 border border-white/10 rounded-2xl p-8">
           <div className="flex items-center gap-3 mb-6">
             <MdLoop className="text-amber-400 text-3xl animate-spin" />
             <div>
@@ -497,7 +517,7 @@ export default function DatabaseReset() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-10">
-      <div className="bg-[#0D1C35] border border-emerald-700/40 rounded-2xl p-8 space-y-6">
+      <div className="bg-navy-800 border border-emerald-700/40 rounded-2xl p-8 space-y-6">
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 rounded-full bg-emerald-700/20 flex items-center justify-center shrink-0">
             <MdCheckCircle className="text-emerald-400 text-xl" />
@@ -530,7 +550,7 @@ export default function DatabaseReset() {
 
         <a
           href="/admin"
-          className="block w-full py-2.5 rounded-lg bg-[#C9A84C]/10 border border-[#C9A84C]/30 text-[#C9A84C] text-sm font-semibold font-montserrat text-center hover:bg-[#C9A84C]/20 transition"
+          className="block w-full py-2.5 rounded-lg bg-gold/10 border border-gold/30 text-gold text-sm font-semibold font-montserrat text-center hover:bg-gold/20 transition"
         >
           Return to Dashboard
         </a>

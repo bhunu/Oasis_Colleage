@@ -1,18 +1,18 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { collection, getDocs } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import toast from 'react-hot-toast'
 
 const TEAL = '#0F6E56'
-const CARD  = 'bg-[#0D1C35] border border-white/10 rounded-xl p-6'
+const CARD  = 'bg-navy-800 border border-white/10 rounded-xl p-6'
 const TH    = 'text-left py-3 px-4 text-[10px] font-semibold text-gray-500 uppercase tracking-widest font-montserrat'
 const TD    = 'py-3 px-4 text-sm text-gray-300 font-montserrat'
 const GRID  = { stroke: 'rgba(255,255,255,0.06)', strokeDasharray: '3 3' }
 const TICK  = { fill: '#6b7280', fontSize: 11 }
 const AXLN  = { stroke: 'rgba(255,255,255,0.08)' }
 const TIP   = {
-  contentStyle: { backgroundColor: '#0D1C35', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, color: '#fff', fontSize: 12 },
+  contentStyle: { backgroundColor: 'var(--color-navy-800-hex)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, color: '#fff', fontSize: 12 },
   labelStyle: { color: '#0F6E56' },
   cursor: { fill: 'rgba(255,255,255,0.04)' },
 }
@@ -99,7 +99,7 @@ export default function CollectionReport() {
           { label: 'No. Receipts',    value: filtered.length,        color: '#378ADD' },
           { label: 'Average Payment', value: filtered.length ? fmt(totalCollected / filtered.length) : '$0.00', color: '#EF9F27' },
         ].map(({ label, value, color }) => (
-          <div key={label} className="bg-[#0D1C35] border border-white/10 rounded-xl p-5">
+          <div key={label} className="bg-navy-800 border border-white/10 rounded-xl p-5">
             <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest font-montserrat mb-1">{label}</p>
             <p className="text-3xl font-bold font-playfair" style={{ color }}>{value}</p>
           </div>

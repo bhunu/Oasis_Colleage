@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { collection, getDocs, query, where, orderBy } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import { useTermDates, fmtTermDate, isTermEnded } from '../../hooks/useTermDates'
 
 const TEAL = '#0F6E56'
-const CARD  = 'bg-[#0D1C35] border border-white/10 rounded-xl p-6'
+const CARD  = 'bg-navy-800 border border-white/10 rounded-xl p-6'
 const TH    = 'text-left py-3 px-4 text-[10px] font-semibold text-gray-500 uppercase tracking-widest font-montserrat'
 const TD    = 'py-3 px-4 text-sm text-gray-300 font-montserrat'
 const TD_W  = 'py-3 px-4 text-sm text-white font-montserrat'
@@ -60,7 +60,7 @@ export default function BursarArrears() {
           { label: 'Total Amount',     value: fmt(totalArrears), color: '#E24B4A' },
           { label: 'Avg per Student',  value: accounts.length ? fmt(totalArrears / accounts.length) : '$0.00', color: '#EF9F27' },
         ].map(({ label, value, color }) => (
-          <div key={label} className="bg-[#0D1C35] border border-white/10 rounded-xl p-5">
+          <div key={label} className="bg-navy-800 border border-white/10 rounded-xl p-5">
             <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest font-montserrat mb-1">{label}</p>
             <p className="text-3xl font-bold font-playfair" style={{ color }}>{value}</p>
           </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+﻿import { useState, useEffect, useCallback } from 'react'
 import {
   collection, getDocs, query, where,
   doc, updateDoc, setDoc, addDoc, getDoc, serverTimestamp, limit,
@@ -284,7 +284,7 @@ export default function ClearanceManagementPage() {
           </button>
 
           {showNotifs && (
-            <div className="absolute right-0 top-12 w-80 bg-[#0D1C35] border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden">
+            <div className="absolute right-0 top-12 w-80 bg-navy-800 border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden">
               <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
                 <span className="font-montserrat text-xs font-semibold text-white">Notifications</span>
                 <button onClick={() => setShowNotifs(false)}><MdClose className="text-gray-500" /></button>
@@ -314,7 +314,7 @@ export default function ClearanceManagementPage() {
       </div>
 
       {/* Applications table */}
-      <div className="bg-[#0D1C35] border border-white/10 rounded-2xl overflow-hidden">
+      <div className="bg-navy-800 border border-white/10 rounded-2xl overflow-hidden">
         <div className="flex justify-between items-center px-6 py-4 border-b border-white/10">
           <h3 className="font-playfair font-semibold text-white">Pending Applications</h3>
           <span className="font-montserrat text-xs text-gray-500">{applications.length} pending</span>
@@ -322,7 +322,7 @@ export default function ClearanceManagementPage() {
 
         {loading ? (
           <div className="py-16 text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#C9A84C] mb-3" />
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gold mb-3" />
             <p className="font-montserrat text-sm text-gray-500">Loading applications…</p>
           </div>
         ) : applications.length === 0 ? (
@@ -345,7 +345,7 @@ export default function ClearanceManagementPage() {
                 {applications.map(app => (
                   <tr key={app.id} className="border-b border-white/5 hover:bg-white/[0.02]">
                     <td className="py-3.5 px-6 font-montserrat font-semibold text-white text-sm">{app.studentName}</td>
-                    <td className="py-3.5 px-4 font-mono text-[#C9A84C] text-xs font-semibold">{app.reg_number}</td>
+                    <td className="py-3.5 px-4 font-mono text-gold text-xs font-semibold">{app.reg_number}</td>
                     <td className="py-3.5 px-4 font-montserrat text-gray-400 text-sm">{app.class || '—'}</td>
                     <td className="py-3.5 px-4">
                       <span className={`inline-flex items-center border rounded-full text-[10px] font-montserrat font-semibold px-2.5 py-1 ${EXIT_COLORS[app.exitType] || 'bg-white/5 text-gray-400 border-white/10'}`}>
@@ -361,7 +361,7 @@ export default function ClearanceManagementPage() {
                     <td className="py-3.5 px-4">
                       <button
                         onClick={() => openReview(app)}
-                        className="bg-[#C9A84C] hover:bg-yellow-400 text-[#0A1628] font-montserrat font-bold text-xs px-3 py-1.5 rounded-lg transition"
+                        className="bg-gold hover:bg-yellow-400 text-navy font-montserrat font-bold text-xs px-3 py-1.5 rounded-lg transition"
                       >
                         Review & Issue
                       </button>
@@ -377,11 +377,11 @@ export default function ClearanceManagementPage() {
       {/* Review Modal */}
       {selected && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-start justify-center p-4 overflow-y-auto">
-          <div className="bg-[#0A1628] border border-white/10 rounded-2xl w-full max-w-2xl my-8 overflow-hidden">
+          <div className="bg-navy border border-white/10 rounded-2xl w-full max-w-2xl my-8 overflow-hidden">
             {/* Modal header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
               <div className="flex items-center gap-3">
-                <MdVerifiedUser className="text-[#C9A84C] text-xl" />
+                <MdVerifiedUser className="text-gold text-xl" />
                 <h3 className="font-playfair font-bold text-white">Review Clearance Application</h3>
               </div>
               <button onClick={() => setSelected(null)} className="p-2 hover:bg-white/10 rounded-lg transition">
@@ -392,15 +392,15 @@ export default function ClearanceManagementPage() {
             <div className="p-6 space-y-6">
               {/* Student info */}
               <div className="flex items-center gap-4">
-                <div className="w-14 h-14 bg-[#C9A84C]/15 rounded-full flex items-center justify-center shrink-0">
+                <div className="w-14 h-14 bg-gold/15 rounded-full flex items-center justify-center shrink-0">
                   {selectedStudent?.photoURL
                     ? <img src={selectedStudent.photoURL} className="w-full h-full rounded-full object-cover" alt="" />
-                    : <MdPerson size={28} className="text-[#C9A84C]" />
+                    : <MdPerson size={28} className="text-gold" />
                   }
                 </div>
                 <div>
                   <h4 className="font-playfair text-lg font-bold text-white">{selected.studentName}</h4>
-                  <p className="font-mono text-[#C9A84C] text-sm">{selected.reg_number}</p>
+                  <p className="font-mono text-gold text-sm">{selected.reg_number}</p>
                   <span className={`inline-flex items-center border rounded-full text-[10px] font-montserrat font-semibold px-2.5 py-0.5 mt-1 ${EXIT_COLORS[selected.exitType] || ''}`}>
                     {EXIT_LABELS[selected.exitType] || selected.exitType}
                   </span>
@@ -418,7 +418,7 @@ export default function ClearanceManagementPage() {
               </div>
 
               {/* Fee summary */}
-              <div className="bg-[#0D1C35] border border-white/10 rounded-xl p-4 space-y-2">
+              <div className="bg-navy-800 border border-white/10 rounded-xl p-4 space-y-2">
                 <p className="font-montserrat text-[10px] uppercase tracking-widest text-gray-600 mb-3">Fee Account Summary</p>
                 <FeeRow label="Current Term Fees"  value={fmt(termFees)} />
                 <FeeRow label="Amount Paid"         value={fmt(totalPaid)} />
@@ -473,7 +473,7 @@ export default function ClearanceManagementPage() {
                       <button
                         onClick={handleIssueClearance}
                         disabled={working}
-                        className="flex items-center gap-2 bg-[#C9A84C] hover:bg-yellow-400 disabled:opacity-60 text-[#0A1628] font-montserrat font-bold text-sm px-5 py-3 rounded-xl transition"
+                        className="flex items-center gap-2 bg-gold hover:bg-yellow-400 disabled:opacity-60 text-navy font-montserrat font-bold text-sm px-5 py-3 rounded-xl transition"
                       >
                         <MdVerifiedUser />
                         {working ? 'Issuing…' : 'Issue Clearance Letter'}

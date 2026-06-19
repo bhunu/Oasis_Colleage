@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { collection, getDocs, query, where, limit } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import { useStudent } from '../../context/StudentContext'
+import { parseTermNumber } from '../../utils/termHelpers'
 
-const CARD = 'bg-[#0D1C35] border border-white/10 rounded-xl p-5'
+const CARD = 'bg-navy-800 border border-white/10 rounded-xl p-5'
 const TH   = 'text-left py-3 px-4 text-[10px] font-semibold text-gray-500 uppercase tracking-widest font-montserrat'
 const TD   = 'py-3 px-4 text-sm text-gray-300 font-montserrat'
 
@@ -18,9 +19,15 @@ export default function StudentFees() {
   const [loading,  setLoading]  = useState(true)
 
   useEffect(() => {
-    if (!studentData?.regNumber) return
+    if (!studentData?.regNumber || !portalSettings?.currentTerm) return
+    const termId = `${parseTermNumber(portalSettings.currentTerm)}-${portalSettings.currentYear}`
     Promise.all([
-      getDocs(query(collection(db, 'feeAccounts'), where('reg_number', '==', studentData.regNumber), limit(1))),
+      getDocs(query(
+        collection(db, 'feeAccounts'),
+        where('reg_number', '==', studentData.regNumber),
+        where('term', '==', termId),
+        limit(1),
+      )),
       getDocs(query(collection(db, 'receipts'), where('reg_number', '==', studentData.regNumber))),
     ]).then(([feeSnap, rcptSnap]) => {
       if (!feeSnap.empty) setAccount({ id: feeSnap.docs[0].id, ...feeSnap.docs[0].data() })
@@ -29,21 +36,31 @@ export default function StudentFees() {
         .sort((a, b) => (b.issuedAt?.seconds || 0) - (a.issuedAt?.seconds || 0))
       setReceipts(sorted)
     }).catch(err => console.error('Fee load error:', err)).finally(() => setLoading(false))
-  }, [studentData?.regNumber])
+  }, [studentData?.regNumber, portalSettings?.currentTerm, portalSettings?.currentYear])
 
   const termFees  = account?.termFees  || 0
   const totalPaid = account?.totalPaid || 0
   const balance   = account?.balance   || 0
   const paidPct   = termFees > 0 ? Math.round((totalPaid / termFees) * 100) : 0
 
-  /* build ledger from account payments array + opening charge */
+  /* build ledger: balance b/d → term fees → payments */
   const ledger = (() => {
     let bal = 0
     const rows = []
-    if (termFees > 0) {
-      bal = termFees
-      rows.push({ date: '—', desc: `${portalSettings.currentTerm} ${portalSettings.currentYear} fees`, debit: termFees, credit: 0, balance: bal })
+    const balanceBD = account?.balanceBD || 0
+    const termLabel = `${portalSettings?.currentTerm || ''} ${portalSettings?.currentYear || ''}`.trim()
+
+    // Carried-forward debt from previous term
+    if (balanceBD > 0) {
+      bal += balanceBD
+      rows.push({ date: '—', desc: 'Balance b/d (previous term)', debit: balanceBD, credit: 0, balance: bal })
     }
+    // Current term fees
+    if (termFees > 0) {
+      bal += termFees
+      rows.push({ date: '—', desc: `${termLabel} fees`, debit: termFees, credit: 0, balance: bal })
+    }
+    // Payments
     ;(account?.payments || []).forEach(p => {
       bal -= Number(p.amount)
       rows.push({ date: p.date || '—', desc: `Payment (${p.method || 'cash'})`, debit: 0, credit: Number(p.amount), balance: bal })
@@ -51,7 +68,7 @@ export default function StudentFees() {
     return rows
   })()
 
-  if (loading) return <div className="flex justify-center py-20"><div className="w-8 h-8 border-2 border-[#C9A84C] border-t-transparent rounded-full animate-spin" /></div>
+  if (loading) return <div className="flex justify-center py-20"><div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin" /></div>
 
   return (
     <div className="space-y-5 max-w-3xl">
@@ -78,7 +95,7 @@ export default function StudentFees() {
             <span className="text-white font-semibold">{paidPct}% paid</span>
           </div>
           <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-            <div className="h-full bg-[#C9A84C] rounded-full" style={{ width: `${Math.min(paidPct, 100)}%` }} />
+            <div className="h-full bg-gold rounded-full" style={{ width: `${Math.min(paidPct, 100)}%` }} />
           </div>
           <div className="flex justify-between text-[10px] font-montserrat text-gray-600 mt-1">
             <span>{fmt(totalPaid)} paid</span>
@@ -88,13 +105,13 @@ export default function StudentFees() {
       )}
 
       {/* Ledger */}
-      <div className="bg-[#0D1C35] border border-white/10 rounded-xl overflow-hidden">
+      <div className="bg-navy-800 border border-white/10 rounded-xl overflow-hidden">
         <div className="flex justify-between items-center px-5 py-4 border-b border-white/10">
           <h3 className="font-playfair font-semibold text-white">Account Ledger</h3>
           <button
             onClick={() => navigate('/student/upload-pop')}
-            className="text-xs font-montserrat px-3 py-1.5 rounded-lg text-[#0A1628] font-semibold transition"
-            style={{ backgroundColor: '#C9A84C' }}
+            className="text-xs font-montserrat px-3 py-1.5 rounded-lg text-navy font-semibold transition"
+            style={{ backgroundColor: 'var(--color-primary-hex)' }}
           >
             Upload payment proof
           </button>

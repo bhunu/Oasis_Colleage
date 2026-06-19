@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   FaTimes, FaUser, FaEnvelope, FaLock, FaEye, FaEyeSlash,
@@ -251,7 +251,7 @@ export default function SignUpModal({ portalKey, onClose }) {
                       value={form.role}
                       onChange={set('role')}
                       disabled={roles.length === 1}
-                      className={`${inputClass} pl-11 [&>option]:bg-[#0D1C35] disabled:opacity-60 disabled:cursor-not-allowed`}
+                      className={`${inputClass} pl-11 [&>option]:bg-navy-800 disabled:opacity-60 disabled:cursor-not-allowed`}
                     >
                       {roles.map(r => <option key={r} value={r}>{r}</option>)}
                     </select>

@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../firebase/config'
 import { MdCheckCircle, MdCancel, MdVerifiedUser } from 'react-icons/md'
 import { FaGraduationCap } from 'react-icons/fa'
+import sc from '../utils/schoolConfig'
 
 const EXIT_LABELS = {
   OLevelCompletion: 'O Level Graduate',
@@ -31,20 +32,20 @@ export default function VerifyClearancePage() {
   }, [clearanceSerial])
 
   return (
-    <div className="min-h-screen bg-[#0A1628] flex flex-col items-center justify-center px-4 py-16">
+    <div className="min-h-screen bg-navy flex flex-col items-center justify-center px-4 py-16">
       {/* Logo */}
       <Link to="/" className="flex items-center gap-3 mb-10">
-        <div className="w-12 h-12 bg-[#C9A84C] rounded-full flex items-center justify-center shadow-lg">
-          <FaGraduationCap className="text-[#0A1628] text-xl" />
+        <div className="w-12 h-12 bg-gold rounded-full flex items-center justify-center shadow-lg">
+          <FaGraduationCap className="text-navy text-xl" />
         </div>
         <div>
-          <p className="font-playfair font-bold text-white text-lg leading-tight">Oasis Private College</p>
-          <p className="font-montserrat text-[#C9A84C] text-[10px] uppercase tracking-widest">Checheche, Zimbabwe</p>
+          <p className="font-playfair font-bold text-white text-lg leading-tight">{sc.name}</p>
+          <p className="font-montserrat text-gold text-[10px] uppercase tracking-widest">{sc.address}</p>
         </div>
       </Link>
 
       {loading ? (
-        <div className="w-8 h-8 border-2 border-[#C9A84C] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin" />
       ) : result?.valid ? (
         <ValidCard data={result.data} />
       ) : (
@@ -57,7 +58,7 @@ export default function VerifyClearancePage() {
 function ValidCard({ data }) {
   const issuedDate = data.issuedAt?.toDate?.()?.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }) || '—'
   return (
-    <div className="bg-[#0D1C35] border border-emerald-500/30 rounded-2xl p-8 max-w-md w-full text-center">
+    <div className="bg-navy-800 border border-emerald-500/30 rounded-2xl p-8 max-w-md w-full text-center">
       <MdCheckCircle className="text-emerald-400 text-6xl mx-auto mb-4" />
       <div className="inline-flex items-center gap-2 bg-emerald-500/15 border border-emerald-500/30 rounded-full px-4 py-1.5 mb-5">
         <MdVerifiedUser className="text-emerald-400 text-sm" />
@@ -71,10 +72,10 @@ function ValidCard({ data }) {
         <Row label="Exit Type"           value={EXIT_LABELS[data.exitType] || data.exitType} />
         <Row label="Date Issued"         value={issuedDate} />
         <Row label="Issued By"           value={data.issuedBy} />
-        <Row label="Clearance Serial"    value={<span className="font-mono text-[#C9A84C] text-xs">{data.clearanceSerial}</span>} />
+        <Row label="Clearance Serial"    value={<span className="font-mono text-gold text-xs">{data.clearanceSerial}</span>} />
       </div>
       <p className="font-montserrat text-xs text-emerald-300 leading-relaxed mt-6">
-        This clearance letter was issued by Oasis Private College and is authentic.
+        This clearance letter was issued by {sc.name} and is authentic.
       </p>
     </div>
   )
@@ -82,7 +83,7 @@ function ValidCard({ data }) {
 
 function InvalidCard({ serial }) {
   return (
-    <div className="bg-[#0D1C35] border border-red-500/30 rounded-2xl p-8 max-w-md w-full text-center">
+    <div className="bg-navy-800 border border-red-500/30 rounded-2xl p-8 max-w-md w-full text-center">
       <MdCancel className="text-red-400 text-6xl mx-auto mb-4" />
       <div className="inline-flex items-center gap-2 bg-red-500/10 border border-red-500/30 rounded-full px-4 py-1.5 mb-5">
         <span className="font-montserrat text-xs font-bold uppercase tracking-widest text-red-400">
@@ -90,7 +91,7 @@ function InvalidCard({ serial }) {
         </span>
       </div>
       <p className="font-montserrat text-sm text-gray-400 leading-relaxed mt-4">
-        This document could not be verified. Please contact Oasis Private College administration.
+        This document could not be verified. Please contact {sc.name} administration.
       </p>
       {serial && (
         <p className="font-mono text-[10px] text-gray-600 mt-3">{serial}</p>

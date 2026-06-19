@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { addDoc, collection, doc, getDoc, getDocs, serverTimestamp, updateDoc } from 'firebase/firestore'
 import { db } from '../firebase/config'
 import { addStudent } from '../firebase/students'
@@ -6,8 +6,10 @@ import { generateRegNumber } from '../utils/generateRegNumber'
 import { sendOtpEmail } from '../utils/sendOtpEmail'
 import BulkImport from '../components/BulkImport'
 import toast from 'react-hot-toast'
+import sc from '../utils/schoolConfig'
 import { MdCheckCircle, MdContentCopy, MdPersonAdd, MdUploadFile, MdEmail } from 'react-icons/md'
 import { FaGraduationCap } from 'react-icons/fa'
+import { useLicense } from '../license/LicenseContext'
 
 function generateOTP(len = 8) {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -80,7 +82,7 @@ function validate(data) {
 }
 
 const iCls = (err) =>
-  `w-full bg-white/5 border ${err ? 'border-red-500/60' : 'border-white/10'} focus:border-[#C9A84C]/50 focus:outline-none rounded-xl px-4 py-2.5 text-white font-montserrat text-sm placeholder-gray-600 transition-all [&>option]:bg-[#0D1C35] [&>option]:text-white`
+  `w-full bg-white/5 border ${err ? 'border-red-500/60' : 'border-white/10'} focus:border-gold/50 focus:outline-none rounded-xl px-4 py-2.5 text-white font-montserrat text-sm placeholder-gray-600 transition-all [&>option]:bg-navy-800 [&>option]:text-white`
 
 const lCls = 'block text-[11px] font-semibold text-gray-500 uppercase tracking-widest font-montserrat mb-1.5'
 const eCls = 'text-red-400 text-[11px] font-montserrat mt-1'
@@ -92,7 +94,7 @@ function TabBtn({ active, onClick, icon: Icon, label }) {
       type="button"
       onClick={onClick}
       className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-montserrat font-semibold uppercase tracking-wider transition-all ${
-        active ? 'bg-[#C9A84C] text-[#0A1628]' : 'text-gray-400 hover:text-white'
+        active ? 'bg-gold text-navy' : 'text-gray-400 hover:text-white'
       }`}
     >
       <Icon className="text-sm" />
@@ -102,6 +104,7 @@ function TabBtn({ active, onClick, icon: Icon, label }) {
 }
 
 export default function Enrol() {
+  const { licenseData } = useLicense()
   const [tab, setTab]           = useState('single')
   const [formData, setFormData] = useState(EMPTY_FORM)
   const [errors, setErrors]     = useState({})
@@ -140,6 +143,9 @@ export default function Enrol() {
   }
 
   const printCard = () => {
+    const root = document.documentElement
+    const cssGold = getComputedStyle(root).getPropertyValue('--color-primary-hex').trim() || '#C9A84C'
+    const cssNavy = getComputedStyle(root).getPropertyValue('--color-navy-hex').trim() || '#0A1628'
     const html = `<!DOCTYPE html>
 <html>
 <head>
@@ -147,20 +153,20 @@ export default function Enrol() {
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: Arial, sans-serif; background: #fff; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-    .card { border: 2px solid #C9A84C; border-radius: 14px; padding: 40px 36px; max-width: 360px; width: 100%; text-align: center; }
-    .school-name { font-size: 15px; font-weight: bold; color: #0A1628; margin-bottom: 2px; }
+    .card { border: 2px solid ${cssGold}; border-radius: 14px; padding: 40px 36px; max-width: 360px; width: 100%; text-align: center; }
+    .school-name { font-size: 15px; font-weight: bold; color: ${cssNavy}; margin-bottom: 2px; }
     .school-sub  { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #888; margin-bottom: 20px; }
     hr { border: none; border-top: 1px solid #e5e5e5; margin: 16px 0; }
     .lbl  { font-size: 9px; text-transform: uppercase; letter-spacing: 2px; color: #aaa; margin-bottom: 4px; }
     .val  { font-size: 16px; font-weight: bold; color: #1a1a1a; margin-bottom: 14px; }
-    .reg  { font-size: 40px; font-weight: bold; color: #C9A84C; letter-spacing: 6px; margin: 18px 0 10px; }
+    .reg  { font-size: 40px; font-weight: bold; color: ${cssGold}; letter-spacing: 6px; margin: 18px 0 10px; }
     .note { font-size: 10px; color: #999; margin-top: 18px; line-height: 1.5; }
   </style>
 </head>
 <body>
   <div class="card">
-    <div class="school-name">Oasis Private College</div>
-    <div class="school-sub">Checheche, Zimbabwe</div>
+    <div class="school-name">${sc.name}</div>
+    <div class="school-sub">${sc.address}</div>
     <hr>
     <div class="lbl">Student Name</div>
     <div class="val">${enrolled.name}</div>
@@ -195,6 +201,20 @@ export default function Enrol() {
 
     setLoading(true)
     try {
+      // Enforce plan student limit
+      const maxStudents = licenseData?.maxStudents
+      if (maxStudents != null) {
+        const snap = await getDocs(collection(db, 'students'))
+        if (snap.size >= maxStudents) {
+          toast.error(
+            `Student limit reached (${snap.size}/${maxStudents}). Contact Oasis Systems to upgrade your plan.`,
+            { duration: 6000 }
+          )
+          setLoading(false)
+          return
+        }
+      }
+
       const reg_number   = await generateRegNumber()
       const fullName     = formData.fullName.trim()
       const studentEmail = formData.studentEmail.trim().toLowerCase()
@@ -281,7 +301,7 @@ export default function Enrol() {
   if (enrolled) {
     return (
       <div className="max-w-lg mx-auto mt-10">
-        <div className="bg-[#0D1C35] border border-white/10 rounded-2xl p-10 text-center">
+        <div className="bg-navy-800 border border-white/10 rounded-2xl p-10 text-center">
           <div className="w-16 h-16 bg-emerald-500/15 rounded-full flex items-center justify-center mx-auto mb-5">
             <MdCheckCircle className="text-emerald-400 text-3xl" />
           </div>
@@ -317,28 +337,28 @@ export default function Enrol() {
             </div>
           )}
 
-          <div className="bg-[#C9A84C]/10 border border-[#C9A84C]/30 rounded-xl px-6 py-6 mb-6 text-left">
-            <div className="flex items-center gap-2 justify-center mb-4 pb-4 border-b border-[#C9A84C]/20">
-              <FaGraduationCap className="text-[#C9A84C]" />
+          <div className="bg-gold/10 border border-gold/30 rounded-xl px-6 py-6 mb-6 text-left">
+            <div className="flex items-center gap-2 justify-center mb-4 pb-4 border-b border-gold/20">
+              <FaGraduationCap className="text-gold" />
               <div className="text-center">
-                <p className="font-playfair font-bold text-white text-sm leading-tight">Oasis Private College</p>
-                <p className="font-montserrat text-[9px] uppercase tracking-widest text-[#C9A84C]/60">Checheche, Zimbabwe</p>
+                <p className="font-playfair font-bold text-white text-sm leading-tight">{sc.name}</p>
+                <p className="font-montserrat text-[9px] uppercase tracking-widest text-gold/60">{sc.address}</p>
               </div>
             </div>
             <div className="mb-3">
               <p className="font-montserrat text-[9px] uppercase tracking-widest text-gray-600 mb-0.5">Student Name</p>
               <p className="font-montserrat font-semibold text-white text-sm">{enrolled.name}</p>
             </div>
-            <div className="mb-4 pb-4 border-b border-[#C9A84C]/20">
+            <div className="mb-4 pb-4 border-b border-gold/20">
               <p className="font-montserrat text-[9px] uppercase tracking-widest text-gray-600 mb-0.5">Class</p>
               <p className="font-montserrat font-semibold text-white text-sm">{enrolled.class}</p>
             </div>
             <div className="text-center">
-              <p className="font-montserrat text-[9px] uppercase tracking-widest text-[#C9A84C]/70 mb-1">Registration Number</p>
-              <p className="font-playfair text-4xl font-bold text-[#C9A84C] tracking-widest mb-3">{enrolled.regNumber}</p>
+              <p className="font-montserrat text-[9px] uppercase tracking-widest text-gold/70 mb-1">Registration Number</p>
+              <p className="font-playfair text-4xl font-bold text-gold tracking-widest mb-3">{enrolled.regNumber}</p>
               <button
                 onClick={copyReg}
-                className="inline-flex items-center gap-1.5 text-xs font-montserrat text-[#C9A84C]/60 hover:text-[#C9A84C] transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs font-montserrat text-gold/60 hover:text-gold transition-colors"
               >
                 <MdContentCopy className="text-sm" />
                 {copied ? 'Copied!' : 'Copy to clipboard'}
@@ -359,7 +379,7 @@ export default function Enrol() {
             </button>
             <button
               onClick={() => setEnrolled(null)}
-              className="flex-1 bg-[#C9A84C] hover:bg-yellow-400 text-[#0A1628] font-montserrat text-xs font-bold uppercase tracking-wider py-3 rounded-xl transition-all flex items-center justify-center gap-2"
+              className="flex-1 bg-gold hover:bg-yellow-400 text-navy font-montserrat text-xs font-bold uppercase tracking-wider py-3 rounded-xl transition-all flex items-center justify-center gap-2"
             >
               <MdPersonAdd />
               Enrol Another
@@ -373,7 +393,7 @@ export default function Enrol() {
   // ── Main page ─────────────────────────────────────────────────────────────
   return (
     <div className="max-w-3xl">
-      <div className="bg-[#0D1C35] border border-white/10 rounded-2xl p-8">
+      <div className="bg-navy-800 border border-white/10 rounded-2xl p-8">
 
         {/* Header + Tabs */}
         <div className="flex items-start justify-between mb-8">
@@ -390,14 +410,14 @@ export default function Enrol() {
         </div>
 
         {/* Bulk Import */}
-        {tab === 'bulk' && <BulkImport />}
+        {tab === 'bulk' && <BulkImport maxStudents={licenseData?.maxStudents ?? null} />}
 
         {/* Single Student Form */}
         {tab === 'single' && (
           <form onSubmit={handleSubmit} noValidate className="space-y-8">
 
             <section>
-              <h3 className="font-montserrat text-[10px] font-semibold text-[#C9A84C]/70 uppercase tracking-widest mb-4 pb-2 border-b border-white/10">
+              <h3 className="font-montserrat text-[10px] font-semibold text-gold/70 uppercase tracking-widest mb-4 pb-2 border-b border-white/10">
                 Personal Information
               </h3>
               <div className="grid grid-cols-2 gap-4">
@@ -443,7 +463,7 @@ export default function Enrol() {
             </section>
 
             <section>
-              <h3 className="font-montserrat text-[10px] font-semibold text-[#C9A84C]/70 uppercase tracking-widest mb-4 pb-2 border-b border-white/10">
+              <h3 className="font-montserrat text-[10px] font-semibold text-gold/70 uppercase tracking-widest mb-4 pb-2 border-b border-white/10">
                 Guardian Information
               </h3>
               <div className="grid grid-cols-2 gap-4">
@@ -475,7 +495,7 @@ export default function Enrol() {
             </section>
 
             <section>
-              <h3 className="font-montserrat text-[10px] font-semibold text-[#C9A84C]/70 uppercase tracking-widest mb-4 pb-2 border-b border-white/10">
+              <h3 className="font-montserrat text-[10px] font-semibold text-gold/70 uppercase tracking-widest mb-4 pb-2 border-b border-white/10">
                 Enrolment Details
               </h3>
               <div className="grid grid-cols-3 gap-4">
@@ -492,7 +512,7 @@ export default function Enrol() {
                       <label key={val} className="flex items-center gap-2 cursor-pointer">
                         <input type="radio" name="studentType" value={val}
                           checked={formData.studentType === val} onChange={handleChange}
-                          className="accent-[#C9A84C] w-4 h-4" />
+                          className="accent-gold w-4 h-4" />
                         <span className="font-montserrat text-sm text-gray-300">{lbl}</span>
                       </label>
                     ))}
@@ -515,7 +535,7 @@ export default function Enrol() {
                 Clear Form
               </button>
               <button type="submit" disabled={loading}
-                className="flex-1 bg-[#C9A84C] hover:bg-yellow-400 disabled:opacity-60 text-[#0A1628] font-montserrat text-xs font-bold uppercase tracking-wider py-3.5 rounded-xl shadow-lg shadow-[#C9A84C]/20 transition-all flex items-center justify-center gap-2">
+                className="flex-1 bg-gold hover:bg-yellow-400 disabled:opacity-60 text-navy font-montserrat text-xs font-bold uppercase tracking-wider py-3.5 rounded-xl shadow-lg shadow-gold/20 transition-all flex items-center justify-center gap-2">
                 <MdPersonAdd className="text-base" />
                 {loading ? 'Enrolling…' : 'Enrol Student'}
               </button>

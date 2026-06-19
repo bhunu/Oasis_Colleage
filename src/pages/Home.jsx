@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import heroImg from '../assets/hero1.jpg'
-import hero2Img from '../assets/hero2.jpg'
 import oasisImg from '../assets/oasis.jpg'
 import studentsImg from '../assets/our students.jpg'
 import classroomImg from '../assets/classroom setup.jpg'
@@ -21,6 +20,7 @@ import { useCalendar } from '../hooks/useCalendar'
 import { useGallery } from '../hooks/useGallery'
 import { useStaff } from '../hooks/useStaff'
 import StaffCard from '../components/StaffCard'
+import { useHomepageContent } from '../hooks/useHomepageContent'
 
 const stagger = { animate: { transition: { staggerChildren: 0.12 } } }
 const fadeUp  = {
@@ -28,30 +28,7 @@ const fadeUp  = {
   animate: { opacity: 1, y: 0, transition: { duration: 0.7, ease: 'easeOut' } },
 }
 
-const PROGRAMS = [
-  { icon: FaBookOpen, title: 'Cambridge O-Level', description: 'Rigorous IGCSE and O-Level programmes preparing students for university entry with a broad curriculum spanning Sciences, Humanities, Commerce and the Arts.', subjects: ['English', 'Mathematics', 'Sciences', 'History'] },
-  { icon: FaChartLine, title: 'Cambridge A-Level', description: 'Advanced Level studies with focused depth in chosen subjects. Our A-Level students consistently achieve outstanding results and gain entry to top universities.', subjects: ['Sciences', 'Commerce', 'Humanities', 'Languages'] },
-  { icon: FaFlask,    title: 'STEM & Sciences',  description: 'State-of-the-art laboratories and dedicated STEM teachers inspire curiosity and critical thinking. Practical investigation is at the core of every science lesson.', subjects: ['Biology', 'Chemistry', 'Physics', 'Computing'] },
-  { icon: FaUsers,   title: 'Arts & Commerce',  description: 'From Accounts to Fine Art, our Arts and Commerce stream develops creative thinkers and future business leaders through real-world application.', subjects: ['Accounts', 'Business', 'Art', 'Literature'] },
-]
-
-const FEATURES = [
-  {
-    title: 'World-Class Facilities',
-    body: 'Our campus features fully equipped science laboratories, a modern computer lab, a well-stocked library, dedicated art and music rooms, and expansive sports fields — all designed to inspire learning and growth.',
-    image: classroomImg,
-  },
-  {
-    title: 'Expert & Dedicated Faculty',
-    body: 'Every teacher at Oasis Private College is a qualified, passionate professional committed to each student\'s success. Small class sizes ensure personalised attention and meaningful teacher-student relationships.',
-    image: oasisImg,
-  },
-  {
-    title: 'Vibrant Day School Community',
-    body: 'As a day school, students bring the energy of home into every day at Oasis. From morning assembly to after-school activities, every day is rich with sport, culture, debate, music, and peer connection.',
-    image: studentsImg,
-  },
-]
+const FEATURE_DEFAULT_IMAGES = [classroomImg, oasisImg, studentsImg]
 
 const SPORTS_CULTURE = [
   { icon: FaFutbol,         label: 'Football',      teal: false },
@@ -64,23 +41,7 @@ const SPORTS_CULTURE = [
   { icon: FaComments,       label: 'Debate',         teal: false },
 ]
 
-const TESTIMONIALS = [
-  {
-    quote: "Oasis Private College gave my daughter more than an education — it gave her confidence, discipline, and a love of learning. The teachers genuinely care about every child's future.",
-    name: 'Mrs. Tendai Mutasa',
-    role: 'Parent · Form 4 Student',
-  },
-  {
-    quote: "The O-Level results I achieved at Oasis opened doors I never thought possible. The standard of teaching here rivals any school in Zimbabwe — absolutely world-class.",
-    name: 'Farai Chikwanda',
-    role: 'Alumnus · University of Zimbabwe',
-  },
-  {
-    quote: "What makes Oasis special is the community. You are not just a student here — you are part of a family. The sport, the drama, the friendships — I wouldn't trade it for anything.",
-    name: 'Blessing Moyo',
-    role: 'Current Student · Form 3',
-  },
-]
+const PROGRAM_ICONS = [FaBookOpen, FaChartLine, FaFlask, FaUsers]
 
 const CAT_STYLES = {
   academic:        { bg: 'bg-blue-100',   text: 'text-blue-800',   label: 'Academic'      },
@@ -92,6 +53,9 @@ const CAT_STYLES = {
 }
 
 export default function Home() {
+  const { content } = useHomepageContent()
+  const { hero, stats, about, programs, testimonials, whyChooseUs, cta } = content
+
   const { getUpcomingEvents } = useCalendar()
   const { photos } = useGallery()
   const upcomingEvents = getUpcomingEvents(3)
@@ -139,7 +103,7 @@ export default function Home() {
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
         <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: `url(${heroImg})` }}
+          style={{ backgroundImage: `url(${hero.imageUrl || heroImg})` }}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-navy/90 via-navy/75 to-navy/95" />
 
@@ -147,7 +111,7 @@ export default function Home() {
           <motion.div variants={stagger} initial="initial" animate="animate">
             <motion.div variants={fadeUp}>
               <span className="inline-block font-montserrat text-xs font-semibold uppercase tracking-[0.25em] text-gold border border-gold/40 px-5 py-2 rounded-full mb-8">
-                Welcome to Oasis Private College · Checheche, Zimbabwe
+                {hero.badge}
               </span>
             </motion.div>
 
@@ -155,16 +119,16 @@ export default function Home() {
               variants={fadeUp}
               className="font-playfair text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-white leading-none mb-6"
             >
-              Where Excellence
+              {hero.headline}
               <br />
-              <span className="text-gradient-gold">Flows</span>
+              <span className="text-gradient-gold">{hero.headlineAccent}</span>
             </motion.h1>
 
             <motion.p
               variants={fadeUp}
               className="text-xl sm:text-2xl text-gray-300 font-sans max-w-2xl mx-auto mb-10 leading-relaxed"
             >
-              A premier day school shaping Zimbabwe's future leaders through knowledge, character, and excellence.
+              {hero.tagline}
             </motion.p>
 
             <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -178,7 +142,7 @@ export default function Home() {
                 to="/admissions"
                 className="inline-flex items-center justify-center gap-2 border-2 border-white text-white hover:bg-white hover:text-navy font-montserrat font-semibold uppercase tracking-wider text-sm px-8 py-4 rounded transition-all duration-300"
               >
-                Apply for 2027
+                Apply for {hero.ctaYear}
               </Link>
             </motion.div>
           </motion.div>
@@ -200,10 +164,9 @@ export default function Home() {
       <section className="bg-navy py-14">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 divide-x divide-white/10">
-            <StatCounter value="500" suffix="+"    label="Students Enrolled"  />
-            <StatCounter value="95"  suffix="%"    label="ZIMSEC Pass Rate"   />
-            <StatCounter value="40"  suffix="+"    label="Subjects Offered"   />
-            <StatCounter value="12"  suffix=""     label="Years of Excellence" />
+            {stats.map((s, i) => (
+              <StatCounter key={i} value={s.value} suffix={s.suffix} label={s.label} />
+            ))}
           </div>
         </div>
       </section>
@@ -219,18 +182,14 @@ export default function Home() {
               transition={{ duration: 0.7 }}
             >
               <span className="font-montserrat text-xs font-semibold uppercase tracking-widest text-gold block mb-4">
-                Our Story
+                {about.sectionLabel}
               </span>
               <h2 className="font-playfair text-4xl md:text-5xl font-bold text-navy leading-tight mb-4">
-                A Legacy of Academic<br />Excellence in Checheche
+                {about.title}
               </h2>
               <span className="gold-line-left" />
-              <p className="mt-6 text-slate text-lg leading-relaxed">
-                Oasis Private College stands as Checheche's premier educational institution — a beacon of academic rigour, moral integrity, and community spirit nestled in the heart of Manicaland. Since our founding, we have nurtured hundreds of Zimbabwe's brightest young minds.
-              </p>
-              <p className="mt-4 text-slate leading-relaxed">
-                As a day school, we believe education thrives when home and school work in partnership. Our students arrive each morning energised by family, and leave each afternoon enriched by learning, friendship, and achievement.
-              </p>
+              <p className="mt-6 text-slate text-lg leading-relaxed">{about.body1}</p>
+              <p className="mt-4 text-slate leading-relaxed">{about.body2}</p>
               <div className="mt-8 flex flex-col sm:flex-row gap-4">
                 <Link
                   to="/about"
@@ -256,13 +215,13 @@ export default function Home() {
             >
               <div className="absolute -top-4 -left-4 w-full h-full border-2 border-gold/30 rounded-2xl" />
               <img
-                src={studentsImg}
-                alt="Students learning at Oasis Private College"
+                src={about.imageUrl || studentsImg}
+                alt={about.title}
                 className="relative rounded-2xl shadow-2xl object-cover w-full h-96 lg:h-[520px]"
               />
               <div className="absolute bottom-6 left-6 bg-navy/90 backdrop-blur-sm rounded-xl px-5 py-4 border border-gold/30">
-                <div className="font-playfair text-gold text-xl font-bold">Day School</div>
-                <div className="font-montserrat text-white text-xs uppercase tracking-wider mt-1">6:30 AM – 5:30 PM</div>
+                <div className="font-playfair text-gold text-xl font-bold">{about.badge1}</div>
+                <div className="font-montserrat text-white text-xs uppercase tracking-wider mt-1">{about.badge2}</div>
               </div>
             </motion.div>
           </div>
@@ -278,8 +237,15 @@ export default function Home() {
             subtitle="Cambridge-aligned curriculum delivering world-class education from O-Level through A-Level, with specialist streams in STEM, Arts, and Commerce."
           />
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {PROGRAMS.map((p, i) => (
-              <ProgramCard key={i} {...p} index={i} />
+            {programs.map((p, i) => (
+              <ProgramCard
+                key={i}
+                icon={PROGRAM_ICONS[i % PROGRAM_ICONS.length]}
+                title={p.title}
+                description={p.description}
+                subjects={typeof p.subjects === 'string' ? p.subjects.split(',').map(s => s.trim()) : p.subjects}
+                index={i}
+              />
             ))}
           </div>
           <div className="mt-10 text-center">
@@ -297,12 +263,12 @@ export default function Home() {
       <section className="section-padding bg-cream">
         <div className="container-max">
           <SectionTitle
-            label="Why Choose Us"
-            title="The Oasis Difference"
-            subtitle="Excellence is not accidental — it is the result of deliberate design, passionate teaching, and a community that lifts every student higher."
+            label={whyChooseUs.label}
+            title={whyChooseUs.title}
+            subtitle={whyChooseUs.subtitle}
           />
           <div className="space-y-20">
-            {FEATURES.map((f, i) => (
+            {whyChooseUs.features.map((f, i) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 40 }}
@@ -321,7 +287,7 @@ export default function Home() {
                 </div>
                 <div className={`relative ${i % 2 === 1 ? 'lg:col-start-1' : ''}`}>
                   <img
-                    src={f.image}
+                    src={f.imageUrl || FEATURE_DEFAULT_IMAGES[i]}
                     alt={f.title}
                     loading="lazy"
                     className="rounded-2xl shadow-2xl object-cover w-full h-72 md:h-80"
@@ -500,7 +466,7 @@ export default function Home() {
             light
           />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {TESTIMONIALS.map((t, i) => (
+            {testimonials.map((t, i) => (
               <TestimonialCard key={i} {...t} index={i} />
             ))}
           </div>
@@ -565,10 +531,10 @@ export default function Home() {
               Admissions Open
             </span>
             <h2 className="font-playfair text-4xl md:text-5xl font-bold text-navy mb-4">
-              Applications for 2027 Are Now Open
+              {cta.headline}
             </h2>
             <p className="text-navy/70 text-lg mb-8 max-w-xl mx-auto font-sans">
-              Join Oasis Private College — where every student finds their voice, their talent, and their future.
+              {cta.body}
             </p>
             <Link
               to="/admissions"

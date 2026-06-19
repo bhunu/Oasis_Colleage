@@ -16,7 +16,7 @@ export default function Toast({ message, type = 'success', onClose }) {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -20, scale: 0.95 }}
           className="fixed top-24 right-4 z-50 flex items-center gap-3 px-5 py-4 rounded-lg shadow-2xl max-w-sm"
-          style={{ background: type === 'success' ? '#0A1628' : '#7f1d1d', border: '1px solid #C9A84C' }}
+          style={{ background: type === 'success' ? 'var(--color-navy-hex)' : '#7f1d1d', border: '1px solid var(--color-primary-hex)' }}
         >
           {type === 'success'
             ? <FaCheckCircle className="text-gold text-lg flex-shrink-0" />

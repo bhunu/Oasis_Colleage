@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+﻿import { useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
 import * as XLSX from 'xlsx'
 import { addDoc, collection, getDocs, serverTimestamp } from 'firebase/firestore'
@@ -151,12 +151,12 @@ function StepRow({ step }) {
     <div className="flex items-center gap-3 py-2.5 border-b border-white/5 last:border-0">
       <div className="shrink-0 w-4 h-4 flex items-center justify-center">
         {step.status === 'pending' && <div className="w-3 h-3 rounded-full border border-gray-600" />}
-        {step.status === 'running' && <MdLoop className="text-[#C9A84C] text-base animate-spin" />}
+        {step.status === 'running' && <MdLoop className="text-gold text-base animate-spin" />}
         {step.status === 'done'    && <MdCheckCircle className="text-emerald-400 text-base" />}
         {step.status === 'error'   && <MdError className="text-red-400 text-base" />}
       </div>
       <p className={`flex-1 text-sm font-montserrat ${
-        step.status === 'running' ? 'text-[#C9A84C]' :
+        step.status === 'running' ? 'text-gold' :
         step.status === 'done'    ? 'text-gray-200'  :
         step.status === 'error'   ? 'text-red-400'   : 'text-gray-500'
       }`}>
@@ -168,7 +168,7 @@ function StepRow({ step }) {
 }
 
 // ── Main component ────────────────────────────────────────────────────────
-export default function BulkImport() {
+export default function BulkImport({ maxStudents = null }) {
   const [rows, setRows]           = useState([])   // { ...data, _errors[], _status }
   const [importing, setImporting] = useState(false)
   const [done, setDone]           = useState(false)
@@ -284,10 +284,30 @@ export default function BulkImport() {
     if (validRows.length === 0) return
     setImporting(true)
     let success = 0, failed = 0
-
     let otpEmailed = 0
 
-    for (const row of validRows) {
+    // Enforce plan student limit before starting the batch
+    let rowsToImport = validRows
+    if (maxStudents != null) {
+      const snap = await getDocs(collection(db, 'students'))
+      const currentCount = snap.size
+      if (currentCount >= maxStudents) {
+        toast.error(
+          `Student limit reached (${currentCount}/${maxStudents}). Contact Oasis Systems to upgrade your plan.`,
+          { duration: 6000 }
+        )
+        setImporting(false)
+        return
+      }
+      const slotsLeft = maxStudents - currentCount
+      if (validRows.length > slotsLeft) {
+        toast(`Only ${slotsLeft} student slot${slotsLeft !== 1 ? 's' : ''} remaining on your plan. Importing first ${slotsLeft} of ${validRows.length} rows.`,
+          { icon: '⚠️', duration: 6000 })
+        rowsToImport = validRows.slice(0, slotsLeft)
+      }
+    }
+
+    for (const row of rowsToImport) {
       try {
         const reg_number = await generateRegNumber()
 
@@ -375,9 +395,9 @@ export default function BulkImport() {
 
     return (
       <div className="max-w-md mx-auto py-6">
-        <div className="bg-[#0D1C35] border border-white/10 rounded-2xl p-6 space-y-4">
+        <div className="bg-navy-800 border border-white/10 rounded-2xl p-6 space-y-4">
           <div className="flex items-center gap-3 mb-1">
-            <MdLoop className="text-[#C9A84C] text-2xl animate-spin shrink-0" />
+            <MdLoop className="text-gold text-2xl animate-spin shrink-0" />
             <div>
               <p className="text-white font-semibold font-montserrat text-sm">Validating file…</p>
               <p className="text-gray-500 font-montserrat text-xs">Do not close this tab</p>
@@ -387,7 +407,7 @@ export default function BulkImport() {
           {/* Progress bar */}
           <div className="h-1 bg-white/5 rounded-full overflow-hidden">
             <div
-              className="h-full bg-[#C9A84C] rounded-full transition-all duration-500"
+              className="h-full bg-gold rounded-full transition-all duration-500"
               style={{ width: `${pct}%` }}
             />
           </div>
@@ -406,14 +426,14 @@ export default function BulkImport() {
     return (
       <div className="space-y-5">
         {/* Template download notice */}
-        <div className="bg-[#C9A84C]/10 border border-[#C9A84C]/25 rounded-xl px-5 py-4">
+        <div className="bg-gold/10 border border-gold/25 rounded-xl px-5 py-4">
           <p className="font-montserrat text-xs text-white font-semibold mb-1">Required column headers</p>
           <p className="font-montserrat text-[11px] text-gray-400 mb-3">
             Your Excel file must contain these exact column names in the first row:
           </p>
           <div className="flex flex-wrap gap-2 mb-3">
             {REQUIRED_COLS.map(c => (
-              <code key={c} className="bg-[#C9A84C]/20 text-[#C9A84C] text-[10px] font-mono px-2 py-0.5 rounded">{c}</code>
+              <code key={c} className="bg-gold/20 text-gold text-[10px] font-mono px-2 py-0.5 rounded">{c}</code>
             ))}
             {OPTIONAL_COLS.map(c => (
               <code key={c} className="bg-white/5 text-gray-400 text-[10px] font-mono px-2 py-0.5 rounded">{c} <span className="text-gray-600">(optional)</span></code>
@@ -421,7 +441,7 @@ export default function BulkImport() {
           </div>
           <button
             onClick={downloadTemplate}
-            className="inline-flex items-center gap-1.5 text-xs font-montserrat font-semibold text-[#C9A84C] hover:text-yellow-300 transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs font-montserrat font-semibold text-gold hover:text-yellow-300 transition-colors"
           >
             <MdDownload className="text-base" />
             Download Template (.xlsx)
@@ -432,11 +452,11 @@ export default function BulkImport() {
         <div
           {...getRootProps()}
           className={`border-2 border-dashed rounded-xl px-8 py-14 text-center cursor-pointer transition-all ${
-            isDragActive ? 'border-[#C9A84C] bg-[#C9A84C]/5' : 'border-white/15 hover:border-[#C9A84C]/40 hover:bg-white/[0.02]'
+            isDragActive ? 'border-gold bg-gold/5' : 'border-white/15 hover:border-gold/40 hover:bg-white/[0.02]'
           }`}
         >
           <input {...getInputProps()} />
-          <MdCloudUpload className={`text-5xl mx-auto mb-3 transition-colors ${isDragActive ? 'text-[#C9A84C]' : 'text-gray-600'}`} />
+          <MdCloudUpload className={`text-5xl mx-auto mb-3 transition-colors ${isDragActive ? 'text-gold' : 'text-gray-600'}`} />
           <p className="font-montserrat font-semibold text-white text-sm mb-1">
             {isDragActive ? 'Drop the file here…' : 'Drag & drop your Excel file'}
           </p>
@@ -477,10 +497,10 @@ export default function BulkImport() {
       </div>
 
       {/* Table */}
-      <div className="bg-[#0A1628] border border-white/10 rounded-xl overflow-hidden">
+      <div className="bg-navy border border-white/10 rounded-xl overflow-hidden">
         <div className="overflow-x-auto max-h-96">
           <table className="w-full text-xs font-montserrat">
-            <thead className="sticky top-0 bg-[#0D1C35] border-b border-white/10">
+            <thead className="sticky top-0 bg-navy-800 border-b border-white/10">
               <tr>
                 <th className="text-left px-3 py-2.5 text-gray-500 uppercase tracking-wider w-8">#</th>
                 <th className="text-left px-3 py-2.5 text-gray-500 uppercase tracking-wider">Full Name</th>
@@ -501,7 +521,7 @@ export default function BulkImport() {
                   <td className="px-3 py-2.5 text-gray-400">{row.gender}</td>
                   <td className="px-3 py-2.5 text-gray-400">{row.class}</td>
                   <td className="px-3 py-2.5 text-gray-400">{row.guardianName}</td>
-                  <td className="px-3 py-2.5 text-[#C9A84C] font-semibold">{row._regNumber || '—'}</td>
+                  <td className="px-3 py-2.5 text-gold font-semibold">{row._regNumber || '—'}</td>
                   <td className="px-3 py-2.5">
                     <div className="flex items-center gap-1.5">
                       {statusIcon(row)}
@@ -536,7 +556,7 @@ export default function BulkImport() {
             <button
               onClick={handleImport}
               disabled={importing}
-              className="flex-1 bg-[#C9A84C] hover:bg-yellow-400 disabled:opacity-60 text-[#0A1628] font-montserrat text-xs font-bold uppercase tracking-wider py-3 rounded-xl transition-all flex items-center justify-center gap-2"
+              className="flex-1 bg-gold hover:bg-yellow-400 disabled:opacity-60 text-navy font-montserrat text-xs font-bold uppercase tracking-wider py-3 rounded-xl transition-all flex items-center justify-center gap-2"
             >
               <MdCloudUpload className="text-base" />
               {importing ? 'Importing…' : `Import ${validRows.length} Student${validRows.length > 1 ? 's' : ''}`}

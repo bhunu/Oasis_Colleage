@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import {
   collection, addDoc, getDocs, deleteDoc, doc, query,
   where, serverTimestamp, updateDoc,
@@ -14,7 +14,7 @@ import {
 import toast from 'react-hot-toast'
 
 const VIOLET = '#7C3AED'
-const CARD   = 'bg-[#0D1C35] border border-white/10 rounded-xl'
+const CARD   = 'bg-navy-800 border border-white/10 rounded-xl'
 const TERMS  = ['Term 1', 'Term 2', 'Term 3']
 const TYPES  = [
   { value: 'notes',      label: 'Notes',           icon: MdMenuBook,   color: 'text-violet-400' },

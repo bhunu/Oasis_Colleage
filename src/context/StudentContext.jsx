@@ -78,8 +78,12 @@ export function StudentProvider({ children }) {
     setFirestoreStudent(null)
   }, [])
 
+  const mergedStudentData = studentData && firestoreStudent
+    ? { ...studentData, class: firestoreStudent.class || studentData.class }
+    : studentData
+
   return (
-    <StudentContext.Provider value={{ studentData, portalSettings, loading, authLoading: false, logout, isBoarder, firestoreStudent }}>
+    <StudentContext.Provider value={{ studentData: mergedStudentData, portalSettings, loading, authLoading: false, logout, isBoarder, firestoreStudent }}>
       {children}
     </StudentContext.Provider>
   )

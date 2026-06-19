@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { collection, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../firebase/config'
@@ -45,7 +45,7 @@ export default function TransferRequestForm() {
           </p>
           <button
             onClick={() => navigate('/student/clearance/apply')}
-            className="bg-[#C9A84C] hover:bg-yellow-400 text-[#0A1628] font-montserrat font-bold text-sm px-6 py-3 rounded-xl transition"
+            className="bg-gold hover:bg-yellow-400 text-navy font-montserrat font-bold text-sm px-6 py-3 rounded-xl transition"
           >
             Apply for Clearance
           </button>
@@ -128,7 +128,7 @@ export default function TransferRequestForm() {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-[#0D1C35] border border-white/10 rounded-2xl p-6 space-y-5">
+      <form onSubmit={handleSubmit} className="bg-navy-800 border border-white/10 rounded-2xl p-6 space-y-5">
         <Field label="Destination School Name">
           <input
             type="text"
@@ -154,7 +154,7 @@ export default function TransferRequestForm() {
             type="checkbox"
             checked={form.consent}
             onChange={e => setForm(f => ({ ...f, consent: e.target.checked }))}
-            className="mt-1 accent-[#C9A84C] w-4 h-4"
+            className="mt-1 accent-gold w-4 h-4"
           />
           <span className="font-montserrat text-xs text-gray-400 leading-relaxed">
             My parent or guardian is aware of and has consented to this transfer request.
@@ -164,7 +164,7 @@ export default function TransferRequestForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full flex items-center justify-center gap-2 bg-[#C9A84C] hover:bg-yellow-400 disabled:opacity-60 text-[#0A1628] font-montserrat font-bold text-sm py-3 rounded-xl transition"
+          className="w-full flex items-center justify-center gap-2 bg-gold hover:bg-yellow-400 disabled:opacity-60 text-navy font-montserrat font-bold text-sm py-3 rounded-xl transition"
         >
           <MdSend className="text-base" />
           {loading ? 'Submitting…' : 'Submit Transfer Request'}
@@ -184,7 +184,7 @@ export default function TransferRequestForm() {
           outline: none;
           transition: border-color 0.2s;
         }
-        .input-style:focus { border-color: rgba(201,168,76,0.4); }
+        .input-style:focus { border-color: rgb(var(--color-primary) / 0.4); }
         .input-style::placeholder { color: #4b5563; }
       `}</style>
     </div>

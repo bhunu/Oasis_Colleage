@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+﻿import { useEffect, useState, useRef } from 'react'
 import { MdAdd, MdEdit, MdDelete, MdClose, MdPeople, MdPhotoCamera } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import { getAdminStaff, addAdminStaff, updateAdminStaff, deleteAdminStaff, uploadStaffPhoto } from '../../firebase/staffAdmin'
@@ -6,7 +6,7 @@ import { getAdminStaff, addAdminStaff, updateAdminStaff, deleteAdminStaff, uploa
 const BLANK = { name: '', title: '', department: '', email: '', phone: '', qualification: '', description: '', featured: false }
 const DEPARTMENTS = ['Leadership', 'Sciences', 'Humanities', 'Mathematics', 'Commerce', 'Languages', 'Arts', 'Sports', 'Support Staff']
 
-const inputCls = 'w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-[#C9A84C]/50 font-montserrat'
+const inputCls = 'w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-gold/50 font-montserrat'
 const labelCls = 'text-[10px] font-semibold uppercase tracking-wider text-gray-400 font-montserrat block mb-1'
 
 export default function AdminStaff() {
@@ -76,38 +76,38 @@ export default function AdminStaff() {
     <div className="relative">
       <div className="flex items-center justify-between mb-5">
         <p className="text-xs text-gray-500 font-montserrat">{items.length} staff member{items.length !== 1 ? 's' : ''}</p>
-        <button onClick={openNew} className="flex items-center gap-2 bg-[#C9A84C] text-[#0A1628] text-xs font-bold px-4 py-2 rounded-lg hover:bg-[#D4B96A] transition font-montserrat">
+        <button onClick={openNew} className="flex items-center gap-2 bg-gold text-navy text-xs font-bold px-4 py-2 rounded-lg hover:bg-[#D4B96A] transition font-montserrat">
           <MdAdd className="text-base" /> Add Staff
         </button>
       </div>
 
       {loading ? (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {[...Array(8)].map((_, i) => <div key={i} className="h-44 bg-[#132140] animate-pulse rounded-xl border border-white/10" />)}
+          {[...Array(8)].map((_, i) => <div key={i} className="h-44 bg-navy-light animate-pulse rounded-xl border border-white/10" />)}
         </div>
       ) : items.length === 0 ? (
-        <div className="bg-[#132140] rounded-xl border border-white/10 p-16 text-center">
+        <div className="bg-navy-light rounded-xl border border-white/10 p-16 text-center">
           <MdPeople className="text-4xl text-gray-600 mx-auto mb-3" />
           <p className="text-gray-500 text-sm font-montserrat">No staff members yet.</p>
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {items.map(item => (
-            <div key={item.id} className="bg-[#132140] rounded-xl border border-white/10 p-4 flex flex-col items-center text-center gap-2">
+            <div key={item.id} className="bg-navy-light rounded-xl border border-white/10 p-4 flex flex-col items-center text-center gap-2">
               {item.photoUrl ? (
-                <img src={item.photoUrl} alt={item.name} className="w-16 h-16 rounded-full object-cover border-2 border-[#C9A84C]/30" />
+                <img src={item.photoUrl} alt={item.name} className="w-16 h-16 rounded-full object-cover border-2 border-gold/30" />
               ) : (
-                <div className="w-16 h-16 rounded-full bg-[#C9A84C]/10 border border-[#C9A84C]/20 flex items-center justify-center text-[#C9A84C] text-xl font-bold font-playfair">
+                <div className="w-16 h-16 rounded-full bg-gold/10 border border-gold/20 flex items-center justify-center text-gold text-xl font-bold font-playfair">
                   {item.name?.[0] ?? '?'}
                 </div>
               )}
               <div>
                 <p className="text-sm font-semibold text-gray-100 font-montserrat">{item.name}</p>
-                <p className="text-xs text-[#C9A84C] font-medium font-montserrat">{item.title}</p>
+                <p className="text-xs text-gold font-medium font-montserrat">{item.title}</p>
                 {item.department && <p className="text-[10px] text-gray-500 mt-0.5 font-montserrat">{item.department}</p>}
               </div>
               <div className="flex gap-2 mt-1">
-                <button onClick={() => openEdit(item)} className="p-1.5 rounded text-gray-500 hover:bg-white/5   hover:text-[#C9A84C] transition"><MdEdit   className="text-sm" /></button>
+                <button onClick={() => openEdit(item)} className="p-1.5 rounded text-gray-500 hover:bg-white/5   hover:text-gold transition"><MdEdit   className="text-sm" /></button>
                 <button onClick={() => handleDelete(item)} className="p-1.5 rounded text-gray-500 hover:bg-red-900/30 hover:text-red-400   transition"><MdDelete className="text-sm" /></button>
               </div>
             </div>
@@ -118,7 +118,7 @@ export default function AdminStaff() {
       {open && (
         <div className="fixed inset-0 z-40 flex">
           <div className="flex-1 bg-black/60" onClick={closePanel} />
-          <div className="w-full max-w-md bg-[#0D1C35] border-l border-white/10 shadow-2xl flex flex-col">
+          <div className="w-full max-w-md bg-navy-800 border-l border-white/10 shadow-2xl flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
               <h2 className="text-sm font-bold text-white font-playfair">{editing ? 'Edit Staff' : 'New Staff Member'}</h2>
               <button onClick={closePanel} className="p-1 rounded text-gray-500 hover:text-gray-200"><MdClose className="text-lg" /></button>
@@ -127,14 +127,14 @@ export default function AdminStaff() {
               <div className="flex flex-col items-center gap-3">
                 <div className="relative">
                   {photoPreview ? (
-                    <img src={photoPreview} alt="Preview" className="w-20 h-20 rounded-full object-cover border-2 border-[#C9A84C]/30" />
+                    <img src={photoPreview} alt="Preview" className="w-20 h-20 rounded-full object-cover border-2 border-gold/30" />
                   ) : (
-                    <div className="w-20 h-20 rounded-full bg-[#C9A84C]/10 border border-[#C9A84C]/20 flex items-center justify-center text-[#C9A84C] text-2xl font-bold font-playfair">
+                    <div className="w-20 h-20 rounded-full bg-gold/10 border border-gold/20 flex items-center justify-center text-gold text-2xl font-bold font-playfair">
                       {form.name?.[0] || <MdPeople />}
                     </div>
                   )}
                   <button type="button" onClick={() => fileRef.current?.click()}
-                    className="absolute -bottom-1 -right-1 w-7 h-7 bg-[#C9A84C] rounded-full flex items-center justify-center text-[#0A1628] shadow">
+                    className="absolute -bottom-1 -right-1 w-7 h-7 bg-gold rounded-full flex items-center justify-center text-navy shadow">
                     <MdPhotoCamera className="text-xs" />
                   </button>
                 </div>
@@ -157,12 +157,12 @@ export default function AdminStaff() {
               <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-lg px-3 py-2.5">
                 <span className="text-sm text-gray-300 font-montserrat">Featured / Leadership</span>
                 <button type="button" onClick={() => setForm(f => ({ ...f, featured: !f.featured }))}
-                  className={`w-11 h-6 rounded-full transition-colors relative ${form.featured ? 'bg-[#C9A84C]' : 'bg-white/10'}`}>
+                  className={`w-11 h-6 rounded-full transition-colors relative ${form.featured ? 'bg-gold' : 'bg-white/10'}`}>
                   <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${form.featured ? 'right-0.5' : 'left-0.5'}`} />
                 </button>
               </div>
               <button type="submit" disabled={saving}
-                className="w-full bg-[#C9A84C] text-[#0A1628] text-sm font-bold py-3 rounded-lg hover:bg-[#D4B96A] disabled:opacity-60 transition font-montserrat">
+                className="w-full bg-gold text-navy text-sm font-bold py-3 rounded-lg hover:bg-[#D4B96A] disabled:opacity-60 transition font-montserrat">
                 {saving ? 'Saving…' : editing ? 'Update Staff' : 'Add Staff Member'}
               </button>
             </form>

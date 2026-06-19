@@ -1,21 +1,22 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{js,jsx,ts,tsx}'],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
         navy: {
-          DEFAULT: '#0A1628',
-          light: '#132140',
-          dark: '#060F1C',
-          800: '#0D1C35',
+          DEFAULT: 'rgb(var(--color-navy) / <alpha-value>)',
+          light:   'rgb(var(--color-navy-light) / <alpha-value>)',
+          dark:    'rgb(var(--color-navy-dark) / <alpha-value>)',
+          800:     'rgb(var(--color-navy-800) / <alpha-value>)',
         },
         gold: {
-          DEFAULT: '#C9A84C',
-          light: '#D4B96A',
-          dark: '#B8962E',
-          50: '#FDF8EC',
-          100: '#F7EDCC',
+          DEFAULT: 'rgb(var(--color-primary) / <alpha-value>)',
+          light:   'rgb(var(--color-primary-light) / <alpha-value>)',
+          dark:    'rgb(var(--color-primary-dark) / <alpha-value>)',
+          50:      'rgb(var(--color-primary-50) / <alpha-value>)',
+          100:     'rgb(var(--color-primary-100) / <alpha-value>)',
         },
         cream: '#F8F9FA',
         slate: {

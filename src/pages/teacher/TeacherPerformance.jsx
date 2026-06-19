@@ -1,11 +1,11 @@
-import { useState, useEffect, useMemo } from 'react'
+﻿import { useState, useEffect, useMemo } from 'react'
 import { collection, getDocs, query, where, documentId } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import { SCHOOL_ID } from '../../utils/schoolConfig'
 import { getCurrentTerm } from '../../utils/termHelpers'
 import { MdBarChart, MdSearch } from 'react-icons/md'
 
-const CARD    = 'bg-[#0D1C35] border border-white/10 rounded-xl'
+const CARD    = 'bg-navy-800 border border-white/10 rounded-xl'
 const VIOLET  = '#7C3AED'
 const { number: CURR_NUM, year: CURR_YEAR } = getCurrentTerm()
 
@@ -27,7 +27,7 @@ function computeGrade(avg, table) {
 }
 
 const GRADE_CLS = {
-  A: 'text-emerald-400', B: 'text-emerald-400', C: 'text-[#C9A84C]',
+  A: 'text-emerald-400', B: 'text-emerald-400', C: 'text-gold',
   D: 'text-orange-400',  U: 'text-red-400',      '—': 'text-gray-500',
 }
 
@@ -147,7 +147,7 @@ export default function TeacherPerformance() {
 
       {loadingBase ? (
         <div className="flex items-center justify-center py-16">
-          <div className="w-7 h-7 border-2 border-[#C9A84C] border-t-transparent rounded-full animate-spin" />
+          <div className="w-7 h-7 border-2 border-gold border-t-transparent rounded-full animate-spin" />
         </div>
       ) : uniqueClasses.length === 0 ? (
         <div className={`${CARD} p-12 text-center`}>
@@ -185,7 +185,7 @@ export default function TeacherPerformance() {
               <p className="text-[10px] uppercase tracking-wider text-gray-500 font-montserrat">Class Average</p>
             </div>
             <div className={`${CARD} p-4 text-center`}>
-              <p className="text-2xl font-bold font-playfair text-[#C9A84C]">
+              <p className="text-2xl font-bold font-playfair text-gold">
                 {loadingData ? '…' : computeGrade(classAvg, gradeTable)}
               </p>
               <p className="text-[10px] uppercase tracking-wider text-gray-500 font-montserrat">Class Grade</p>
@@ -206,7 +206,7 @@ export default function TeacherPerformance() {
           {/* Table */}
           {loadingData ? (
             <div className="flex items-center justify-center py-12">
-              <div className="w-7 h-7 border-2 border-[#C9A84C] border-t-transparent rounded-full animate-spin" />
+              <div className="w-7 h-7 border-2 border-gold border-t-transparent rounded-full animate-spin" />
             </div>
           ) : students.length === 0 ? (
             <div className={`${CARD} p-10 text-center`}>

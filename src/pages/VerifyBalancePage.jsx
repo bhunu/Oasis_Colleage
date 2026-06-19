@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { collection, getDocs, query, where, limit } from 'firebase/firestore'
 import { db } from '../firebase/config'
 import { FaGraduationCap } from 'react-icons/fa'
 import { MdSchool } from 'react-icons/md'
+import sc from '../utils/schoolConfig'
 
 const TEAL = '#0F6E56'
 
@@ -43,18 +44,18 @@ export default function VerifyBalancePage() {
   const cfg = statusConfig[status] ?? statusConfig.nil
 
   return (
-    <div className="min-h-screen bg-[#0A1628] flex flex-col items-center justify-center px-4 py-16">
+    <div className="min-h-screen bg-navy flex flex-col items-center justify-center px-4 py-16">
       <Link to="/" className="flex items-center gap-3 mb-10">
-        <div className="w-12 h-12 bg-[#C9A84C] rounded-full flex items-center justify-center shadow-lg">
-          <FaGraduationCap className="text-[#0A1628] text-xl" />
+        <div className="w-12 h-12 bg-gold rounded-full flex items-center justify-center shadow-lg">
+          <FaGraduationCap className="text-navy text-xl" />
         </div>
         <div>
-          <p className="font-playfair font-bold text-white text-lg leading-tight">Oasis Private College</p>
-          <p className="font-montserrat text-[10px] uppercase tracking-[0.2em] text-gray-400">Checheche, Zimbabwe</p>
+          <p className="font-playfair font-bold text-white text-lg leading-tight">{sc.name}</p>
+          <p className="font-montserrat text-[10px] uppercase tracking-[0.2em] text-gray-400">{sc.address}</p>
         </div>
       </Link>
 
-      <div className="w-full max-w-sm bg-[#0D1C35] border border-white/10 rounded-2xl overflow-hidden">
+      <div className="w-full max-w-sm bg-navy-800 border border-white/10 rounded-2xl overflow-hidden">
         <div className="px-6 py-4 border-b border-white/10 flex items-center gap-3" style={{ backgroundColor: `${TEAL}18` }}>
           <MdSchool size={20} style={{ color: TEAL }} />
           <h1 className="font-playfair font-bold text-white text-base">Fee Status Verification</h1>
@@ -94,7 +95,7 @@ export default function VerifyBalancePage() {
 
               <p className="font-montserrat text-[10px] text-gray-600 pt-1">
                 Verified {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}
-                {' '}&middot;{' '}Oasis Private College
+                {' '}&middot;{' '}{sc.name}
               </p>
               {updatedAt && (
                 <p className="font-montserrat text-[10px] text-gray-700 mt-0.5">

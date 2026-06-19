@@ -1,12 +1,12 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import { useStudent } from '../../context/StudentContext'
 import toast from 'react-hot-toast'
 
-const INPUT = 'w-full bg-white/5 border border-white/10 focus:border-[#C9A84C]/50 focus:outline-none rounded-xl px-4 py-3 text-white font-montserrat text-sm placeholder-gray-600 transition-all'
+const INPUT = 'w-full bg-white/5 border border-white/10 focus:border-gold/50 focus:outline-none rounded-xl px-4 py-3 text-white font-montserrat text-sm placeholder-gray-600 transition-all'
 const LABEL = 'block text-[10px] font-semibold uppercase tracking-widest text-gray-500 font-montserrat mb-1.5'
-const CARD  = 'bg-[#0D1C35] border border-white/10 rounded-xl p-6'
+const CARD  = 'bg-navy-800 border border-white/10 rounded-xl p-6'
 
 export default function StudentProfile() {
   const { studentData, firestoreStudent } = useStudent()
@@ -14,7 +14,7 @@ export default function StudentProfile() {
     firestoreStudent?.email || firestoreStudent?.studentEmail || studentData?.email || ''
   )
   const [phone,     setPhone]     = useState(
-    firestoreStudent?.phone || firestoreStudent?.guardianPhone || studentData?.guardianPhone || ''
+    firestoreStudent?.phone || ''
   )
   const [saving,    setSaving]    = useState(false)
 
@@ -55,8 +55,8 @@ export default function StudentProfile() {
       {/* Avatar + name */}
       <div className={CARD}>
         <div className="flex items-center gap-5">
-          <div className="w-16 h-16 bg-[#C9A84C] rounded-full flex items-center justify-center shrink-0">
-            <span className="text-[#0A1628] font-bold text-xl font-montserrat">{initials}</span>
+          <div className="w-16 h-16 bg-gold rounded-full flex items-center justify-center shrink-0">
+            <span className="text-navy font-bold text-xl font-montserrat">{initials}</span>
           </div>
           <div>
             <h2 className="font-playfair text-xl font-bold text-white">{studentData?.name || 'Student'}</h2>
@@ -109,7 +109,7 @@ export default function StudentProfile() {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="mt-5 px-6 py-3 rounded-xl text-sm font-semibold font-montserrat text-[#0A1628] bg-[#C9A84C] hover:bg-yellow-400 transition disabled:opacity-50"
+          className="mt-5 px-6 py-3 rounded-xl text-sm font-semibold font-montserrat text-navy bg-gold hover:bg-yellow-400 transition disabled:opacity-50"
         >
           {saving ? 'Saving…' : 'Save Changes'}
         </button>

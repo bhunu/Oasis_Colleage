@@ -1,15 +1,15 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { collection, getDocs } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 
 const TEAL = '#0F6E56'
-const CARD  = 'bg-[#0D1C35] border border-white/10 rounded-xl p-6'
+const CARD  = 'bg-navy-800 border border-white/10 rounded-xl p-6'
 const GRID  = { stroke: 'rgba(255,255,255,0.06)', strokeDasharray: '3 3' }
 const TICK  = { fill: '#6b7280', fontSize: 11 }
 const AXLN  = { stroke: 'rgba(255,255,255,0.08)' }
 const TIP   = {
-  contentStyle: { backgroundColor: '#0D1C35', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, color: '#fff', fontSize: 12 },
+  contentStyle: { backgroundColor: 'var(--color-navy-800-hex)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, color: '#fff', fontSize: 12 },
   labelStyle:   { color: '#0F6E56' },
   cursor:       { fill: 'rgba(255,255,255,0.04)' },
 }
@@ -52,7 +52,7 @@ export default function BudgetOverview() {
           { label: 'Expense Entries', value: loading ? '...' : expenses.length,         color: '#EF9F27' },
           { label: 'Top Category',    value: loading ? '...' : (topCat?.total > 0 ? topCat.name : '—'), color: '#7F77DD' },
         ].map(({ label, value, color }) => (
-          <div key={label} className="bg-[#0D1C35] border border-white/10 rounded-xl p-5">
+          <div key={label} className="bg-navy-800 border border-white/10 rounded-xl p-5">
             <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest font-montserrat mb-1">{label}</p>
             <p className="text-2xl font-bold font-playfair" style={{ color }}>{value}</p>
           </div>

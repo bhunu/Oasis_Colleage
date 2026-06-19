@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom'
+﻿import { Link } from 'react-router-dom'
+import sc from '../utils/schoolConfig'
 import { FaGraduationCap, FaFacebookF, FaTwitter, FaInstagram, FaYoutube, FaMapMarkerAlt, FaPhone, FaEnvelope, FaClock, FaCode } from 'react-icons/fa'
 
 const LINKS = {
@@ -35,8 +36,8 @@ export default function Footer() {
                 <FaGraduationCap className="text-navy text-xl" />
               </div>
               <div>
-                <div className="font-playfair text-white font-bold text-base leading-tight">Oasis Private College</div>
-                <div className="font-montserrat text-gold text-xs uppercase tracking-widest">Checheche, Zimbabwe</div>
+                <div className="font-playfair text-white font-bold text-base leading-tight">{sc.name}</div>
+                <div className="font-montserrat text-gold text-xs uppercase tracking-widest">{sc.address}</div>
               </div>
             </div>
             <p className="text-sm leading-relaxed mb-5 text-gray-400">
@@ -119,19 +120,19 @@ export default function Footer() {
       {/* Bottom bar */}
       <div className="border-t border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-500 font-montserrat">
-          <span>© {new Date().getFullYear()} Oasis Private College. All rights reserved.</span>
+          <span>© {new Date().getFullYear()} {sc.name}. All rights reserved.</span>
 
           {/* CloudTech credit */}
           <div className="flex items-center gap-1.5">
-            <FaCode className="text-[10px]" style={{ color: '#C9A84C' }} />
-            <span className="font-semibold" style={{ color: '#C9A84C' }}>CloudTech</span>
+            <FaCode className="text-[10px]" style={{ color: 'var(--color-primary-hex)' }} />
+            <span className="font-semibold" style={{ color: 'var(--color-primary-hex)' }}>CloudTech</span>
             <span className="text-gray-700">·</span>
-            <a href="tel:+263775712114" className="hover:text-[#C9A84C] transition-colors">+263 775 712 114</a>
+            <a href="tel:+263775712114" className="hover:text-gold transition-colors">+263 775 712 114</a>
           </div>
 
           <span className="flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-gold" />
-            Day School · Checheche, Zimbabwe
+            Day School · {sc.address}
           </span>
         </div>
       </div>

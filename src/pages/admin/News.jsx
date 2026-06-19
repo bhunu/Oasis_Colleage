@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+﻿import { useEffect, useRef, useState } from 'react'
 import { MdAdd, MdEdit, MdDelete, MdClose, MdArticle, MdImage, MdUploadFile } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import { getNews, addNews, updateNews, deleteNews, uploadNewsImage } from '../../firebase/news'
@@ -6,7 +6,7 @@ import { getNews, addNews, updateNews, deleteNews, uploadNewsImage } from '../..
 const BLANK = { title: '', category: 'News', date: '', image: '', imagePath: '', summary: '', content: '' }
 const CATEGORIES = ['News', 'Events', 'Achievements', 'Academic', 'Sports', 'Community', 'Announcement']
 
-const inputCls = 'w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-[#C9A84C]/50 font-montserrat'
+const inputCls = 'w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-gold/50 font-montserrat'
 const labelCls = 'text-[10px] font-semibold uppercase tracking-wider text-gray-400 font-montserrat block mb-1'
 
 const CAT_COLORS = {
@@ -98,24 +98,24 @@ export default function AdminNews() {
     <div className="relative">
       <div className="flex items-center justify-between mb-5">
         <p className="text-xs text-gray-500 font-montserrat">{items.length} article{items.length !== 1 ? 's' : ''}</p>
-        <button onClick={openNew} className="flex items-center gap-2 bg-[#C9A84C] text-[#0A1628] text-xs font-bold px-4 py-2 rounded-lg hover:bg-[#D4B96A] transition font-montserrat">
+        <button onClick={openNew} className="flex items-center gap-2 bg-gold text-navy text-xs font-bold px-4 py-2 rounded-lg hover:bg-[#D4B96A] transition font-montserrat">
           <MdAdd className="text-base" /> Add Article
         </button>
       </div>
 
       {loading ? (
         <div className="space-y-3">
-          {[...Array(5)].map((_, i) => <div key={i} className="h-20 bg-[#132140] animate-pulse rounded-xl border border-white/10" />)}
+          {[...Array(5)].map((_, i) => <div key={i} className="h-20 bg-navy-light animate-pulse rounded-xl border border-white/10" />)}
         </div>
       ) : items.length === 0 ? (
-        <div className="bg-[#132140] rounded-xl border border-white/10 p-16 text-center">
+        <div className="bg-navy-light rounded-xl border border-white/10 p-16 text-center">
           <MdArticle className="text-4xl text-gray-600 mx-auto mb-3" />
           <p className="text-gray-500 text-sm font-montserrat">No articles yet.</p>
         </div>
       ) : (
         <div className="space-y-2">
           {items.map(item => (
-            <div key={item.id} className="bg-[#132140] rounded-xl border border-white/10 px-4 py-3 flex items-start gap-4">
+            <div key={item.id} className="bg-navy-light rounded-xl border border-white/10 px-4 py-3 flex items-start gap-4">
               {/* Thumbnail */}
               {item.image ? (
                 <img src={item.image} alt="" className="w-14 h-14 rounded-lg object-cover shrink-0 border border-white/10" />
@@ -139,7 +139,7 @@ export default function AdminNews() {
               </div>
               {/* Actions */}
               <div className="flex items-center gap-1 shrink-0">
-                <button onClick={() => openEdit(item)} className="p-2 rounded-lg text-gray-500 hover:bg-white/5 hover:text-[#C9A84C] transition"><MdEdit /></button>
+                <button onClick={() => openEdit(item)} className="p-2 rounded-lg text-gray-500 hover:bg-white/5 hover:text-gold transition"><MdEdit /></button>
                 {confirmingDelete === item.id ? (
                   <>
                     <button onClick={() => handleDelete(item.id, item.imagePath)} className="p-2 rounded-lg text-red-400 hover:bg-red-900/30 transition text-xs font-montserrat font-semibold">Delete?</button>
@@ -158,7 +158,7 @@ export default function AdminNews() {
       {open && (
         <div className="fixed inset-0 z-40 flex">
           <div className="flex-1 bg-black/60" onClick={closePanel} />
-          <div className="w-full max-w-md bg-[#0D1C35] border-l border-white/10 shadow-2xl flex flex-col">
+          <div className="w-full max-w-md bg-navy-800 border-l border-white/10 shadow-2xl flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
               <h2 className="text-sm font-bold text-white font-playfair">{editing ? 'Edit Article' : 'New Article'}</h2>
               <button onClick={closePanel} className="p-1 rounded text-gray-500 hover:text-gray-200"><MdClose className="text-lg" /></button>
@@ -195,7 +195,7 @@ export default function AdminNews() {
                   </div>
                 ) : (
                   <button type="button" onClick={() => fileRef.current?.click()}
-                    className="mt-1 w-full border border-dashed border-white/20 rounded-lg py-6 flex flex-col items-center gap-2 text-gray-500 hover:border-[#C9A84C]/50 hover:text-[#C9A84C] transition">
+                    className="mt-1 w-full border border-dashed border-white/20 rounded-lg py-6 flex flex-col items-center gap-2 text-gray-500 hover:border-gold/50 hover:text-gold transition">
                     <MdUploadFile className="text-2xl" />
                     <span className="text-xs font-montserrat">Click to upload image</span>
                   </button>
@@ -216,7 +216,7 @@ export default function AdminNews() {
               </div>
 
               <button type="submit" disabled={saving}
-                className="w-full bg-[#C9A84C] text-[#0A1628] text-sm font-bold py-3 rounded-lg hover:bg-[#D4B96A] disabled:opacity-60 transition font-montserrat">
+                className="w-full bg-gold text-navy text-sm font-bold py-3 rounded-lg hover:bg-[#D4B96A] disabled:opacity-60 transition font-montserrat">
                 {saving ? 'Saving…' : editing ? 'Update Article' : 'Add Article'}
               </button>
             </form>

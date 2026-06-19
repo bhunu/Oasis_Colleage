@@ -11,7 +11,7 @@ export default function useStudentSessionTimeout() {
   const timerRef = useRef(null)
 
   useEffect(() => {
-    const minutes = portalSettings?.sessionTimeoutMinutes ?? 4
+    const minutes = portalSettings?.sessionTimeoutMinutes ?? 20
     const ms = minutes * 60 * 1000
 
     const reset = () => {

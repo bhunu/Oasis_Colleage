@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { collection, query, where, getDocs, doc, updateDoc, writeBatch } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import { useStudent } from '../../context/StudentContext'
 import { MdNotifications, MdDoneAll, MdHourglassEmpty } from 'react-icons/md'
 
-const CARD = 'bg-[#0D1C35] border border-white/10 rounded-xl'
+const CARD = 'bg-navy-800 border border-white/10 rounded-xl'
 
 function fmtDate(ts) {
   if (!ts) return ''
@@ -72,7 +72,7 @@ export default function StudentNotifications() {
           <button
             onClick={markAllRead}
             disabled={markingAll}
-            className="flex items-center gap-1.5 text-xs font-montserrat font-semibold text-[#C9A84C] hover:text-yellow-300 transition disabled:opacity-50"
+            className="flex items-center gap-1.5 text-xs font-montserrat font-semibold text-gold hover:text-yellow-300 transition disabled:opacity-50"
           >
             <MdDoneAll className="text-base" />
             Mark all read
@@ -98,10 +98,10 @@ export default function StudentNotifications() {
               key={n.id}
               onClick={() => !n.read && markRead(n.id)}
               className={`${CARD} px-5 py-4 flex items-start gap-4 cursor-pointer transition hover:border-white/20 ${
-                !n.read ? 'border-[#C9A84C]/30 bg-[#C9A84C]/5' : ''
+                !n.read ? 'border-gold/30 bg-gold/5' : ''
               }`}
             >
-              <div className={`mt-0.5 shrink-0 w-2 h-2 rounded-full ${!n.read ? 'bg-[#C9A84C]' : 'bg-transparent'}`} />
+              <div className={`mt-0.5 shrink-0 w-2 h-2 rounded-full ${!n.read ? 'bg-gold' : 'bg-transparent'}`} />
               <div className="flex-1 min-w-0">
                 <p className={`font-montserrat text-sm leading-snug ${!n.read ? 'text-white' : 'text-gray-400'}`}>
                   {n.message}
@@ -110,7 +110,7 @@ export default function StudentNotifications() {
                   <p className="font-montserrat text-[10px] text-gray-600 mt-1">{fmtDate(n.createdAt)}</p>
                 )}
               </div>
-              <MdNotifications className={`text-lg shrink-0 mt-0.5 ${!n.read ? 'text-[#C9A84C]' : 'text-gray-700'}`} />
+              <MdNotifications className={`text-lg shrink-0 mt-0.5 ${!n.read ? 'text-gold' : 'text-gray-700'}`} />
             </div>
           ))}
         </div>
